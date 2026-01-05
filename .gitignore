@@ -27,3 +27,8 @@ node_modules/
 /frontend/build/
 /frontend/dist/
 
+
+# [Data]
+crawling/data
+*.csv
+*.json
