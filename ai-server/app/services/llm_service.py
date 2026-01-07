@@ -1,29 +1,29 @@
+import time
+import re
 import requests
 import json
 from app import database
 from typing import List, Dict
+from konlpy.tag import Okt
 
 OLLAMA_URL = "http://localhost:11434/api"
 MODEL_NAME = "llama3.1"          
 EMBED_MODEL = "mxbai-embed-large"
 
-async def get_normalization(body: str):
-    """LLM을 호출하여 민원을 정규화된 JSON 구조로 변환합니다."""
-    prompt = f"""
-    당신은 민원 분석 전문가입니다. 다음 민원을 분석하여 반드시 JSON 형식으로만 응답하세요. 
-    - neutral_summary: 감정이 배제된 객관적 사실 요약
-    - core_request: 핵심 요구사항
-    - core_cause: 발생 원인 추정
-    - target_object: 민원 대상물 (예: 가로등, 맨홀 등)
-    - keywords: 핵심 키워드 5개 (배열)
+class LLMService:
+    def __init__(self):
+        try:
+            # Okt는 한 번 로드할 때 시간이 걸리므로 생성자에서 초기화합니다.
+            self.okt = Okt()
+        except Exception as e:
+            print(f"KoNLPy 로드 실패 (Java 설정을 확인하세요): {e}")
+            self.okt = None
 
-    민원 내용: {body}
-    """
-    
-    response = requests.post(f"{OLLAMA_URL}/generate", json={
-        "model": "llama3.1", "prompt": prompt, "format": "json", "stream": False
-    })
-    return json.loads(response.json()['response'])
+    def preprocess(self, text):
+        # 특수문자만 제거하고 문장은 그대로 둡니다.
+        text = re.sub(r'[^가-힣a-zA-Z0-9\s.,!?]', '', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        return text
 
 async def get_embedding(text: str):
     """텍스트를 벡터로 변환합니다. (설계상 1024차원 필요) """
@@ -182,3 +182,52 @@ async def generate_rag_response(complaint_id: int, user_query: str = None) -> st
     except Exception as e:
         print(f"❌ 생성 실패: {e}")
         return f"답변 생성 중 시스템 오류가 발생했습니다: {str(e)}"
+    
+async def get_normalization(self, body: str):
+    """LLM을 호출하여 민원을 정규화된 JSON 구조로 변환합니다."""
+    
+    # 전처리 수행
+    preprocess_body = self.preprocess(body)
+    print(f"[*] 전처리된 민원 내용: {preprocess_body}")
+    prompt = f"""
+        당신은 대한민국 구청의 민원 분석 전문가입니다. 
+        다음은 시민이 접수한 민원 내용입니다. 내용을 정확히 읽고 반드시 '한국어'로 분석하세요.
+        [민원 내용]
+        {preprocess_body}
+        [응답 양식]
+        반드시 아래의 JSON 형식을 지켜서 한국어로 답변하세요.
+        {{
+        "neutral_summary": "객관적인 요약 내용",
+        "core_request": "민원인의 핵심 요구사항",
+        "core_cause": "민원 발생 원인",
+        "target_object": ["대상물1", "대상물2"],
+        "keywords": ["키워드1", "키워드2"]
+        }}
+        """
+    
+    response = requests.post(f"{OLLAMA_URL}/generate", json={
+        "model": "gemma2:2b", 
+        "prompt": prompt, 
+        "format": "json", 
+        "stream": False
+    })
+    if response.status_code == 200:
+        return json.loads(response.json()['response'])
+    else:
+        raise Exception(f"Ollama API Error: {response.text}")
+    
+async def get_embedding(self, text: str):
+    """텍스트를 벡터로 변환합니다. (mxbai-embed-large: 1024차원)"""
+    response = requests.post(f"{OLLAMA_URL}/embeddings", json={
+        "model": "mxbai-embed-large", 
+        "prompt": text
+    })
+    if response.status_code == 200:
+        return response.json()['embedding']
+    else:
+        raise Exception(f"Ollama Embedding Error: {response.text}")
+    
+async def get_embedding_with_answer(self, complaint, department, answer):
+    """민원, 부서명, 답변을 결합하여 벡터로 변환합니다."""
+    combined_text = f"민원: {complaint}\n부서명: {department}\n답변: {answer}"
+    return await self.get_embedding(combined_text)

@@ -18,6 +18,19 @@ services:
       - ./postgres_data:/var/lib/postgresql/data
     networks:
       - complaint-network
+  langflow:
+    image: langflowai/langflow:latest
+    ports:
+      - "7860:7860"
+    volumes:
+      # 로컬의 ./langflow_data 폴더를 컨테이너 내부의 저장소와 연결합니다.
+      - ./langflow_data:/app/langflow
+    environment:
+      - LANGFLOW_DATABASE_URL=sqlite:////app/langflow/langflow.db
+    depends_on:
+      - db
+    networks:
+    - complaint-network
 
 networks:
   complaint-network:

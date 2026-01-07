@@ -26,3 +26,10 @@ __pycache__/
 node_modules/
 /frontend/build/
 /frontend/dist/
+
+
+# [Data]
+crawling/data
+*.csv
+*.json
+postgres_data/
