@@ -26,7 +26,6 @@ public class JwtTokenProvider {
     // 생성될때 단 한 번만
     @PostConstruct
     protected void init() {
-        String secretKey;
         // 비밀 키의 문자열이 충분히 긴지 확인 - 안정성 검사
         this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }

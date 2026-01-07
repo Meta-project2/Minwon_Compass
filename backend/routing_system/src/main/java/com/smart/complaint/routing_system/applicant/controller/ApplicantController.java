@@ -1,12 +1,16 @@
 package com.smart.complaint.routing_system.applicant.controller;
 
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
+import com.smart.complaint.routing_system.applicant.dto.NormalizationResponse;
+import com.smart.complaint.routing_system.applicant.service.AiService;
 import com.smart.complaint.routing_system.applicant.service.ApplicantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
@@ -18,7 +22,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ApplicantController {
 
-    private static ApplicantService applicantService;
+    private final AiService aiService;
+    private final ApplicantService applicantService;
 
     @GetMapping("/api/home")
     public ResponseEntity<?> login(@AuthenticationPrincipal OAuth2User principal) {
@@ -33,6 +38,18 @@ public class ApplicantController {
 
         // TODO: 확인용, 이후 변경할 것
         return ResponseEntity.ok(userInfo);
+    }
+
+    @PostMapping("/api/complaints")
+    public ResponseEntity<NormalizationResponse> sendComplaints(@AuthenticationPrincipal String applicantId,
+                                                                @RequestBody ComplaintDto request) {
+
+        NormalizationResponse aiData = aiService.getNormalization(request);
+
+        System.out.println(aiData.neutralSummary());
+        System.out.println(aiData.coreRequest());
+
+        return ResponseEntity.ok(null);
     }
 
     @GetMapping("/api/complaints")

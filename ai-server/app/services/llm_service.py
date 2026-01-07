@@ -55,9 +55,16 @@ class LLMService:
         })
 
         if response.status_code == 200:
-            return json.loads(response.json()['response'])
+            # 3. LLM의 응답(JSON 문자열)을 파이썬 딕셔너리로 변환
+            result_dict = json.loads(response.json()['response'])
+            
+            # 4. 전처리된 원본 데이터를 결과에 추가
+            result_dict['preprocess_body'] = preprocess_body
+            
+            return result_dict
         else:
             raise Exception(f"Ollama API Error: {response.text}")
+
 
     async def get_embedding(self, text: str):
         """텍스트를 벡터로 변환합니다. (mxbai-embed-large: 1024차원)"""
