@@ -2,7 +2,7 @@ package com.smart.complaint.routing_system.applicant.dto;
 
 import java.util.Map;
 
-// OAuth에서 사용되는 정보를 저장하는 DTO
+// OAuth에서 사용되는 정보를 저장하는 record
 public record OAuth2Attributes(Map<String, Object> attributes, String nameAttributeKey, String name, String id) {
     public static OAuth2Attributes of(String registrationId, String userNameAttributeName, Map<String, Object> attributes) {
         if ("naver".equals(registrationId)) return ofNaver(attributes);

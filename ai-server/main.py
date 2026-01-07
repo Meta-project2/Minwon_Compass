@@ -25,8 +25,8 @@ async def analyze_and_store(request: ComplaintRequest):
         print(f"[*] 정규화 완료: {analysis}...")
 
         # 2. 벡터 추출 (Embedding)
-        # 요약본을 바탕으로 1024차원 벡터 생성
-        embedding = await llm_service.get_embedding(analysis['neutral_summary'])
+        # 전처리된 민원 원본을 바탕으로 1024차원 벡터 생성
+        embedding = await llm_service.get_embedding(analysis['preprocess_body'])
         print(f"[*] 벡터화 완료 (차원: {len(embedding)})")
 
         # 3. DB 저장 (is_current 처리 포함 트랜잭션)
@@ -38,7 +38,7 @@ async def analyze_and_store(request: ComplaintRequest):
         return {
             "status": "success", 
             "complaint_id": complaint_id,
-            "analysis": analysis
+            **analysis,
         }
 
     except Exception as e:
