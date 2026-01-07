@@ -1,5 +1,6 @@
 package com.smart.complaint.routing_system.applicant.controller;
 
+import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
 import com.smart.complaint.routing_system.applicant.service.ApplicantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 // 민원인 컨트롤러
@@ -34,6 +36,11 @@ public class ApplicantController {
     }
 
     @GetMapping("/api/complaints")
-    public static void getAllComplaints() {
+    public ResponseEntity<List<ComplaintDto>> getAllComplaints(@AuthenticationPrincipal String applicantId) {
+        
+        // 현재 로그인한 사용자의 모든 민원 조회
+        List<ComplaintDto> complaints = applicantService.getAllComplaints(applicantId);
+
+        return ResponseEntity.ok(complaints);
     }
 }
