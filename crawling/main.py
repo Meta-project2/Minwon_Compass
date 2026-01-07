@@ -1,96 +1,140 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import logging
-
-# 우리가 만든 전문가들(모듈) 불러오기
-from tool_llama import ComplaintAnalyzer
-from department_manager import DepartmentManager
-from risk_detector import RiskManager
-from legal_advisor import LegalAdvisor
-
-# [추가] 민원 DB 검색용 (유사 사례 찾기)
+import os
+import time
+from dotenv import load_dotenv
 from langchain_chroma import Chroma
-from langchain_ollama import OllamaEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
-# 로깅 설정
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("Server")
+# 우리가 만든 전처리 모듈 가져오기
+from complaint_preprocessor import ComplaintCleaner
 
-# 1. FastAPI 앱 생성 (서버 본체)
-app = FastAPI(title="민원 AI 통합 처리 시스템", version="1.0")
+# 1. 설정 및 초기화
+load_dotenv() # .env 파일 로드
 
-# 2. 전문가들 출근 (서버 켤 때 한 번만 로딩)
-print("🏭 시스템 초기화 중... (AI 모델들을 로딩합니다)")
-analyzer = ComplaintAnalyzer()       # 정제/요약
-dept_manager = DepartmentManager()   # 부서 배정
-risk_manager = RiskManager()         # 위험 탐지
-legal_advisor = LegalAdvisor()       # 법률 자문
+# 경로 설정 (폴더 위치가 다르면 여기서 수정하세요)
+DB_PATH_LAW_ORG = "./chroma_db"             # 법령/조직도 DB
+DB_PATH_CASES = "./complaint_vector_db"     # 과거 민원 사례 DB
+MODEL_NAME = "jhgan/ko-sroberta-multitask"  # 임베딩 모델
 
-# 민원 DB 로딩 (유사 사례 추천용)
-complaint_db = Chroma(
-    persist_directory="complaint_vector_db",
-    embedding_function=OllamaEmbeddings(model="nomic-embed-text")
-)
+class ComplaintAI:
+    def __init__(self):
+        print("🤖 AI 시스템을 초기화하는 중입니다... (10~20초 소요)")
+        
+        # (1) 전처리 도구 준비
+        self.cleaner = ComplaintCleaner()
+        
+        # (2) 임베딩 모델 준비
+        self.embeddings = HuggingFaceEmbeddings(
+            model_name=MODEL_NAME,
+            model_kwargs={'device': 'cpu'},
+            encode_kwargs={'normalize_embeddings': True}
+        )
+        
+        # (3) 두 개의 두뇌(DB) 연결
+        # 뇌 A: 이론 담당 (법령, 조직도)
+        self.db_law_org = Chroma(
+            persist_directory=DB_PATH_LAW_ORG,
+            embedding_function=self.embeddings
+        )
+        # 뇌 B: 경험 담당 (과거 사례)
+        self.db_cases = Chroma(
+            persist_directory=DB_PATH_CASES,
+            embedding_function=self.embeddings
+        )
+        
+        # (4) 최종 판단을 내릴 LLM (Gemini) 준비
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-flash-latest",
+            temperature=0,
+            google_api_key=os.getenv("GOOGLE_API_KEY")
+        )
 
-# == 데이터 모델 (입력받을 형식) ==
-class ComplaintRequest(BaseModel):
-    text: str
-    location: str = "마포구" # 기본값
+    def search_documents(self, db, query, k=3):
+        """DB에서 유사한 문서 k개를 찾아오는 함수"""
+        try:
+            docs = db.similarity_search(query, k=k)
+            # 문서 내용만 텍스트로 합침
+            context = "\n".join([f"- {doc.page_content}" for doc in docs])
+            return context
+        except Exception:
+            return "관련 정보를 찾을 수 없음."
 
-# == API 엔드포인트 (기능 버튼) ==
+    def classify(self, user_complaint, target_gu="강남구"):
+        """
+        민원을 분석하여 담당 부서를 배정하는 메인 함수
+        """
+        start_time = time.time()
+        print("\n" + "="*50)
+        print(f"📢 민원 접수: {user_complaint[:30]}...")
+        
+        # --- 1단계: 민원 전처리 (청소) ---
+        print("🧹 1단계: 민원 내용 정제 및 키워드 추출 중...")
+        refined_result = self.cleaner.refine(user_complaint)
+        
+        # 전처리 결과에서 '요약내용'만 추출해서 검색에 사용
+        search_query = refined_result.replace("요약내용:", "").replace("주요키워드:", "")
+        print(f"   ㄴ 검색 쿼리: {search_query[:50]}...")
 
-@app.post("/analyze")
-async def process_complaint(request: ComplaintRequest):
-    """
-    [통합 처리] 민원 텍스트를 받아서 5단계 분석 결과를 반환합니다.
-    """
-    logger.info(f"📩 신규 민원 접수: {request.text[:20]}...")
-    
-    response = {
-        "original_text": request.text,
-        "location": request.location,
-        "steps": {}
-    }
+        # --- 2단계: 과거 사례 검색 (경험) ---
+        print("🔍 2단계: 타 지자체 과거 유사 사례 검색 중...")
+        case_context = self.search_documents(self.db_cases, search_query, k=3)
+        
+        # --- 3단계: 법령 및 조직도 검색 (이론) ---
+        print(f"📖 3단계: {target_gu} 조직도 및 관련 법령 검색 중...")
+        # '강남구 도로 파손' 처럼 구 이름을 붙여서 검색해야 해당 구 조직도가 잘 나옴
+        org_query = f"{target_gu} {search_query}"
+        law_org_context = self.search_documents(self.db_law_org, org_query, k=3)
 
-    # [Step 1] 위험 탐지 (악성/급증)
-    risk_result = risk_manager.calculate_risk_score(request.text)
-    surge_result = risk_manager.check_surge(request.location, "미분류") # 카테고리는 아직 모름
-    
-    response["risk_analysis"] = {
-        "is_danger": risk_result["is_danger"],
-        "risk_score": risk_result["score"],
-        "is_surge": surge_result["is_surge"],
-        "tags": []
-    }
-    if risk_result["is_danger"]: response["risk_analysis"]["tags"].append("👿 악성 의심")
-    if surge_result["is_surge"]: response["risk_analysis"]["tags"].append("🔥 민원 폭주")
+        # --- 4단계: 최종 추론 (LLM) ---
+        print("🧠 4단계: AI가 최종 판단을 내리는 중...")
+        
+        final_prompt = f"""
+        당신은 {target_gu}청의 베테랑 민원 분류관입니다.
+        아래 정보를 종합하여 해당 민원을 처리할 **최적의 부서**를 선정하고 이유를 설명하세요.
 
-    # [Step 2] 내용 정제 및 요약 (Llama)
-    refined = analyzer.analyze(request.text)
-    response["refined_content"] = refined
-    
-    # [Step 3] 부서 배정
-    # AI가 뽑은 카테고리를 이용해 부서 매칭
-    dept_info = dept_manager.classify_and_match(refined["summary"], request.location)
-    response["department_info"] = dept_info
+        [분석 정보]
+        1. 민원 내용(정제됨):
+        {refined_result}
 
-    # [Step 4] 법률 자문 (RAG)
-    # 민원 내용이 구체적일 때만 자문 수행
-    if len(request.text) > 10:
-        legal_advice = legal_advisor.advise(refined["summary"])
-        response["legal_advice"] = legal_advice
-    else:
-        response["legal_advice"] = "내용이 너무 짧아 법률 자문을 생략합니다."
+        2. 과거 유사 처리 사례 (참고용 타 지자체 데이터):
+        {case_context}
 
-    # [Step 5] 유사 민원 사례 찾기 (Bonus)
-    docs = complaint_db.similarity_search(refined["summary"], k=2)
-    similar_cases = [{"content": d.page_content[:100], "source": d.metadata.get("source")} for d in docs]
-    response["similar_cases"] = similar_cases
+        3. {target_gu} 조직도 및 법적 근거 (실무 부서 정보):
+        {law_org_context}
 
-    return response
+        [지시사항]
+        - 과거 사례에서 처리했던 부서가 {target_gu}에 없을 수 있습니다.
+        - 반드시 '3. 조직도 정보'를 기준으로 {target_gu}에 실제로 존재하는 부서를 매칭하세요.
+        - 과거 사례의 '하는 일(업무)'과 조직도의 '담당 업무'를 비교하여 추론하세요.
+        
+        [출력 형식]
+        --------------------------------------------------
+        결과: [부서명] (정확도: %)
+        근거: (왜 이 부서인지, 과거 사례와 조직도 정보를 인용하여 3줄 이내 설명)
+        관련법령: (찾은 법령이 있다면 기재, 없으면 생략)
+        --------------------------------------------------
+        """
+        
+        chain = PromptTemplate.from_template(final_prompt) | self.llm | StrOutputParser()
+        response = chain.invoke({})
+        
+        end_time = time.time()
+        print(f"✅ 처리 완료! (소요시간: {end_time - start_time:.2f}초)")
+        return response
 
-# == 서버 실행 코드 ==
+# --- 실행 테스트 ---
 if __name__ == "__main__":
-    import uvicorn
-    print("🚀 서버가 8000번 포트에서 시작됩니다! (http://localhost:8000)")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    ai = ComplaintAI()
+    
+    # 테스트할 민원 내용
+    complaint = """
+    논현동 먹자골목 쪽에 식당들이 쓰레기를 밤마다 무단으로 버려서
+    냄새나고 미치겠어요. 고양이들이 다 뜯어놓고 난리입니다.
+    CCTV라도 달아서 과태료 좀 물려주세요 제발!!!
+    """
+    
+    # 강남구 기준으로 분류 요청
+    result = ai.classify(complaint, target_gu="강남구")
+    print(result)

@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   db:
     build:
@@ -7,11 +6,11 @@ services:
       dockerfile: ./db/Dockerfile
     container_name: complaint-postgres
     restart: always
-    # .env 파일에 정의된 변수를 사용하거나 직접 입력하세요
+    # .env 파일이 없으면 기본값(postgres/your_password)이 사용됩니다.
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_password}
-      POSTGRES_DB: ${POSTGRES_DB:-complaint_db}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "0000"
+      POSTGRES_DB: complaint_db
     ports:
       - "5432:5432"
     volumes:
