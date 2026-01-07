@@ -24,6 +24,9 @@ import com.smart.complaint.routing_system.applicant.service.jwt.OAuth2SuccessHan
 @Profile("!dev")
 public class SecurityConfig {
 
+    //*******CORS를 켜고, CorsConfigurationSource 필요******
+
+
     private final OAuth2Service oAuth2Service;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final JwtTokenProvider jwtTokenProvider;
