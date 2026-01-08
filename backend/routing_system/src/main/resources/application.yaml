@@ -9,8 +9,8 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
-    username: ${DB_USERNAME:myuser}
-    password: ${DB_PASSWORD:secret}
+    username: postgres
+    password: ${POSTGRES_PASSWORD:secret}
     driver-class-name: org.postgresql.Driver
 
     # JPA 설정 (SQL 로그 )

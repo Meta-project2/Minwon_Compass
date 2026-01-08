@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   db:
-    build:
-      context: .
-      dockerfile: ./db/Dockerfile
+    image: pgvector/pgvector:pg16  # 빌드 대신 검증된 이미지를 사용
     container_name: complaint-postgres
     restart: always
     # .env 파일에 정의된 변수를 사용하거나 직접 입력하세요

@@ -1,7 +1,7 @@
 package com.smart.complaint.routing_system.applicant.service;
 
 import com.smart.complaint.routing_system.applicant.config.LoginFailedException;
-import com.smart.complaint.routing_system.applicant.entitiy.User;
+import com.smart.complaint.routing_system.applicant.entity.User;
 import org.springframework.stereotype.Service;
 
 import com.smart.complaint.routing_system.applicant.repository.UserRepository;

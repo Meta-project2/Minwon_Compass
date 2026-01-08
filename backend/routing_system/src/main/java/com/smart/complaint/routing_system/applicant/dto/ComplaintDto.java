@@ -3,7 +3,6 @@ package com.smart.complaint.routing_system.applicant.dto;
 import java.sql.Date;
 
 import lombok.Builder;
-import lombok.Getter;
 
 @Builder
 // 원본 민원 DTO

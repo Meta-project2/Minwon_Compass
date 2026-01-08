@@ -2,6 +2,8 @@ package com.smart.complaint.routing_system.applicant.dto;
 
 import java.util.Map;
 
+// response를 가져올 때 무조건 map 형태이기 때문에 suppress
+@SuppressWarnings("unchecked")
 // OAuth에서 사용되는 정보를 저장하는 record
 public record OAuth2Attributes(Map<String, Object> attributes, String nameAttributeKey, String name, String id) {
     public static OAuth2Attributes of(String registrationId, String userNameAttributeName, Map<String, Object> attributes) {

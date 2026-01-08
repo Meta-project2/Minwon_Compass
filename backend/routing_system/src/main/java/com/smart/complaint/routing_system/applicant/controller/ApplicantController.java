@@ -1,6 +1,7 @@
 package com.smart.complaint.routing_system.applicant.controller;
 
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
+import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchResult;
 import com.smart.complaint.routing_system.applicant.dto.NormalizationResponse;
 import com.smart.complaint.routing_system.applicant.service.AiService;
 import com.smart.complaint.routing_system.applicant.service.ApplicantService;
@@ -46,8 +47,14 @@ public class ApplicantController {
 
         NormalizationResponse aiData = aiService.getNormalization(request);
 
-        System.out.println(aiData.neutralSummary());
-        System.out.println(aiData.coreRequest());
+        // 2. 서비스 호출 (분석 데이터 전달)
+        // aiData 안에 들어있는 embedding(double[])을 서비스로 넘깁니다.
+        List<ComplaintSearchResult> similarComplaints = aiService.getSimilarityScore(aiData.embedding());
+
+        // 3. 결과 확인 (콘솔 출력 및 반환)
+        similarComplaints.forEach(result -> {
+            System.out.println("유사 민원 발견 - [" + result.simScore() + "] " + result.title());
+        });
 
         return ResponseEntity.ok(null);
     }
