@@ -9,27 +9,56 @@ interface LoginPageProps {
   onLogin: (role: 'agent' | 'admin') => void;
 }
 
+type LoginResponse = {
+  message?: string;
+  username?: string;
+  role: "ADMIN" | "AGENT";
+};
+
 export function LoginPage({ onLogin }: LoginPageProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Mock login logic
-    setTimeout(() => {
-      if (username && password) {
-        // For demo: 'admin' logs in as admin, anything else as agent
-        onLogin(username === 'admin' ? 'admin' : 'agent');
-      } else {
-        setError('아이디 또는 비밀번호를 확인하세요');
-        setIsLoading(false);
-      }
-    }, 1000);
+    // // Mock login logic
+    // setTimeout(() => {
+    //   if (username && password) {
+    //     // For demo: 'admin' logs in as admin, anything else as agent
+    //     onLogin(username === 'admin' ? 'admin' : 'agent');
+    //   } else {
+    //     setError('아이디 또는 비밀번호를 확인하세요');
+    //     setIsLoading(false);
+    //   }
+    // }, 1000);
+    try {
+      const res = await springApi.post<LoginResponse>("/api/agent/login", {
+        username,
+        password,
+      });
+
+      // 백엔드 role: ADMIN/AGENT  → 프론트 role: admin/agent
+      const role = res.data.role === "ADMIN" ? "admin" : "agent";
+
+      // 필요하면 저장(선택)
+      localStorage.setItem("role", role);
+      localStorage.setItem("username", res.data.username ?? username);
+
+      onLogin(role);
+    } catch (err: any) {
+      const status = err?.response?.status;
+
+      if (status === 401) setError("아이디 또는 비밀번호가 일치하지 않습니다.");
+      else if (status === 403) setError("접근 권한이 없습니다.");
+      else setError("서버 연결에 실패했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

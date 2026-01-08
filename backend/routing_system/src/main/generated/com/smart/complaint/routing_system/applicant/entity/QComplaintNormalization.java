@@ -66,7 +66,7 @@ public class QComplaintNormalization extends EntityPathBase<ComplaintNormalizati
 
     public QComplaintNormalization(Class<? extends ComplaintNormalization> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.complaint = inits.isInitialized("complaint") ? new QComplaint(forProperty("complaint")) : null;
+        this.complaint = inits.isInitialized("complaint") ? new QComplaint(forProperty("complaint"), inits.get("complaint")) : null;
     }
 
 }

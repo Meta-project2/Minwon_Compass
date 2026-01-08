@@ -7,6 +7,7 @@ import com.querydsl.core.types.dsl.*;
 import com.querydsl.core.types.PathMetadata;
 import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
+import com.querydsl.core.types.dsl.PathInits;
 
 
 /**
@@ -16,6 +17,8 @@ import com.querydsl.core.types.Path;
 public class QComplaint extends EntityPathBase<Complaint> {
 
     private static final long serialVersionUID = -168105923L;
+
+    private static final PathInits INITS = PathInits.DIRECT2;
 
     public static final QComplaint complaint = new QComplaint("complaint");
 
@@ -33,7 +36,7 @@ public class QComplaint extends EntityPathBase<Complaint> {
 
     public final NumberPath<Long> currentDepartmentId = createNumber("currentDepartmentId", Long.class);
 
-    public final NumberPath<Integer> districtId = createNumber("districtId", Integer.class);
+    public final QDistrict district;
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
@@ -49,24 +52,33 @@ public class QComplaint extends EntityPathBase<Complaint> {
 
     public final DateTimePath<java.time.LocalDateTime> receivedAt = createDateTime("receivedAt", java.time.LocalDateTime.class);
 
-    public final EnumPath<ComplaintStatus> status = createEnum("status", ComplaintStatus.class);
+    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.ComplaintStatus> status = createEnum("status", com.smart.complaint.routing_system.applicant.domain.ComplaintStatus.class);
 
     public final StringPath title = createString("title");
 
     public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt", java.time.LocalDateTime.class);
 
-    public final EnumPath<UrgencyLevel> urgency = createEnum("urgency", UrgencyLevel.class);
+    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.UrgencyLevel> urgency = createEnum("urgency", com.smart.complaint.routing_system.applicant.domain.UrgencyLevel.class);
 
     public QComplaint(String variable) {
-        super(Complaint.class, forVariable(variable));
+        this(Complaint.class, forVariable(variable), INITS);
     }
 
     public QComplaint(Path<? extends Complaint> path) {
-        super(path.getType(), path.getMetadata());
+        this(path.getType(), path.getMetadata(), PathInits.getFor(path.getMetadata(), INITS));
     }
 
     public QComplaint(PathMetadata metadata) {
-        super(Complaint.class, metadata);
+        this(metadata, PathInits.getFor(metadata, INITS));
+    }
+
+    public QComplaint(PathMetadata metadata, PathInits inits) {
+        this(Complaint.class, metadata, inits);
+    }
+
+    public QComplaint(Class<? extends Complaint> type, PathMetadata metadata, PathInits inits) {
+        super(type, metadata, inits);
+        this.district = inits.isInitialized("district") ? new QDistrict(forProperty("district")) : null;
     }
 
 }

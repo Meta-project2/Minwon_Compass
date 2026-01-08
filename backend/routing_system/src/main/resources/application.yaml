@@ -9,7 +9,7 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
+    username: ${POSTGRES_USERNAME:postgres}
     password: ${POSTGRES_PASSWORD:secret}
     driver-class-name: org.postgresql.Driver
 
