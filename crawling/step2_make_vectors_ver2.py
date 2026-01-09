@@ -49,7 +49,7 @@ def embed_and_upload():
     cursor = conn.cursor()
 
     # 1. 모든 CSV 파일 찾기 (특정 구 아님)
-    target_files = glob.glob("data/step1_refined/*.csv")
+    target_files = glob.glob("data/step1_refined/용산구*.csv")
     print(f"[*] 총 {len(target_files)}개의 파일을 발견했습니다. 작업을 시작합니다.")
     
     for file_path in target_files:
@@ -89,8 +89,13 @@ def embed_and_upload():
 
         for _, row in tqdm(df.iterrows(), total=len(df)):
             try:
-                # 데이터 준비
-                summary = str(row.get('req_content', ''))[:500]
+                # 제목과 본문 사이에 공백을 한 칸 두어 구분하기 편하게 만들었습니다.
+                title = str(row.get('req_title', '')).strip()
+                content = str(row.get('req_content', '')).strip()
+                
+                # 제목 + 본문을 합치고, 너무 길어지면 DB에 안 들어갈 수 있으니 500자로 자릅니다.
+                summary = f"{title}, {content}"[:500]
+
                 dept_name = str(row.get('resp_dept', '정보없음')).split()[-1]
                 
                 answer_text = str(row.get('resp_content', ''))
@@ -114,10 +119,19 @@ def embed_and_upload():
                 # DB 저장 (complaints)
                 cursor.execute("""
                     INSERT INTO complaints 
-                    (received_at, title, body, answer, district_id, current_department_id, answerd_by, status)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, 'CLOSED')
+                    (applicant_id, received_at, title, body, answer, district_id, current_department_id, answerd_by, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'CLOSED')
                     RETURNING id
-                """, (row.get('req_date'), row.get('req_title'), row.get('refined_body'), answer_text, district_id, dept_id, officer_id))
+                """, (
+                    ' ',           # applicant_id: 과거 데이터이므로 익명 처리
+                    row.get('req_date'),   # received_at
+                    row.get('req_title'),  # title
+                    row.get('refined_body'), # body
+                    answer_text,           # answer
+                    district_id,           # district_id
+                    dept_id,               # current_department_id
+                    officer_id             # answerd_by
+                ))
                 
                 complaint_id = cursor.fetchone()[0]
 
