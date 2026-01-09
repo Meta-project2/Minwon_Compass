@@ -3,7 +3,6 @@ package com.smart.complaint.routing_system.applicant.service;
 import java.util.List;
 
 import com.smart.complaint.routing_system.applicant.repository.ComplaintRepository;
-import com.smart.complaint.routing_system.applicant.repository.ComplaintRepositoryImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -12,7 +12,6 @@ import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintResponse;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchCondition;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchResult;
-import com.smart.complaint.routing_system.applicant.entity.Complaint;
 import com.smart.complaint.routing_system.applicant.entity.QComplaint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
