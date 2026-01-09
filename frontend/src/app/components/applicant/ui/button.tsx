@@ -34,25 +34,27 @@ const buttonVariants = cva(
   },
 );
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
+// 1. React.forwardRef를 사용하여 ref를 전달받을 수 있게 만듭니다.
+const Button = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<"button"> &
+    VariantProps<typeof buttonVariants> & {
+      asChild?: boolean;
+    }
+>(({ className, variant, size, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : "button";
 
   return (
     <Comp
       data-slot="button"
+      ref={ref} // 2. 전달받은 ref를 Comp(button 또는 Slot)에 연결합니다.
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   );
-}
+});
+
+// 3. 디스플레이 이름을 설정하여 디버깅 시 컴포넌트 이름을 확인할 수 있게 합니다.
+Button.displayName = "Button";
 
 export { Button, buttonVariants };

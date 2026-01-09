@@ -16,9 +16,8 @@ import ApplicantLoginPage from './components/applicant/ApplicantLoginPage';
 import ApplicantMainPage from './components/applicant/ApplicantMainPage';
 import LoginSuccess from './components/applicant/LoginSuccess';
 import { ApplicantComplaintListPage } from './components/applicant/ApplicantComplaintListPage';
-import { ApplicantComplaintForm } from './components/applicant/ApplicantComplaintForm';
 import ApplicantLogout from './components/ApplicantLogout';
-//import ComplaintForm from './ComplaintForm';
+import ApplicantComplaintCreatePage from './components/applicant/ApplicantComplaintCreatePage';
 
 type Page =
   | { type: 'login' }
@@ -103,7 +102,7 @@ function AppContent() {
         <Route path="/applicant/login-success" element={<LoginSuccess />} />
         <Route path="/applicant/main" element={<ApplicantMainPage />} />
         <Route path="/applicant/complaint" element={<ApplicantComplaintListPage />} />
-        <Route path="/applicant/complaints/new" element={<ApplicantComplaintForm />} />
+        <Route path="/applicant/complaints/new" element={<ApplicantComplaintCreatePage />} />
         {/* <Route path="/applicant/form" element={<ComplaintForm />} /> */}
       </Routes>
     );
