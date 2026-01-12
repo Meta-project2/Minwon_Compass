@@ -49,14 +49,11 @@ dependencies {
     // 필수 어노테이션 프로세서
     annotationProcessor "jakarta.annotation:jakarta.annotation-api"
     annotationProcessor "jakarta.persistence:jakarta.persistence-api"
-
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
 }
-
-
 // Querydsl QClass 생성 경로 설정
 def querydslDir = "src/main/generated"
 
@@ -71,4 +68,3 @@ tasks.withType(JavaCompile) {
 clean {
     delete file(querydslDir)
 }
-

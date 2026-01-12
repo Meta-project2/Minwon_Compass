@@ -22,9 +22,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
-        // Authorization 헤더를 가져온다 
+        // Authorization 헤더를 가져온다
         String bearerToken = request.getHeader("Authorization");
         String token = null;
 
@@ -34,13 +35,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (token != null && jwtTokenProvider.validateToken(token)) {
+            /*System.out.println("토큰 검증 성공, 유저 정보 추출 시작...");
             String providerId = jwtTokenProvider.getProviderId(token);
 
             // 유저 정보를 담은 인증 객체 생성
             Authentication auth = new UsernamePasswordAuthenticationToken(providerId, null,
                     Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")));
 
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            SecurityContextHolder.getContext().setAuthentication(auth); */
+            
+            try {
+                System.out.println("토큰 검증 성공, 유저 정보 추출 시작...");
+                String providerId = jwtTokenProvider.getProviderId(token);
+                System.out.println("추출된 providerId: " + providerId);
+
+                Authentication auth = new UsernamePasswordAuthenticationToken(providerId, null,
+                        Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")));
+
+                SecurityContextHolder.getContext().setAuthentication(auth);
+                System.out.println("SecurityContext에 인증 객체 저장 완료!");
+            } catch (Exception e) {
+                System.err.println("인증 객체 생성 중 에러 발생: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("Invalid or missing JWT token" + (token == null ? "" : ": " + token));
         }
 
         filterChain.doFilter(request, response);

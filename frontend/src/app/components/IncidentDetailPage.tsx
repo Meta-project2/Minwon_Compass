@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { ArrowLeft, Calendar, Users, Clock, Eye, AlertCircle, MessageSquare, Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -26,55 +27,90 @@ interface IncidentDetailPageProps {
   onViewComplaint: (id: string) => void;
 }
 
-const statusMap = {
-  occurred: { label: '발생', color: 'bg-blue-100 text-blue-800' },
-  responding: { label: '대응중', color: 'bg-yellow-100 text-yellow-800' },
-  resolved: { label: '해결', color: 'bg-green-100 text-green-800' },
-  closed: { label: '종결', color: 'bg-slate-100 text-slate-700' },
+// 백엔드 DTO 타입 정의
+interface IncidentDetailResponse {
+  id: string;
+  title: string;
+  status: string;
+  district: string;
+  firstOccurred: string;
+  lastOccurred: string;
+  complaintCount: number;
+  avgProcessTime: string;
+  complaints: {
+    id: string;
+    originalId: number;
+    title: string;
+    receivedAt: string;
+    urgency: 'HIGH' | 'MEDIUM' | 'LOW';
+    status: string;
+  }[];
+}
+
+const statusMap: Record<string, { label: string; color: string }> = {
+  OPEN: { label: '발생', color: 'bg-blue-100 text-blue-800' },
+  IN_PROGRESS: { label: '대응중', color: 'bg-yellow-100 text-yellow-800' },
+  RESOLVED: { label: '해결', color: 'bg-green-100 text-green-800' },
+  CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-700' },
 };
 
-const complaintStatusMap = {
-  received: { label: '접수', color: 'bg-blue-100 text-blue-800' },
-  processing: { label: '처리중', color: 'bg-yellow-100 text-yellow-800' },
-  completed: { label: '종결', color: 'bg-green-100 text-green-800' },
+const urgencyMap: Record<string, { label: string; color: string }> = {
+  HIGH: { label: '높음', color: 'bg-red-100 text-red-700' },
+  MEDIUM: { label: '보통', color: 'bg-orange-100 text-orange-700' },
+  LOW: { label: '낮음', color: 'bg-slate-100 text-slate-700' },
 };
 
-const mockIncident = {
-  id: 'I-2026-001',
-  title: '역삼동 도로 파손 집중 발생',
-  status: 'responding',
-  category: '도로/교통',
-  district: '역삼동',
-  firstOccurred: '2025-12-28 09:15',
-  lastOccurred: '2026-01-01 14:30',
-  complaintCount: 12,
-  avgProcessTime: '4.5시간',
+const complaintStatusMap: Record<string, { label: string; color: string }> = {
+  RECEIVED: { label: '접수', color: 'bg-blue-100 text-blue-800' },
+  NORMALIZED: { label: '정규화', color: 'bg-purple-100 text-purple-800' },
+  RECOMMENDED: { label: '추천완료', color: 'bg-cyan-100 text-cyan-800' },
+  IN_PROGRESS: { label: '처리중', color: 'bg-yellow-100 text-yellow-800' },
+  CLOSED: { label: '종결', color: 'bg-green-100 text-green-800' },
 };
 
-const mockComplaints = [
-  { id: 'C2026-0001', title: '도로 파손으로 인한 보수 요청', status: 'processing', receivedAt: '2026-01-01 09:23', urgency: 'high' },
-  { id: 'C2026-0005', title: '보도블록 파손 보수', status: 'processing', receivedAt: '2025-12-31 11:05', urgency: 'medium' },
-  { id: 'C2025-9876', title: '도로 균열 신고', status: 'completed', receivedAt: '2025-12-30 15:40', urgency: 'low' },
-  { id: 'C2025-9823', title: '역삼동 도로 상태 불량', status: 'completed', receivedAt: '2025-12-29 10:22', urgency: 'medium' },
-  { id: 'C2025-9801', title: '보도 파손 긴급 조치 요청', status: 'completed', receivedAt: '2025-12-28 14:10', urgency: 'high' },
-];
-
+// 타임라인과 메모는 아직 백엔드 API가 없으므로 목업 데이터 유지
 const mockTimeline = [
-  { date: '2026-01-01 14:30', type: 'complaint', content: '신규 민원 추가 (C2026-0001)' },
+  { date: '2026-01-01 14:30', type: 'complaint', content: '신규 민원 추가' },
   { date: '2026-01-01 10:00', type: 'note', content: '현장 조사 완료, 임시 보수 진행 중', author: '김담당' },
-  { date: '2025-12-31 11:05', type: 'complaint', content: '신규 민원 추가 (C2026-0005)' },
-  { date: '2025-12-30 16:00', type: 'status', content: '상태 변경: 발생 → 대응중' },
-  { date: '2025-12-30 15:40', type: 'complaint', content: '신규 민원 추가 (C2025-9876)' },
   { date: '2025-12-28 09:15', type: 'incident', content: '사건 생성' },
 ];
 
 const mockNotes = [
   { id: 'N1', author: '김담당', date: '2026-01-01 10:00', content: '현장 조사 완료. 역삼동 주요 도로 3곳에서 파손 구간 확인. 임시 보수 작업 진행 중이며, 본 보수는 1월 3일 예정.' },
-  { id: 'N2', author: '이과장', date: '2025-12-30 14:30', content: '기상청 자료 확인 결과 최근 한파로 인한 도로 균열 가능성 높음. 유사 지역 예방 점검 필요.' },
 ];
 
 export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: IncidentDetailPageProps) {
+  const [incidentData, setIncidentData] = useState<IncidentDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState('');
+
+  // API 호출
+  useEffect(() => {
+    const fetchDetail = async () => {
+      try {
+        setLoading(true);
+        // incidentId (예: I-2026-0001) 그대로 전송
+        const response = await axios.get(`/api/agent/incidents/${incidentId}`);
+        setIncidentData(response.data);
+      } catch (error) {
+        console.error("사건 상세 조회 실패:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (incidentId) {
+      fetchDetail();
+    }
+  }, [incidentId]);
+
+  if (loading) {
+    return <div className="h-full flex items-center justify-center">로딩 중...</div>;
+  }
+
+  if (!incidentData) {
+    return <div className="h-full flex items-center justify-center">데이터를 찾을 수 없습니다.</div>;
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -87,16 +123,16 @@ export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: Inci
             </Button>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h1>{mockIncident.title}</h1>
-                <Badge className={statusMap[mockIncident.status as keyof typeof statusMap].color}>
-                  {statusMap[mockIncident.status as keyof typeof statusMap].label}
+                <h1>{incidentData.title}</h1>
+                <Badge className={statusMap[incidentData.status]?.color || 'bg-gray-100'}>
+                  {statusMap[incidentData.status]?.label || incidentData.status}
                 </Badge>
-                <Badge variant="outline">{mockIncident.category}</Badge>
+                {/* 업무군(Category) 배지 제거됨 */}
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <span>{mockIncident.id}</span>
+                <span className="font-mono">{incidentData.id}</span>
                 <span>•</span>
-                <span>{mockIncident.district}</span>
+                <span>{incidentData.district}</span>
               </div>
             </div>
           </div>
@@ -126,7 +162,7 @@ export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: Inci
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">최초 발생</div>
-                  <div className="text-sm">{mockIncident.firstOccurred}</div>
+                  <div className="text-sm">{incidentData.firstOccurred}</div>
                 </div>
               </div>
             </CardContent>
@@ -140,7 +176,7 @@ export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: Inci
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">최근 발생</div>
-                  <div className="text-sm">{mockIncident.lastOccurred}</div>
+                  <div className="text-sm">{incidentData.lastOccurred}</div>
                 </div>
               </div>
             </CardContent>
@@ -154,7 +190,7 @@ export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: Inci
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">구성민원수</div>
-                  <div className="text-sm">{mockIncident.complaintCount}건</div>
+                  <div className="text-sm">{incidentData.complaintCount}건</div>
                 </div>
               </div>
             </CardContent>
@@ -168,7 +204,7 @@ export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: Inci
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">평균 처리시간</div>
-                  <div className="text-sm">{mockIncident.avgProcessTime}</div>
+                  <div className="text-sm">{incidentData.avgProcessTime}</div>
                 </div>
               </div>
             </CardContent>
@@ -203,53 +239,53 @@ export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: Inci
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockComplaints.map((complaint) => (
-                      <TableRow key={complaint.id}>
-                        <TableCell className="text-sm">{complaint.id}</TableCell>
-                        <TableCell>{complaint.title}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {complaint.receivedAt}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              complaint.urgency === 'high'
-                                ? 'bg-red-100 text-red-700'
-                                : complaint.urgency === 'medium'
-                                ? 'bg-orange-100 text-orange-700'
-                                : 'bg-slate-100 text-slate-700'
-                            }
-                          >
-                            {complaint.urgency === 'high' ? '높음' : complaint.urgency === 'medium' ? '보통' : '낮음'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              complaintStatusMap[complaint.status as keyof typeof complaintStatusMap].color
-                            }
-                          >
-                            {complaintStatusMap[complaint.status as keyof typeof complaintStatusMap].label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => onViewComplaint(complaint.id)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            열기
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {incidentData.complaints.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            연결된 민원이 없습니다.
+                          </TableCell>
+                        </TableRow>
+                    ) : (
+                        incidentData.complaints.map((complaint) => (
+                          <TableRow key={complaint.id}>
+                            <TableCell className="text-sm font-mono">{complaint.id}</TableCell>
+                            <TableCell>{complaint.title}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {complaint.receivedAt}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={urgencyMap[complaint.urgency]?.color || 'bg-gray-100'}
+                              >
+                                {urgencyMap[complaint.urgency]?.label || complaint.urgency}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={complaintStatusMap[complaint.status]?.color || 'bg-gray-100'}
+                              >
+                                {complaintStatusMap[complaint.status]?.label || complaint.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => onViewComplaint(String(complaint.originalId))}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                열기
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
               </Card>
             </TabsContent>
 
-            {/* Tab 2: 타임라인 */}
+            {/* Tab 2: 타임라인 (목업 유지) */}
             <TabsContent value="timeline" className="m-0 h-full p-6">
               <Card>
                 <CardContent className="p-6">
@@ -283,9 +319,9 @@ export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: Inci
                         <div className="flex-1 pb-4">
                           <div className="text-sm text-muted-foreground mb-1">{item.date}</div>
                           <div className="text-sm">{item.content}</div>
-                          {item.author && (
-                            <div className="text-xs text-muted-foreground mt-1">작성자: {item.author}</div>
-                          )}
+                          <div className="text-xs text-muted-foreground mt-1">
+                             {item.type === 'incident' ? '시스템 자동 생성' : '작성자: 김담당'}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -294,10 +330,9 @@ export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: Inci
               </Card>
             </TabsContent>
 
-            {/* Tab 3: 메모 */}
+            {/* Tab 3: 메모 (목업 유지) */}
             <TabsContent value="notes" className="m-0 h-full p-6">
               <div className="space-y-4">
-                {/* Add Note */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">메모 추가</CardTitle>
@@ -319,7 +354,6 @@ export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: Inci
                   </CardContent>
                 </Card>
 
-                {/* Existing Notes */}
                 {mockNotes.map((note) => (
                   <Card key={note.id}>
                     <CardContent className="p-4">

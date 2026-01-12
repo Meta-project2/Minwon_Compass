@@ -8,8 +8,8 @@ load_dotenv()
 
 # DB 연결 정보 (환경 변수 또는 .env 활용 권장)
 DB_CONFIG = {
-    "dbname": "complaint_db",
-    "user": "postgres",
+    "dbname": "postgres",
+    "user": "myuser",
     "password": os.getenv("POSTGRES_PASSWORD"),
     "host": "localhost",
     "port": 5432
@@ -154,7 +154,7 @@ def search_cases_by_text(embedding_vector: List[float], limit: int = 3) -> List[
         query = """
         SELECT 
             c.id, c.body, c.answer, cn.neutral_summary, 
-            (cn.embedding <=> %s) as distance
+            (cn.embedding <=> %s::vector) as distance
         FROM complaint_normalizations cn
         JOIN complaints c ON cn.complaint_id = c.id
         WHERE cn.is_current = true
@@ -227,7 +227,7 @@ def search_laws_by_text(embedding_vector: List[float], limit: int = 3, keyword: 
         if keyword:
             # ILIKE: 대소문자 구분 없는 부분 일치 검색 (Hybrid Search)
             query = """
-            SELECT d.title, kc.section, kc.content, (kc.embedding <=> %s) as distance
+            SELECT d.title, kc.section, kc.content, (kc.embedding <=> %s::vector) as distance
             FROM knowledge_chunks kc
             JOIN knowledge_documents d ON kc.document_id = d.id
             WHERE kc.content ILIKE %s 
@@ -238,7 +238,7 @@ def search_laws_by_text(embedding_vector: List[float], limit: int = 3, keyword: 
         else:
             # 순수 벡터 검색
             query = """
-            SELECT d.title, kc.section, kc.content, (kc.embedding <=> %s) as distance
+            SELECT d.title, kc.section, kc.content, (kc.embedding <=> %s::vector) as distance
             FROM knowledge_chunks kc
             JOIN knowledge_documents d ON kc.document_id = d.id
             ORDER BY distance ASC

@@ -16,5 +16,6 @@ public record NormalizationResponse(
         List<String> targetObject,
         List<String> keywords,
         @JsonProperty("preprocess_body")
-        String preprocessBody        // 전처리된 원본
+        String preprocessBody,        // 전처리된 원본
+        double[] embedding
 ) {}

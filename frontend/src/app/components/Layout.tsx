@@ -96,11 +96,11 @@ export function Layout({ children, currentPage, onNavigate, userRole }: LayoutPr
         {/* Top Bar */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6">
           <div className="flex-1 max-w-xl">
-            <Input
+            {/* <Input
               type="search"
               placeholder="민원/사건 검색"
               className="w-full bg-input-background"
-            />
+            /> */}
           </div>
 
           <div className="flex items-center gap-4">

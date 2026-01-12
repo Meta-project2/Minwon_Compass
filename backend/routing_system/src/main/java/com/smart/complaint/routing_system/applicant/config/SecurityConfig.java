@@ -3,7 +3,6 @@ package com.smart.complaint.routing_system.applicant.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -13,6 +12,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import com.smart.complaint.routing_system.applicant.service.jwt.JwtAuthenticationFilter;
 import com.smart.complaint.routing_system.applicant.service.jwt.JwtTokenProvider;
 import com.smart.complaint.routing_system.applicant.service.jwt.OAuth2Service;
@@ -67,6 +70,20 @@ public class SecurityConfig {
         return http.build();
     }
 
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        // ★ 5173 포트로 수정 (referer 헤더와 일치시켜야 함)
+        configuration.addAllowedOrigin("http://localhost:5173"); 
+        configuration.addAllowedMethod("*");
+        configuration.addAllowedHeader("*");
+        configuration.setAllowCredentials(true);
+    
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
     // 시민/공용 (JWT 방식) - 나머지 전부 담당
     @Bean
     @Order(2)
@@ -74,7 +91,8 @@ public class SecurityConfig {
         http
                 .securityMatcher("/api/auth/**", "/api/complaint/**", "/**") // 나머지 API들
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configure(http))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // .cors(cors -> cors.configure(http))
 
                 // 시민은 세션을 안 쓴다 (Stateless) ->  JWT 필터 들어갈 곳
                 .sessionManagement(session -> session
@@ -82,9 +100,9 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll() // 시민 로그인/회원가입 허용
-                        // .anyRequest().authenticated() // 원래는 막아야 하지만, 개발 중이니 일단 열어둠 (필요 시 주석 해제)
-                        .anyRequest().permitAll()
+                        .requestMatchers("/api/auth/validate").authenticated()
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .anyRequest().authenticated()
                 )
 
                 .oauth2Login(oauth2 -> oauth2
@@ -100,9 +118,6 @@ public class SecurityConfig {
                 )
                 //추후 JwtFilter가 오면 여기에
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
-
-        //
-        //
 
         return http.build();
     }

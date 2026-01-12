@@ -1,6 +1,6 @@
 package com.smart.complaint.routing_system.applicant.repository;
 
-import com.smart.complaint.routing_system.applicant.entitiy.User;
+import com.smart.complaint.routing_system.applicant.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 

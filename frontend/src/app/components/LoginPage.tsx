@@ -37,7 +37,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     //     setIsLoading(false);
     //   }
     // }, 1000);
-
     try {
       const res = await springApi.post<LoginResponse>("/api/agent/login", {
         username,

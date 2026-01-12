@@ -1,10 +1,9 @@
 package com.smart.complaint.routing_system.applicant.controller; // ★ 본인 패키지 위치에 맞게 수정하세요!
 
 import com.smart.complaint.routing_system.applicant.dto.AgentLoginRequestDto;
-import com.smart.complaint.routing_system.applicant.entitiy.User;
+import com.smart.complaint.routing_system.applicant.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;

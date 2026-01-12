@@ -3,9 +3,24 @@ from pydantic import BaseModel
 from app.services import llm_service
 from app import database
 from app.services.llm_service import LLMService
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Complaint Analyzer AI")
 llm_service = LLMService()
+
+# (CORS 설정)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],      # 모든 곳에서 접속 허용
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 테스트
+@app.get("/")
+async def root():
+    return {"message": "서버 연결 성공 "}
 
 # Postman으로 보낼 데이터 구조 정의
 class ComplaintRequest(BaseModel):
@@ -27,6 +42,7 @@ async def analyze_and_store(request: ComplaintRequest):
         # 2. 벡터 추출 (Embedding)
         # 전처리된 민원 원본을 바탕으로 1024차원 벡터 생성
         embedding = await llm_service.get_embedding(analysis['preprocess_body'])
+        analysis['embedding'] = embedding
         print(f"[*] 벡터화 완료 (차원: {len(embedding)})")
 
         # 3. DB 저장 (is_current 처리 포함 트랜잭션)

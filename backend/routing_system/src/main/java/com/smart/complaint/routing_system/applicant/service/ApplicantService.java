@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
-import org.springframework.web.client.RestClient;
 
 // 민원인 서비스
 @Service
