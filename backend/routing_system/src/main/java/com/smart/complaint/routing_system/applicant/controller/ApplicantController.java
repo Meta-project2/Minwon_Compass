@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 // 민원인 컨트롤러
 @RestController
@@ -39,13 +40,19 @@ public class ApplicantController {
     @PostMapping("api/applicant/login")
     public ResponseEntity<?> applicantLogin(@RequestBody UserLoginRequest loginRequest) {
 
-        String[] result = applicantService.applicantLogin(loginRequest);
-        if (result != null) {
-            String token = jwtTokenProvider.createJwtToken(result[0], result[1]);
-            return ResponseEntity.ok(token);
-        }
+        // 서비스에서 토큰을 직접 받아옵니다. 실패 시 ExceptionHandler가 처리하므로 코드가 간결해집니다.
+        String token = applicantService.applicantLogin(loginRequest);
 
-        return ResponseEntity.ok("로그인에 실패하였습니다.");
+        // 프론트엔드에서 response.data.accessToken으로 받기로 했으므로 Map으로 감싸서 보냅니다.
+        return ResponseEntity.ok(Map.of("accessToken", token));
+    }
+
+    @PostMapping("api/applicant/check-id")
+    public ResponseEntity<?> checkUserIdAvailability(@RequestBody UserLoginRequest loginRequest) {
+
+        boolean isAvailable = applicantService.isUserIdAvailable(loginRequest.userId());
+
+        return ResponseEntity.ok(isAvailable);
     }
 
     // 토큰 유효성 검사 엔드포인트

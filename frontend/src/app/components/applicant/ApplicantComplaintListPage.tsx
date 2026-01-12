@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-export function ApplicantComplaintListPage() {
-    const [complaints, setComplaints] = useState([]); // 데이터를 저장할 상태
+export default function ApplicantComplaintListPage() {
+  const [complaints, setComplaints] = useState([]); // 데이터를 저장할 상태
 
   useEffect(() => {
     // 페이지가 열리자마자 실행됨

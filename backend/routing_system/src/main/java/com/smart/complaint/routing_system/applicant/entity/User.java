@@ -24,6 +24,9 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(name = "email", unique = true)
+    private String email;
+
     @Column(nullable = false)
     private String displayName;
 
@@ -37,6 +40,15 @@ public class User {
         this.username = username;
         this.password = password;
         this.displayName = displayName;
+        this.role = role;
+    }
+
+    // TODO: Builder 권유
+    public User(String username, String password, String displayName, String email, UserRole role) {
+        this.username = username;
+        this.password = password;
+        this.displayName = displayName;
+        this.email = email;
         this.role = role;
     }
 }

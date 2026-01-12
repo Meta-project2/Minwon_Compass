@@ -43,7 +43,7 @@ const ApplicationLoginPage = () => {
         validateToken();
     }, [navigate]);
 
-    // 로딩 중일 때는 빈 화면이나 스피너만 보여줍니다.
+    // 로딩 중일 때는 빈 화면이나 스피너만
     if (isLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -63,7 +63,7 @@ const ApplicationLoginPage = () => {
         }
     };
 
-    // 비밀번호 검증 (8자 이상, 영문/숫자/특수문자 포함)
+    // 비밀번호 검증 (8자 이상, 영문/숫자/특수문자 포함) - input이 있을때마다 검증
     const validatePw = (pw: string) => {
         const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
         if (!pw) {
@@ -77,38 +77,79 @@ const ApplicationLoginPage = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // 최종 제출 전 한 번 더 검증
-        if (!userId || !password) {
-            Swal.fire({
-                icon: 'warning',
-                title: '입력 오류',
-                text: '아이디와 비밀번호를 모두 입력해주세요.',
-                confirmButtonColor: '#007bff'
-            });
+
+        // 1. 즉시 검증용 정규식 (state를 기다리지 않음)
+        const idRegex = /^[a-z0-9]{5,15}$/;
+        const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+
+        if (!userId) {
+            Swal.fire({ icon: 'warning', title: '입력 누락', text: '아이디를 입력해주세요.' });
+            return;
+        }
+        if (!idRegex.test(userId)) {
+            Swal.fire({ icon: 'warning', title: '형식 오류', text: '아이디는 5~15자의 영문 소문자와 숫자만 가능합니다.' });
             return;
         }
 
-        validateId(userId);
-        validatePw(password);
+        // --- 비밀번호 검증 ---
+        if (!password) {
+            Swal.fire({ icon: 'warning', title: '입력 누락', text: '비밀번호를 입력해주세요.' });
+            return;
+        }
+        if (!pwRegex.test(password)) {
+            Swal.fire({ icon: 'warning', title: '형식 오류', text: '비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다.' });
+            return;
+        }
 
-        if (!idError && !pwError && userId && password) {
-            // 백엔드 API 호출 로직 (axios 등)
-            await axios.post('http://localhost:8080/api/applicant/login', {
-                username: userId,
+        Swal.fire({
+            title: '로그인 중...',
+            text: '잠시만 기다려 주세요.',
+            allowOutsideClick: false, // 로딩 중 바깥 클릭으로 끄기 방지
+            didOpen: () => {
+                Swal.showLoading(); // 기본 로딩 스피너 표시
+            }
+        });
+
+        // 3. 모든 검증 통과 시에만 API 호출
+        try {
+            const response = await axios.post('http://localhost:8080/api/applicant/login', {
+                userId: userId,
                 password: password
-            }).then(response => {
-                const token = response.data.accessToken;
-                localStorage.setItem('accessToken', token);
-                navigate('/applicant/main');
-            }).catch(error => {
-                console.error("로그인 실패:", error);
-                Swal.fire({
-                    icon: 'error',
-                    title: '로그인 실패',
-                    text: '아이디 또는 비밀번호를 확인해주세요.',
-                    confirmButtonColor: '#007bff'
-                });
-            })
+            });
+
+            Swal.close();
+            // 성공 로직...
+            localStorage.setItem('accessToken', response.data.accessToken);
+            navigate('/applicant/main');
+
+        } catch (error) {
+
+            Swal.close();
+
+            // 보안상 이유로 상세 에러가 무엇이든 사용자에게는 동일한 메시지를 보여줍니다.
+            let displayMessage = '아이디 또는 비밀번호를 확인해주세요.';
+
+            if (axios.isAxiosError(error)) {
+                // 온다면 지정 아닐 경우 500으로
+                const serverStatus = error.response?.status || 500;
+
+
+                // 401(미인증)이나 404(찾을 수 없음) 모두 같은 메시지로 처리
+                if (serverStatus === 401 || serverStatus === 404) {
+                    displayMessage = '아이디 또는 비밀번호가 일치하지 않습니다.';
+                } else if (serverStatus === 403) {
+                    displayMessage = '접근 권한이 없거나 계정이 정지되었습니다.';
+                } else if (serverStatus >= 500) {
+                    displayMessage = '서버 통신에 문제가 발생했습니다.';
+                }
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: '로그인 실패',
+                text: displayMessage,
+                confirmButtonColor: '#007bff'
+            });
         }
     };
 

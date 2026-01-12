@@ -15,7 +15,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import ApplicantLoginPage from './components/applicant/ApplicantLoginPage';
 import ApplicantMainPage from './components/applicant/ApplicantMainPage';
 import LoginSuccess from './components/applicant/LoginSuccess';
-import { ApplicantComplaintListPage } from './components/applicant/ApplicantComplaintListPage';
+import ApplicantComplaintListPage from './components/applicant/ApplicantComplaintListPage';
 import ApplicantLogout from './components/applicant/ApplicantLogout';
 import ApplicantComplaintCreatePage from './components/applicant/ApplicantComplaintCreatePage';
 import ApplicantSignUpPage from './components/applicant/ApplicantSignUpPage';

@@ -25,7 +25,7 @@ import com.smart.complaint.routing_system.applicant.service.jwt.OAuth2SuccessHan
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
-@Profile("dev")
+@Profile("!dev")
 public class SecurityConfig {
 
         // *******CORS를 켜고, CorsConfigurationSource 필요******
@@ -98,8 +98,12 @@ public class SecurityConfig {
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                                 .authorizeHttpRequests(auth -> auth
-                                                // 로그인 관련 AP는 모두 허용
+                                                // 1. 로그인 관련 허용
                                                 .requestMatchers("/api/auth/**", "/oauth2/**", "/login/oauth2/**")
+                                                .permitAll()
+                                                // 2. 회원가입 및 중복 확인 API 허용 TODO: id 찾기, pw 찾기 등도 여기에 추가
+                                                .requestMatchers("/api/applicant/signup", "/api/applicant/check-id",
+                                                                "/api/applicant/login")
                                                 .permitAll()
                                                 // 민원인 전용 API는 권한 필요
                                                 .requestMatchers("/api/applicant/**").authenticated()

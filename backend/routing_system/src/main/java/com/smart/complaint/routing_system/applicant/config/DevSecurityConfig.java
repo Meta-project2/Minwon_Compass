@@ -18,7 +18,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@Profile("!dev") // application.yml의 active profile이 dev일 때만 작동
+@Profile("dev") // application.yml의 active profile이 dev일 때만 작동
 public class DevSecurityConfig {
 
     // 비밀번호 암호화 도구
