@@ -8,15 +8,28 @@ services:
     restart: always
     # .env 파일이 없으면 기본값(postgres/your_password)이 사용됩니다.
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "0000"
-      POSTGRES_DB: complaint_db
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-0000}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
     ports:
       - "5432:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     networks:
       - complaint-network
+  langflow:
+    image: langflowai/langflow:latest
+    ports:
+      - "7860:7860"
+    volumes:
+      # 로컬의 ./langflow_data 폴더를 컨테이너 내부의 저장소와 연결합니다.
+      - ./langflow_data:/app/langflow
+    environment:
+      - LANGFLOW_DATABASE_URL=sqlite:////app/langflow/langflow.db
+    depends_on:
+      - db
+    networks:
+    - complaint-network
 
 networks:
   complaint-network:
