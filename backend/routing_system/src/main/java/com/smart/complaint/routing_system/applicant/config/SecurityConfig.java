@@ -3,6 +3,7 @@ package com.smart.complaint.routing_system.applicant.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -40,7 +41,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Swagger 등 정적 리소스는 보안 필터 아예 거치지 않게 무시
+    // Swagger 등 정적 리소스는 s보안 필터 아예 거치지 않게 무시
     // 개발 완료후 application.yaml Swagger off
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
@@ -74,11 +75,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // ★ 5173 포트로 수정 (referer 헤더와 일치시켜야 함)
-        configuration.addAllowedOrigin("http://localhost:5173"); 
+        configuration.addAllowedOrigin("http://localhost:5173");
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
-    
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
