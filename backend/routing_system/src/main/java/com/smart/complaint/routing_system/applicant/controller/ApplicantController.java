@@ -6,7 +6,6 @@ import com.smart.complaint.routing_system.applicant.dto.UserLoginRequest;
 import com.smart.complaint.routing_system.applicant.dto.NormalizationResponse;
 import com.smart.complaint.routing_system.applicant.service.AiService;
 import com.smart.complaint.routing_system.applicant.service.ApplicantService;
-import com.smart.complaint.routing_system.applicant.service.EmailService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,7 +27,6 @@ public class ApplicantController {
 
     private final AiService aiService;
     private final ApplicantService applicantService;
-    private final EmailService emailService;
 
     // 회원가입 엔드포인트
     @PostMapping("api/applicant/signup")
