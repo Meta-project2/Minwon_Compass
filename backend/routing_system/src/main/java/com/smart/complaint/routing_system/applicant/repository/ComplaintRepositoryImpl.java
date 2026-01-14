@@ -6,7 +6,6 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberTemplate;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
 import com.smart.complaint.routing_system.applicant.domain.UrgencyLevel;
@@ -21,10 +20,17 @@ import com.smart.complaint.routing_system.applicant.dto.ComplaintResponse;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchCondition;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchResult;
 import com.smart.complaint.routing_system.applicant.entity.QComplaint;
+import com.smart.complaint.routing_system.applicant.entity.Incident;
+import com.smart.complaint.routing_system.applicant.entity.QComplaint;
+import com.smart.complaint.routing_system.applicant.entity.QComplaintNormalization;
+import com.smart.complaint.routing_system.applicant.entity.QIncident;
+import com.smart.complaint.routing_system.applicant.entity.QDepartment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 import java.util.stream.Collectors;
+
 import static com.smart.complaint.routing_system.applicant.entity.QComplaint.complaint;
 import com.smart.complaint.routing_system.applicant.entity.QComplaintNormalization;
 import com.smart.complaint.routing_system.applicant.entity.*;
@@ -41,23 +47,18 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
 
     @Override
     public List<ComplaintResponse> search(Long departmentId, ComplaintSearchCondition condition) {
-
-        // Tuple로 조회 (민원 + 요약문)
         List<Tuple> results = queryFactory
                 .select(complaint, normalization.neutralSummary, user.displayName)
                 .from(complaint)
-                // 요약 정보를 가져오기 위해 조인 (없을 수도 있으니 Left Join)
                 .leftJoin(normalization).on(normalization.complaint.eq(complaint))
                 .leftJoin(user).on(complaint.answeredBy.eq(user.id))
                 .where(
-                        complaint.currentDepartmentId.eq(departmentId),
                         keywordContains(condition.getKeyword()),
                         statusEq(condition.getStatus()),
                         hasIncident(condition.getHasIncident()))
                 .orderBy(getOrderSpecifier(condition.getSort())) // 정렬 적용
                 .fetch();
 
-        // Tuple -> DTO 매핑
         return results.stream()
                 .map(tuple -> {
                     Complaint c = tuple.get(complaint);
@@ -69,14 +70,13 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                     dto.setManagerName(managerName);
                     return dto;
                 })
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<ComplaintSearchResult> findSimilarComplaint(double[] queryEmbedding, int limit) {
         String vectorString = java.util.Arrays.toString(queryEmbedding);
-
-        // PGVector 코사인 거리 계산 (1 - Cosine Distance)
         NumberTemplate<Double> similarity = Expressions.numberTemplate(Double.class,
                 "1 - ({0} <-> cast({1} as vector))",
                 normalization.embedding,
@@ -160,7 +160,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
         return StringUtils.hasText(keyword) ? QComplaint.complaint.title.contains(keyword) : null;
     }
 
-    // --- 정렬 메서드 (Sort) ---
     private OrderSpecifier<?> getOrderSpecifier(String sort) {
         if ("status".equals(sort)) {
             return complaint.status.asc();

@@ -1,3 +1,6 @@
+jwt:
+  secret: "thisIsMyLocalTemporarySecretKeyForTest1234567890MakeItLongEnough"
+
 spring:
   profiles:
     active:
@@ -8,9 +11,9 @@ spring:
       enabled: false
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres?stringtype=unspecified
+    url: jdbc:postgresql://localhost:5432/complaint_db
     username: ${POSTGRES_USERNAME:postgres}
-    password: ${POSTGRES_PASSWORD:secret}
+    password: ${POSTGRES_PASSWORD:0000}
     driver-class-name: org.postgresql.Driver
 
     # JPA 설정 (SQL 로그 )

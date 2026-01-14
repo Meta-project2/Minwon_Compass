@@ -44,6 +44,8 @@ public class QComplaintNormalization extends EntityPathBase<ComplaintNormalizati
 
     public final StringPath neutralSummary = createString("neutralSummary");
 
+    public final StringPath respDept = createString("respDept");
+
     public final StringPath targetObject = createString("targetObject");
 
     public final StringPath urgencySignal = createString("urgencySignal");

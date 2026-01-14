@@ -2,22 +2,16 @@ import { springApi } from "../lib/springApi";
 
 export type ComplaintStatus = 'RECEIVED' | 'NORMALIZED' | 'RECOMMENDED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'CANCELED';
 export type UrgencyLevel = 'LOW' | 'MEDIUM' | 'HIGH';
-export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 
-// 목록 조회용 DTO
 export interface ComplaintDto {
   id: number;
   title: string;
   body: string;
-  addressText?: string;
   status: ComplaintStatus;
   urgency: UrgencyLevel;
   receivedAt: string;
-  createdAt: string;
-  updatedAt?: string;
-  districtId?: number;
-  incidentId?: string | null;
-  category?: string;
+  neutralSummary?: string; 
+  addressText?: string;
   tags?: string[];
   neutralSummary?: string;
   managerName?: string;
@@ -40,7 +34,7 @@ export interface ComplaintHistoryDto {
   coreRequest?: string;
   coreCause?: string;
   targetObject?: string;
-  keywords?: string[];
+  keywords: string[];
   locationHint?: string;
 }
 
@@ -64,7 +58,7 @@ export interface ComplaintDetailDto {
   // 사건 정보
   incidentId?: string;       
   incidentTitle?: string;
-  incidentStatus?: IncidentStatus;
+  incidentStatus?: string;
   incidentComplaintCount?: number;
 
   // 기존 최상위 필드 호환성 (필요시 사용, 현재는 history에서 가져옴)

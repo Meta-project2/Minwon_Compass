@@ -1,10 +1,6 @@
 package com.smart.complaint.routing_system.applicant.dto;
 
-import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
-import com.smart.complaint.routing_system.applicant.domain.IncidentStatus;
-import com.smart.complaint.routing_system.applicant.domain.UrgencyLevel;
 import com.smart.complaint.routing_system.applicant.entity.Complaint;
-import com.smart.complaint.routing_system.applicant.entity.ComplaintNormalization;
 import com.smart.complaint.routing_system.applicant.entity.Incident;
 import com.smart.complaint.routing_system.applicant.entity.ChildComplaint;
 import lombok.Data;
@@ -13,11 +9,16 @@ import lombok.NoArgsConstructor;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 import java.util.Comparator;
 
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class ComplaintDetailResponse {
     // 1. 민원 기본 정보 (공통)
     private String id;           // C2026-xxxx

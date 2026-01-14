@@ -24,7 +24,7 @@ public class QComplaint extends EntityPathBase<Complaint> {
 
     public final StringPath addressText = createString("addressText");
 
-    public final NumberPath<Long> ai_predicted_department_id = createNumber("ai_predicted_department_id", Long.class);
+    public final NumberPath<Long> aiPredictedDepartmentId = createNumber("aiPredictedDepartmentId", Long.class);
 
     public final StringPath answer = createString("answer");
 

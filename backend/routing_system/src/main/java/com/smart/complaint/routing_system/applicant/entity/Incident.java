@@ -3,7 +3,7 @@ package com.smart.complaint.routing_system.applicant.entity;
 import com.smart.complaint.routing_system.applicant.domain.IncidentStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,6 +23,9 @@ public class Incident {
     @Column(length = 200)
     private String title;
 
+    @Column(name = "complaint_count")
+    private Integer complaintCount;
+
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "incident_status")
     @Builder.Default
@@ -37,7 +40,6 @@ public class Incident {
     @Column(name = "centroid_lon", precision = 10, scale = 7)
     private BigDecimal centroidLon;
 
-    @CreationTimestamp
     @Column(name = "opened_at")
     private LocalDateTime openedAt;
 
