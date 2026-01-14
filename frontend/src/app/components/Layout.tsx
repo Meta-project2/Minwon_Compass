@@ -25,14 +25,20 @@ export function Layout({ children, currentPage, onNavigate, userRole }: LayoutPr
   const agentMenuItems = [
     { id: 'complaints', label: '민원함', icon: FileText },
     { id: 'incidents', label: '사건(군집)', icon: Layers },
+    { id: 'dashboard', label: '민원 처리 통계', icon: Layers },
+    { id: 'reroute-requests', label: '재이관 요청함', icon: FileText },
+    // { id: 'knowledge-base', label: '지식베이스', icon: FileText },
+    // { id: 'user-management', label: '사용자/부서 관리', icon: User },
     // { id: 'settings', label: '설정', icon: Settings },
   ];
 
   const adminMenuItems = [
-    { id: 'dashboard', label: '운영 대시보드', icon: Layers },
+    { id: 'complaints', label: '민원함', icon: FileText },
+        { id: 'incidents', label: '사건(군집)', icon: Layers },
+    { id: 'dashboard', label: '민원 처리 통계', icon: Layers },
     { id: 'reroute-requests', label: '재이관 요청함', icon: FileText },
-    { id: 'knowledge-base', label: '지식베이스', icon: FileText },
     { id: 'user-management', label: '사용자/부서 관리', icon: User },
+    // { id: 'knowledge-base', label: '지식베이스', icon: FileText },
     // { id: 'settings', label: '설정', icon: Settings },
   ];
 

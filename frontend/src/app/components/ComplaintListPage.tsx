@@ -172,7 +172,7 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
               </SelectContent>
             </Select>
 
-            <Select value={selectedUrgency} onValueChange={setSelectedUrgency}>
+            {/* <Select value={selectedUrgency} onValueChange={setSelectedUrgency}>
               <SelectTrigger className="w-32 bg-input-background">
                 <SelectValue placeholder="긴급도" />
               </SelectTrigger>
@@ -182,7 +182,7 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                 <SelectItem value="MEDIUM">보통</SelectItem>
                 <SelectItem value="LOW">낮음</SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
 
             <div className="flex items-center space-x-2 px-3 py-2 border rounded bg-input-background">
               <Checkbox
@@ -219,14 +219,14 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[160px]">접수일시</TableHead>
-                  <TableHead>제목</TableHead> 
-                  <TableHead className="w-[100px]">긴급도</TableHead>
-                  <TableHead className="w-[100px]">상태</TableHead>
-                  <TableHead className="w-[120px]">사건</TableHead>
-                  <TableHead>특이태그</TableHead>
-                  <TableHead>담당자</TableHead>
-                  <TableHead className="text-right">관리</TableHead>
+                  <TableHead className="w-[160px] text-center">접수일시</TableHead>
+                  <TableHead className="text-center">제목</TableHead>
+                  {/* <TableHead className="w-[100px] text-center">긴급도</TableHead> */}
+                  <TableHead className="w-[100px] text-center">상태</TableHead>
+                  <TableHead className="w-[120px] text-center">사건</TableHead>
+                  <TableHead className="text-center">특이태그</TableHead>
+                  <TableHead className="text-center">담당자</TableHead>
+                  <TableHead className="text-center">관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -243,51 +243,56 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                       className={`cursor-pointer ${selectedComplaintId === c.id ? 'bg-accent' : ''}`}
                       onClick={() => setSelectedComplaintId(c.id)}
                     >
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-sm text-muted-foreground text-center">
                         {c.receivedAt || '-'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <div className="flex flex-col">
+                          <span className="text-xs text-muted-foreground">{c.id}</span>
                           <span className="font-medium">{c.title}</span>
-                          <span className="text-xs text-muted-foreground">#{c.id}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      {/* <TableCell>
                         <Badge className={urgencyMap[c.urgency]?.color || 'bg-gray-100'}>
                           {urgencyMap[c.urgency]?.label || c.urgency}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={statusMap[c.status]?.color || 'bg-gray-100'}>
-                          {statusMap[c.status]?.label || c.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {c.incidentId ? (
-                          <Badge variant="secondary" className="font-mono text-xs">
-                            {c.incidentId}
+                      </TableCell> */}
+                      <TableCell className="text-center">
+                        <div className="flex justify-center">
+                          <Badge className={statusMap[c.status]?.color || 'bg-gray-100'}>
+                            {statusMap[c.status]?.label || c.status}
                           </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">-</span>
-                        )}
+                        </div>
                       </TableCell>
-                      <TableCell>
-                         <div className="flex gap-1 flex-wrap">
-                           {c.tags && c.tags.length > 0 ? (
-                             c.tags.map((tag) => (
-                               <Badge key={tag} variant="outline" className={tagMap[tag] || 'bg-gray-100'}>
-                                 {tag}
-                               </Badge>
-                             ))
-                           ) : (
-                             <span className="text-xs text-muted-foreground">-</span>
-                           )}
-                         </div>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center">
+                          {c.incidentId ? (
+                            <Badge variant="secondary" className="font-mono text-xs">
+                              {c.incidentId}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          )}
+                        </div>
                       </TableCell>
 
-                       <TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex justify-center gap-1 flex-wrap">
+                          {c.tags && c.tags.length > 0 ? (
+                            c.tags.map((tag) => (
+                              <Badge key={tag} variant="outline" className={tagMap[tag] || 'bg-gray-100'}>
+                                {tag}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="text-center">
                         {c.managerName ? (
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center justify-center gap-1.5">
                             <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center border">
                               <User className="h-3 w-3 text-slate-500" />
                             </div>
@@ -297,9 +302,10 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                           <span className="text-xs text-slate-400">미지정</span>
                         )}
                       </TableCell>
+
                       
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-2">
                           {/* 담당자가 없을 때만 '담당하기' 버튼 표시 */}
                           {!c.managerName && (
                             <Button 
@@ -348,7 +354,7 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
           <div className="p-4 space-y-4">
             <div>
               <div className="text-xs text-muted-foreground mb-1">민원 ID</div>
-              <div className="text-sm">#{selectedComplaintData.id}</div>
+              <div className="text-sm">{selectedComplaintData.id}</div>
             </div>
 
             <div>
@@ -374,12 +380,12 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                 <div className="text-xs text-muted-foreground mb-1">위치</div>
                 <div className="text-sm">{selectedComplaintData.addressText || '-'}</div>
               </div>
-              <div>
+              {/* <div>
                 <div className="text-xs text-muted-foreground mb-1">긴급도</div>
                 <Badge className={urgencyMap[selectedComplaintData.urgency]?.color}>
                   {urgencyMap[selectedComplaintData.urgency]?.label}
                 </Badge>
-              </div>
+              </div> */}
             </div>
 
             <div>

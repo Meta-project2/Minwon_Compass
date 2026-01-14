@@ -82,7 +82,7 @@ export function AdminDashboard() {
   return (
     <div className="h-full flex flex-col">
       <div className="border-b border-border bg-card px-6 py-4">
-        <h1>운영 대시보드</h1>
+        <h1>민원 처리 현황</h1>
         <p className="text-sm text-muted-foreground">사전 집계된 지표</p>
       </div>
 
@@ -101,7 +101,7 @@ export function AdminDashboard() {
             </SelectContent>
           </Select>
 
-          <Select defaultValue="all">
+          {/* <Select defaultValue="all">
             <SelectTrigger className="w-32 bg-input-background">
               <SelectValue placeholder="업무군" />
             </SelectTrigger>
@@ -111,9 +111,9 @@ export function AdminDashboard() {
               <SelectItem value="env">환경/시설</SelectItem>
               <SelectItem value="admin">행정/민원</SelectItem>
             </SelectContent>
-          </Select>
+          </Select> */}
 
-          <Select defaultValue="all">
+          {/* <Select defaultValue="all">
             <SelectTrigger className="w-32 bg-input-background">
               <SelectValue placeholder="부서" />
             </SelectTrigger>
@@ -133,7 +133,7 @@ export function AdminDashboard() {
               <SelectItem value="yeoksam">역삼동</SelectItem>
               <SelectItem value="samsung">삼성동</SelectItem>
             </SelectContent>
-          </Select>
+          </Select> */}
 
           <Button variant="ghost" size="sm" className="ml-auto">
             <X className="h-4 w-4 mr-1" />
@@ -149,22 +149,19 @@ export function AdminDashboard() {
           <Card className="col-span-2">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">민원 유입 추이</CardTitle>
+                <CardTitle className="text-base">민원 접수 추이</CardTitle>
                 <div className="flex gap-2">
-                  <Button
-                    variant={trendView === 'daily' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTrendView('daily')}
-                  >
-                    일별
-                  </Button>
-                  <Button
-                    variant={trendView === 'weekly' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTrendView('weekly')}
-                  >
-                    주별
-                  </Button>
+                  <Select defaultValue="all">
+                    <SelectTrigger className="w-32 bg-input-background">
+                      <SelectValue placeholder="부서" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">전체 부서</SelectItem>
+                      <SelectItem value="road">도로관리과</SelectItem>
+                      <SelectItem value="env">환경관리과</SelectItem>
+                      {/* 실제 부서 데이터 가져오게 */}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardHeader>
@@ -181,10 +178,64 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
 
+
+                    {/* Widget 4: 처리시간 분포 */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">처리 소요시간 분포</CardTitle>
+                <div className="flex gap-2">
+                  <Select defaultValue="all">
+                    <SelectTrigger className="w-32 bg-input-background">
+                      <SelectValue placeholder="부서" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">전체 부서</SelectItem>
+                      <SelectItem value="road">도로관리과</SelectItem>
+                      <SelectItem value="env">환경관리과</SelectItem>
+                      {/* 실제 부서 데이터 가져오게 */}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={processingTimeData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis type="number" tick={{ fontSize: 12 }} />
+                  <YAxis dataKey="range" type="category" tick={{ fontSize: 11 }} width={80} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#10b981" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Widget 3: 부서 유입·미처리 랭킹 */}
+          <Card className="col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">부서별 접수·처리 현황</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={departmentRanking}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="dept" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="received" fill="#3b82f6" name="접수" />
+                  <Bar dataKey="pending" fill="#ef4444" name="미처리" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
           {/* Widget 2: 업무군 분포 */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">업무군 분포</CardTitle>
+              <CardTitle className="text-base">민원 유형 분포</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
@@ -209,48 +260,10 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Widget 3: 부서 유입·미처리 랭킹 */}
-          <Card className="col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base">부서 유입·미처리 랭킹</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={departmentRanking}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="dept" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="received" fill="#3b82f6" name="접수" />
-                  <Bar dataKey="pending" fill="#ef4444" name="미처리" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Widget 4: 처리시간 분포 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">처리시간 분포</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={processingTimeData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} />
-                  <YAxis dataKey="range" type="category" tick={{ fontSize: 11 }} width={80} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#10b981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
           {/* Widget 5: 라우팅 품질 */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">라우팅 품질</CardTitle>
+              <CardTitle className="text-base">민원 자동 배정 품질</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-3 border rounded">
@@ -297,7 +310,7 @@ export function AdminDashboard() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">지도 핫스팟</CardTitle>
+                <CardTitle className="text-base">민원 집중 지역</CardTitle>
                 <div className="flex gap-2">
                   <Select value={mapView} onValueChange={(v: any) => setMapView(v)}>
                     <SelectTrigger className="w-24 h-8 text-xs">
