@@ -13,7 +13,6 @@ export interface ComplaintDto {
   neutralSummary?: string; 
   addressText?: string;
   tags?: string[];
-  neutralSummary?: string;
   managerName?: string;
 }
 

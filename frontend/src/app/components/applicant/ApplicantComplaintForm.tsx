@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { cn } from './ui/utils';
+import KakaoMap from './KakaoMap';
 
 interface NewComplaintFormProps {
   onGoHome: () => void;
@@ -127,7 +128,7 @@ export function ApplicantComplaintForm({ onGoHome, onViewComplaints, onPreview, 
                   <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                   <p className="text-gray-500 text-sm">지도 API 연동 영역</p>
                   <p className="text-gray-400 text-xs mt-1">
-                    (Kakao Map 또는 Naver Map API 연동 예정)
+                    <KakaoMap address={location} />
                   </p>
                 </div>
               </div>

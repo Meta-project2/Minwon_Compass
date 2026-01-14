@@ -21,7 +21,7 @@ public class ChildComplaint {
 
     // 부모 민원 연결
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_complaint")
+    @JoinColumn(name = "parent_complaint_id")
     private Complaint parentComplaint;
 
     @Column(length = 200, nullable = false)

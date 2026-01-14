@@ -12,7 +12,7 @@ interface SignupPageProps {
   onSignupSuccess?: () => void;
 }
 
-export default function ApplicantSignUpPage({ onGoBack, onSignupSuccess }: SignupPageProps) {
+export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps) {
 
   const navigate = useNavigate();
 
@@ -56,7 +56,7 @@ export default function ApplicantSignUpPage({ onGoBack, onSignupSuccess }: Signu
 
     // 아이디 중복 확인 API 호출
     try {
-      const response = await axios.post(`http://localhost:8080/api/applicant/check-id`, { userId: userId });
+      await axios.post(`http://localhost:8080/api/applicant/check-id`, { checkString: userId, type: "id" });
       setIsIdAvailable(true);
       Swal.fire({ icon: 'success', text: '사용 가능한 아이디입니다.' });
     } catch (error) {
@@ -105,6 +105,17 @@ export default function ApplicantSignUpPage({ onGoBack, onSignupSuccess }: Signu
       return;
     }
 
+    try {
+      const response = await axios.post(`http://localhost:8080/api/applicant/check-id`, {
+        checkString: email,
+        type: "email"
+      });
+
+    } catch (error) {
+      Swal.fire({ icon: 'warning', title: '형식 오류', text: '중복된 이메일 주소입니다!' });
+      return; // 여기서 함수 중단 (아무것도 반환하지 않거나 특정 값 반환)
+    }
+
     Swal.fire({
       title: '회원가입 처리 중...',
       didOpen: () => { Swal.showLoading(); }
@@ -146,7 +157,7 @@ export default function ApplicantSignUpPage({ onGoBack, onSignupSuccess }: Signu
   };
 
   const handleCancel = () => {
-      navigate("/applicant/login"); 
+    navigate("/applicant/login");
   };
 
   return (

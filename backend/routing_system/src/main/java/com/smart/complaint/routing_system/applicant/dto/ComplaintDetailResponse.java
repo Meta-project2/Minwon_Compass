@@ -1,6 +1,9 @@
 package com.smart.complaint.routing_system.applicant.dto;
 
+import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
+import com.smart.complaint.routing_system.applicant.domain.IncidentStatus;
 import com.smart.complaint.routing_system.applicant.entity.Complaint;
+import com.smart.complaint.routing_system.applicant.entity.ComplaintNormalization;
 import com.smart.complaint.routing_system.applicant.entity.Incident;
 import com.smart.complaint.routing_system.applicant.entity.ChildComplaint;
 import lombok.Data;
@@ -31,7 +34,6 @@ public class ComplaintDetailResponse {
     private String address;
     private String receivedAt;
     private ComplaintStatus status; // 대표 상태 (부모 기준)
-    private UrgencyLevel urgency;
     private String departmentName; // 담당 부서명 (없으면 미배정)
     private String category;       // 업무군
 
@@ -72,7 +74,6 @@ public class ComplaintDetailResponse {
         }
 
         // [핵심] History 리스트 구성
-
         // 1) 부모 민원 추가 (정규화 정보 포함)
         ComplaintHistoryDto parentDto = new ComplaintHistoryDto();
         parentDto.setId("P-" + c.getId()); // 고유 키
@@ -92,11 +93,38 @@ public class ComplaintDetailResponse {
             parentDto.setCoreCause(n.getCoreCause());
             parentDto.setTargetObject(n.getTargetObject());
             parentDto.setLocationHint(n.getLocationHint());
-            if (n.getKeywordsJsonb() instanceof List) {
-                parentDto.setKeywords((List<String>) n.getKeywordsJsonb());
-            } else {
-                parentDto.setKeywords(Collections.emptyList());
+
+            List<String> parsedKeywords = new ArrayList<>();
+            Object rawKeywords = n.getKeywordsJsonb();
+
+            if (rawKeywords != null) {
+                // Case 1: List 타입으로 들어온 경우 (JSON Array)
+                if (rawKeywords instanceof List<?>) {
+                    for (Object item : (List<?>) rawKeywords) {
+                        if (item != null) {
+                            String s = String.valueOf(item);
+                            // 대괄호[], 따옴표'", 공백 제거 -> 순수 단어만 추출
+                            s = s.replaceAll("[\\[\\]'\"]", "").trim();
+                            if (!s.isEmpty()) {
+                                parsedKeywords.add(s);
+                            }
+                        }
+                    }
+                }
+                // Case 2: String 타입으로 들어온 경우 (JSON String)
+                else if (rawKeywords instanceof String) {
+                    String s = (String) rawKeywords;
+                    // 통째로 문자열인 경우 분해
+                    String[] parts = s.replaceAll("[\\[\\]'\"]", " ").split(",");
+                    for (String part : parts) {
+                        String clean = part.trim();
+                        if (!clean.isEmpty()) {
+                            parsedKeywords.add(clean);
+                        }
+                    }
+                }
             }
+            parentDto.setKeywords(parsedKeywords);
         }
         this.history.add(parentDto);
 

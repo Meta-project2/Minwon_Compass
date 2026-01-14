@@ -296,17 +296,16 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                                 </CardHeader>
                                 <CardContent className="pt-4">
                                     {isParent ? (
-                                        // [수정] 최초 민원(Parent): 좌우 분할 뷰 + 정규화 결과 복구
                                         <div className="grid grid-cols-2 gap-6">
                                             <div>
                                                 <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center"><FileText className="w-3 h-3 mr-1"/> 원문</div>
                                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{h.body}</p>
-                                                <div className="mt-4 space-y-2">
+                                                {/* <div className="mt-4 space-y-2">
                                                     <div className="flex items-center gap-2 p-2 border rounded text-xs bg-white">
                                                         <FileText className="h-3 w-3 text-muted-foreground" />
                                                         <span className="flex-1">현장사진_01.jpg</span>
                                                     </div>
-                                                </div>
+                                                </div> */}
                                             </div>
                                             <div className="border-l pl-6">
                                                 <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center"><Sparkles className="w-3 h-3 mr-1"/> AI 정규화 분석</div>
@@ -314,14 +313,27 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                                                     <div className="text-sm text-muted-foreground">분석 데이터 없음</div>
                                                 ) : (
                                                     <div className="space-y-3 text-sm">
-                                                        <div className="p-3 bg-slate-100 rounded text-slate-700">{h.neutralSummary}</div>
+                                                        <div className="p-3 bg-slate-100 rounded text-slate-700">{h.coreRequest}</div>
                                                         <div className="grid grid-cols-2 gap-2 text-xs">
-                                                            <div><span className="text-muted-foreground">핵심요구:</span> {h.coreRequest}</div>
-                                                            <div><span className="text-muted-foreground">원인:</span> {h.coreCause}</div>
+                                                            <div><span className="text-muted-foreground block mb-1">핵심 키워드</span>
+                                                                {/* keywords_jsonb 데이터 출력 */}
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {h.keywords && h.keywords.length > 0 ? (
+                                                                        h.keywords.map((k, i) => (
+                                                                            <Badge key={i} variant="secondary" className="text-xs px-1 py-0">
+                                                                                {k}
+                                                                            </Badge>
+                                                                        ))
+                                                                    ) : (
+                                                                        /* 키워드가 없으면 기존 coreRequest라도 표시 (혹은 '-') */
+                                                                        <span className="text-slate-500"></span>
+                                                                    )}
+                                                                </div></div>
+                                                            <div><span className="text-muted-foreground">위치:</span> {h.coreCause}</div>
                                                         </div>
-                                                        <div className="flex flex-wrap gap-1">
+                                                        {/* <div className="flex flex-wrap gap-1">
                                                             {h.keywords?.map((k, i) => <Badge key={i} variant="secondary" className="text-xs px-1 py-0">{k}</Badge>)}
-                                                        </div>
+                                                        </div> */}
                                                     </div>
                                                 )}
                                             </div>

@@ -58,7 +58,7 @@ public class ApplicantController {
     @PostMapping("api/applicant/check-id")
     public ResponseEntity<Boolean> checkUserIdAvailability(@RequestBody UserCheckDto checkDto) {
 
-        boolean isAvailable = applicantService.isUserIdEmailAvailable(checkDto.userId(), checkDto.email());
+        boolean isAvailable = applicantService.isUserIdEmailAvailable(checkDto.checkString(), checkDto.type());
 
         return ResponseEntity.ok(isAvailable);
     }

@@ -6,6 +6,7 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberTemplate;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
 import com.smart.complaint.routing_system.applicant.domain.UrgencyLevel;
@@ -26,6 +27,8 @@ import com.smart.complaint.routing_system.applicant.entity.QComplaintNormalizati
 import com.smart.complaint.routing_system.applicant.entity.QIncident;
 import com.smart.complaint.routing_system.applicant.entity.QDepartment;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -41,6 +44,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
 
+    private static final Logger log = LoggerFactory.getLogger(ComplaintRepositoryImpl.class);
     private final JPAQueryFactory queryFactory;
     private final QComplaintNormalization normalization = QComplaintNormalization.complaintNormalization;
     private final QUser user = QUser.user;
@@ -53,6 +57,7 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 .leftJoin(normalization).on(normalization.complaint.eq(complaint))
                 .leftJoin(user).on(complaint.answeredBy.eq(user.id))
                 .where(
+                        complaint.currentDepartmentId.eq(departmentId),
                         keywordContains(condition.getKeyword()),
                         statusEq(condition.getStatus()),
                         hasIncident(condition.getHasIncident()))
@@ -201,11 +206,32 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
         // 3. 연관 데이터 별도 조회 (Normalization, Department, User)
         // Entity 조회 후 DTO 변환 시점에 필요한 데이터들
 
-        // Normalization (Parent Only)
-        ComplaintNormalization n = queryFactory
-                .selectFrom(normalization)
+        ComplaintNormalization n = null;
+
+        Tuple normTuple = queryFactory
+                .select(
+                        normalization.neutralSummary,
+                        normalization.coreRequest,
+                        normalization.coreCause,
+                        normalization.targetObject,
+                        normalization.locationHint,
+                        normalization.keywordsJsonb // JSONB는 드라이버가 지원하면 가져옴
+                )
+                .from(normalization)
                 .where(normalization.complaint.eq(c))
-                .fetchFirst(); // OneToOne or ManyToOne
+                .fetchFirst();
+
+        if (normTuple != null) {
+            // Builder를 사용해 필요한 값만 채운 임시 객체 생성 (embedding은 null 상태)
+            n = ComplaintNormalization.builder()
+                    .neutralSummary(normTuple.get(normalization.neutralSummary))
+                    .coreRequest(normTuple.get(normalization.coreRequest))
+                    .coreCause(normTuple.get(normalization.coreCause))
+                    .targetObject(normTuple.get(normalization.targetObject))
+                    .locationHint(normTuple.get(normalization.locationHint))
+                    .keywordsJsonb(normTuple.get(normalization.keywordsJsonb))
+                    .build();
+        }
 
         // 부서명
         String deptName = null;
