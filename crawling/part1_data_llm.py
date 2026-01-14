@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 import psycopg2
 from psycopg2.extras import Json
@@ -8,7 +9,7 @@ from datetime import datetime
 # --- 설정 섹션 ---
 DB_CONFIG = {
     "host": "localhost",
-    "database": "complaint_db", 
+    "database": "complaint_db",
     "user": "postgres",
     "password": "0000",
     "port": 5432
@@ -49,6 +50,7 @@ def migrate_data():
     # 3. 데이터 슬라이싱 (이미 완료된 건수 이후부터 시작)
     # iloc[last_count:] 를 사용하여 중복 삽입 방지
     df_to_process = df.iloc[last_count:]
+    df_to_process = df_to_process.replace({np.nan: None})
     
     if len(df_to_process) == 0:
         print("✨ 이미 모든 데이터가 이관되었습니다.")
@@ -63,10 +65,10 @@ def migrate_data():
             # 1. 부모 테이블 삽입
             sql_parent = """
             INSERT INTO complaints (
-                received_at, title, body, status, urgency, created_at, updated_at
-            ) VALUES (%s, %s, %s, 'RECEIVED', 'MEDIUM', %s, %s) RETURNING id;
+                received_at, title, body, answer, address_text, status, urgency, created_at, updated_at
+            ) VALUES (%s, %s, %s, %s, %s, 'RECEIVED', 'MEDIUM', %s, %s) RETURNING id;
             """
-            cur.execute(sql_parent, (now, row['req_title'], row['req_p'], now, now))
+            cur.execute(sql_parent, (now, row['req_title'], row['req_content'], row['resp_content'], row["resp_dept"], row["req_date"], row["resp_date"]))
             new_complaint_id = cur.fetchone()[0]
 
             # 2. 임베딩 생성 (search_text 컬럼 활용)

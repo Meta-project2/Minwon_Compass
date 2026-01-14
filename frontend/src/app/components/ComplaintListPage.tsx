@@ -255,7 +255,7 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                       <TableCell>
                          <div className="flex gap-1 flex-wrap">
                            {c.tags && c.tags.length > 0 ? (
-                             c.tags.map((tag) => (
+                             c.tags.map((tag: string) => (
                                <Badge key={tag} variant="outline" className={tagMap[tag] || 'bg-gray-100'}>
                                  {tag}
                                </Badge>

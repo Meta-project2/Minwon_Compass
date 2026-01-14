@@ -25,6 +25,8 @@ public class QIncident extends EntityPathBase<Incident> {
 
     public final DateTimePath<java.time.LocalDateTime> closedAt = createDateTime("closedAt", java.time.LocalDateTime.class);
 
+    public final NumberPath<Integer> complaintCount = createNumber("complaintCount", Integer.class);
+
     public final NumberPath<Integer> districtId = createNumber("districtId", Integer.class);
 
     public final NumberPath<Long> id = createNumber("id", Long.class);

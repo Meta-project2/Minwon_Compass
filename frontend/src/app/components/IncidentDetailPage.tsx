@@ -1,25 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { ArrowLeft, Calendar, Users, Clock, Eye, AlertCircle, MessageSquare, Plus } from 'lucide-react';
+import { 
+  ArrowLeft, Calendar, Users, Clock, Eye, AlertCircle, 
+  Search, ChevronLeft, ChevronRight 
+} from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from './ui/table';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from './ui/tooltip';
-import { Textarea } from './ui/textarea';
+import { Card, CardContent } from './ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Input } from './ui/input';
 
 interface IncidentDetailPageProps {
   incidentId: string;
@@ -27,7 +16,6 @@ interface IncidentDetailPageProps {
   onViewComplaint: (id: string) => void;
 }
 
-// 백엔드 DTO 타입 정의
 interface IncidentDetailResponse {
   id: string;
   title: string;
@@ -37,14 +25,8 @@ interface IncidentDetailResponse {
   lastOccurred: string;
   complaintCount: number;
   avgProcessTime: string;
-  complaints: {
-    id: string;
-    originalId: number;
-    title: string;
-    receivedAt: string;
-    urgency: 'HIGH' | 'MEDIUM' | 'LOW';
-    status: string;
-  }[];
+  complaints: any[];
+  keywords?: string[]; // [추가] 군집화 시 사용된 핵심 키워드들
 }
 
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -68,28 +50,22 @@ const complaintStatusMap: Record<string, { label: string; color: string }> = {
   CLOSED: { label: '종결', color: 'bg-green-100 text-green-800' },
 };
 
-// 타임라인과 메모는 아직 백엔드 API가 없으므로 목업 데이터 유지
-const mockTimeline = [
-  { date: '2026-01-01 14:30', type: 'complaint', content: '신규 민원 추가' },
-  { date: '2026-01-01 10:00', type: 'note', content: '현장 조사 완료, 임시 보수 진행 중', author: '김담당' },
-  { date: '2025-12-28 09:15', type: 'incident', content: '사건 생성' },
-];
+const ITEMS_PER_PAGE = 10;
 
-const mockNotes = [
-  { id: 'N1', author: '김담당', date: '2026-01-01 10:00', content: '현장 조사 완료. 역삼동 주요 도로 3곳에서 파손 구간 확인. 임시 보수 작업 진행 중이며, 본 보수는 1월 3일 예정.' },
-];
+// [수정] 대괄호 및 부서명 정보를 제거하여 순수 제목만 추출
+const cleanTitle = (title: string) => title.replace(/\[.*?\]/g, '').trim();
 
 export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: IncidentDetailPageProps) {
   const [incidentData, setIncidentData] = useState<IncidentDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [newNote, setNewNote] = useState('');
+  const [complaintPage, setComplaintPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
-  // API 호출
   useEffect(() => {
     const fetchDetail = async () => {
       try {
         setLoading(true);
-        // incidentId (예: I-2026-0001) 그대로 전송
         const response = await axios.get(`/api/agent/incidents/${incidentId}`);
         setIncidentData(response.data);
       } catch (error) {
@@ -98,285 +74,203 @@ export function IncidentDetailPage({ incidentId, onBack, onViewComplaint }: Inci
         setLoading(false);
       }
     };
-
-    if (incidentId) {
-      fetchDetail();
-    }
+    if (incidentId) fetchDetail();
   }, [incidentId]);
 
-  if (loading) {
-    return <div className="h-full flex items-center justify-center">로딩 중...</div>;
-  }
+  const filteredComplaints = useMemo(() => {
+    if (!incidentData) return [];
+    return incidentData.complaints.filter(c => {
+      const matchesSearch = 
+        c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.id.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "ALL" || c.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [incidentData, searchQuery, statusFilter]);
 
-  if (!incidentData) {
-    return <div className="h-full flex items-center justify-center">데이터를 찾을 수 없습니다.</div>;
-  }
+  if (loading) return <div className="h-full flex items-center justify-center">로딩 중...</div>;
+  if (!incidentData) return <div className="h-full flex items-center justify-center">데이터를 찾을 수 없습니다.</div>;
+
+  const totalFiltered = filteredComplaints.length;
+  const totalPages = Math.ceil(totalFiltered / ITEMS_PER_PAGE);
+  const startIndex = (complaintPage - 1) * ITEMS_PER_PAGE;
+  const visibleComplaints = filteredComplaints.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, complaintPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    if (endPage - startPage + 1 < maxVisiblePages) startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+    return pageNumbers;
+  };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="border-b border-border bg-card px-6 py-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onBack}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h1>{incidentData.title}</h1>
-                <Badge className={statusMap[incidentData.status]?.color || 'bg-gray-100'}>
-                  {statusMap[incidentData.status]?.label || incidentData.status}
-                </Badge>
-                {/* 업무군(Category) 배지 제거됨 */}
-              </div>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <span className="font-mono">{incidentData.id}</span>
-                <span>•</span>
-                <span>{incidentData.district}</span>
+    <div className="h-full flex flex-col bg-slate-50/50">
+      {/* 상단 헤더 영역 */}
+      <div className="border-b border-border bg-card px-6 py-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack} className="mt-1">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          
+          <div className="flex-1">
+            {/* [변경] 제목 영역: truncate를 제거하여 긴 제목도 모두 표시 */}
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <h1 className="text-2xl font-bold text-slate-900 leading-tight">
+                {cleanTitle(incidentData.title)}
+              </h1>
+              <Badge className={`${statusMap[incidentData.status]?.color} whitespace-nowrap mt-1`}>
+                {statusMap[incidentData.status]?.label || incidentData.status}
+              </Badge>
+            </div>
+
+            {/* [변경] 제목 아래 사건 번호(ID) 및 해시태그 키워드 배치 */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="text-sm font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 shadow-sm">
+              {incidentData.id}
+             </span>
+              <div className="flex gap-2">
+                 {incidentData.keywords && incidentData.keywords.length > 0 ? (
+                 // DB에서 온 진짜 키워드 (예: "방역") 출력
+                  incidentData.keywords.map((kw, idx) => (
+                    <span key={idx} className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                       # {kw}
+                     </span>
+                  ))
+                 ) : (
+                  // 키워드가 없을 경우
+                  <span className="text-xs text-slate-400 italic"># 키워드 없음</span>
+                  )}
               </div>
             </div>
           </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Button variant="outline" disabled>
-                    상태 변경
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>운영자 권한 필요</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-blue-700" />
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">최초 발생</div>
-                  <div className="text-sm">{incidentData.firstOccurred}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                  <AlertCircle className="h-5 w-5 text-orange-700" />
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">최근 발생</div>
-                  <div className="text-sm">{incidentData.lastOccurred}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-purple-700" />
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">구성민원수</div>
-                  <div className="text-sm">{incidentData.complaintCount}건</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-green-700" />
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">평균 처리시간</div>
-                  <div className="text-sm">{incidentData.avgProcessTime}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* 요약 카드 그리드 */}
+        <div className="grid grid-cols-4 gap-4 mt-6">
+          <Card className="border-none shadow-sm"><CardContent className="p-4 flex items-center gap-3"><Calendar className="h-5 w-5 text-blue-600" /><div><div className="text-[10px] uppercase font-bold text-slate-400">최초 발생</div><div className="text-sm font-semibold">{incidentData.firstOccurred}</div></div></CardContent></Card>
+          <Card className="border-none shadow-sm"><CardContent className="p-4 flex items-center gap-3"><AlertCircle className="h-5 w-5 text-orange-600" /><div><div className="text-[10px] uppercase font-bold text-slate-400">최근 발생</div><div className="text-sm font-semibold">{incidentData.lastOccurred}</div></div></CardContent></Card>
+          <Card className="border-none shadow-sm"><CardContent className="p-4 flex items-center gap-3"><Users className="h-5 w-5 text-purple-600" /><div><div className="text-[10px] uppercase font-bold text-slate-400">구성민원수</div><div className="text-sm font-semibold">{incidentData.complaintCount}건</div></div></CardContent></Card>
+          <Card className="border-none shadow-sm"><CardContent className="p-4 flex items-center gap-3"><Clock className="h-5 w-5 text-green-600" /><div><div className="text-[10px] uppercase font-bold text-slate-400">평균 처리시간</div><div className="text-sm font-semibold">{incidentData.avgProcessTime}</div></div></CardContent></Card>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex-1 overflow-hidden">
-        <Tabs defaultValue="complaints" className="h-full flex flex-col">
-          <div className="border-b border-border px-6 bg-card">
-            <TabsList>
-              <TabsTrigger value="complaints">구성민원</TabsTrigger>
-              <TabsTrigger value="timeline">타임라인</TabsTrigger>
-              <TabsTrigger value="notes">메모</TabsTrigger>
-            </TabsList>
+      {/* 하단 리스트 영역 */}
+      <div className="flex-1 flex flex-col p-6 overflow-hidden">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+              <Input 
+                placeholder="ID 또는 제목 검색..." 
+                className="pl-9 h-9" 
+                value={searchQuery}
+                onChange={(e) => {setSearchQuery(e.target.value); setComplaintPage(1);}}
+              />
+            </div>
+            <select 
+              className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm outline-none"
+              value={statusFilter}
+              onChange={(e) => {setStatusFilter(e.target.value); setComplaintPage(1);}}
+            >
+              <option value="ALL">전체 상태</option>
+              <option value="RECEIVED">접수</option>
+              <option value="IN_PROGRESS">처리중</option>
+              <option value="CLOSED">종결</option>
+            </select>
           </div>
+          <span className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+            Filtered: {totalFiltered} Complaints
+          </span>
+        </div>
 
+        <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-md">
           <div className="flex-1 overflow-auto">
-            {/* Tab 1: 구성민원 */}
-            <TabsContent value="complaints" className="m-0 h-full p-6">
-              <Card>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>민원 ID</TableHead>
-                      <TableHead>제목</TableHead>
-                      <TableHead>접수일시</TableHead>
-                      <TableHead>긴급도</TableHead>
-                      <TableHead>상태</TableHead>
-                      <TableHead className="text-right">액션</TableHead>
+            <Table>
+              <TableHeader className="sticky top-0 bg-slate-50 z-10">
+                <TableRow>
+                  <TableHead className="w-[120px]">민원 ID</TableHead>
+                  <TableHead>제목</TableHead>
+                  <TableHead className="w-[180px]">접수일시</TableHead>
+                  <TableHead className="w-[100px]">긴급도</TableHead>
+                  <TableHead className="w-[100px]">상태</TableHead>
+                  <TableHead className="text-right w-[100px]">액션</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="bg-white">
+                {visibleComplaints.length > 0 ? (
+                  visibleComplaints.map((complaint) => (
+                    <TableRow key={complaint.id} className="hover:bg-slate-50/50">
+                      <TableCell className="text-xs font-mono font-semibold text-slate-400">{complaint.id}</TableCell>
+                      <TableCell className="text-sm font-medium text-slate-700">{complaint.title}</TableCell>
+                      <TableCell className="text-xs text-slate-400">{complaint.receivedAt}</TableCell>
+                      <TableCell><Badge className={`${urgencyMap[complaint.urgency]?.color} border-none`}>{urgencyMap[complaint.urgency]?.label}</Badge></TableCell>
+                      <TableCell><Badge className={`${complaintStatusMap[complaint.status]?.color} border-none`}>{complaintStatusMap[complaint.status]?.label}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => onViewComplaint(complaint.originalId)}>
+                          <Eye className="h-4 w-4 mr-1" /> 열기
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {incidentData.complaints.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                            연결된 민원이 없습니다.
-                          </TableCell>
-                        </TableRow>
-                    ) : (
-                        incidentData.complaints.map((complaint) => (
-                          <TableRow key={complaint.id}>
-                            <TableCell className="text-sm font-mono">{complaint.id}</TableCell>
-                            <TableCell>{complaint.title}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {complaint.receivedAt}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                className={urgencyMap[complaint.urgency]?.color || 'bg-gray-100'}
-                              >
-                                {urgencyMap[complaint.urgency]?.label || complaint.urgency}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                className={complaintStatusMap[complaint.status]?.color || 'bg-gray-100'}
-                              >
-                                {complaintStatusMap[complaint.status]?.label || complaint.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => onViewComplaint(String(complaint.originalId))}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                열기
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                    )}
-                  </TableBody>
-                </Table>
-              </Card>
-            </TabsContent>
-
-            {/* Tab 2: 타임라인 (목업 유지) */}
-            <TabsContent value="timeline" className="m-0 h-full p-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    {mockTimeline.map((item, index) => (
-                      <div key={index} className="flex gap-4">
-                        <div className="flex flex-col items-center">
-                          <div
-                            className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                              item.type === 'complaint'
-                                ? 'bg-blue-100'
-                                : item.type === 'status'
-                                ? 'bg-yellow-100'
-                                : item.type === 'note'
-                                ? 'bg-purple-100'
-                                : 'bg-green-100'
-                            }`}
-                          >
-                            {item.type === 'complaint' ? (
-                              <AlertCircle className="h-4 w-4 text-blue-700" />
-                            ) : item.type === 'note' ? (
-                              <MessageSquare className="h-4 w-4 text-purple-700" />
-                            ) : (
-                              <Calendar className="h-4 w-4 text-slate-700" />
-                            )}
-                          </div>
-                          {index < mockTimeline.length - 1 && (
-                            <div className="w-px h-full min-h-[40px] bg-border" />
-                          )}
-                        </div>
-                        <div className="flex-1 pb-4">
-                          <div className="text-sm text-muted-foreground mb-1">{item.date}</div>
-                          <div className="text-sm">{item.content}</div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                             {item.type === 'incident' ? '시스템 자동 생성' : '작성자: 김담당'}
-                          </div>
-                        </div>
-                      </div>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-32 text-center text-slate-400">일치하는 구성 민원이 없습니다.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          
+          {/* 하단 중앙 정렬 페이지네이션 영역 */}
+          {totalFiltered > 0 && (
+            <div className="border-t p-4 bg-white">
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setComplaintPage(p => Math.max(1, p - 1))} 
+                    disabled={complaintPage === 1} 
+                    className="h-8 px-3"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" /> 이전
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {getPageNumbers().map(pageNum => (
+                      <Button 
+                        key={pageNum} 
+                        variant={pageNum === complaintPage ? "default" : "ghost"} 
+                        size="sm" 
+                        className={`h-8 w-8 p-0 ${pageNum === complaintPage ? 'bg-slate-900 text-white font-bold' : 'text-slate-600'}`}
+                        onClick={() => setComplaintPage(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
-            {/* Tab 3: 메모 (목업 유지) */}
-            <TabsContent value="notes" className="m-0 h-full p-6">
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">메모 추가</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Textarea
-                      placeholder="메모 내용을 입력하세요"
-                      rows={3}
-                      value={newNote}
-                      onChange={(e) => setNewNote(e.target.value)}
-                      className="bg-input-background"
-                    />
-                    <div className="flex justify-end">
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-1" />
-                        메모 추가
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {mockNotes.map((note) => (
-                  <Card key={note.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm">
-                            {note.author[0]}
-                          </div>
-                          <div>
-                            <div className="text-sm">{note.author}</div>
-                            <div className="text-xs text-muted-foreground">{note.date}</div>
-                          </div>
-                        </div>
-                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <p className="text-sm leading-relaxed">{note.content}</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setComplaintPage(p => Math.min(totalPages, p + 1))} 
+                    disabled={complaintPage === totalPages} 
+                    className="h-8 px-3"
+                  >
+                    다음 <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+                
+                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-tighter">
+                  Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, totalFiltered)} of {totalFiltered}
+                </span>
               </div>
-            </TabsContent>
-          </div>
-        </Tabs>
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );

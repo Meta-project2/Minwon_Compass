@@ -19,6 +19,9 @@ public class ComplaintNormalization {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(length = 200)
+    private String respDept;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "complaint_id", nullable = false)
     private Complaint complaint;
@@ -48,8 +51,6 @@ public class ComplaintNormalization {
     @Column(length = 200)
     private String urgencySignal;
 
-    // pgvector (1024차원) 매핑
-    // Hibernate 6에서 vector 타입을 double[]로 처리하기 위한 설정
     @Column(name = "embedding", columnDefinition = "vector(1024)")
     private double[] embedding;
 

@@ -24,7 +24,7 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from "@/components/ui/resizable";
+} from "./ui/resizable";
 import {
   Dialog,
   DialogContent,
