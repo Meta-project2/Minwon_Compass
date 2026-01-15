@@ -129,123 +129,123 @@ const ApplicantMainPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-hidden">
       <Toolbar
         onViewComplaints={handleViewComplaints}
         onNewComplaint={handleNewComplaint}
         onLogout={handleLogout}
       />
 
-      <main className="max-w-7xl mx-auto px-6 py-6">
-        {/* 메인 그리드 컨테이너: 좌(2) : 우(3) 비율 */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+      <main className="max-w-[1600px] mx-auto px-6 h-[calc(100vh-100px)] flex flex-col justify-center py-4">
+        {/* 메인 그리드 컨테이너: 좌(3) : 우(2) 비율로 피드백 반영 */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-full max-h-[820px]">
 
-          {/* [좌측 섹션] 최근 민원 TOP 3 - col-span-2 (40%) */}
-          <section className="lg:col-span-2 bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden h-full">
-            <div className="p-8 space-y-8">
-              {/* Section Header */}
-              <div className="flex justify-between items-center border-b border-gray-50 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <span className="text-xl">📋</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-800">최근 민원 현황</h3>
-                    <p className="text-xs text-gray-400">최근 접수된 3건입니다.</p>
-                  </div>
+          {/* [좌측 섹션] 민원 TOP3 + 키워드 맵 (60% 비중) */}
+          <div className="lg:col-span-3 flex flex-col gap-6 h-full">
+
+            {/* 상단: 최근 민원 현황 (가로형 리스트로 압축) */}
+            <section className="flex-[1.1] bg-white rounded-[32px] border border-gray-100 shadow-sm p-6 flex flex-col overflow-hidden">
+              <div className="flex justify-between items-center mb-4 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">📋</span>
+                  <h3 className="text-lg font-bold text-gray-800">최근 민원 현황</h3>
                 </div>
-                <span className="px-3 py-1 bg-blue-600 text-white text-[10px] font-bold rounded-full shadow-sm">
-                  TOP 3
-                </span>
+                <span className="px-3 py-1 bg-blue-600 text-white text-[10px] font-bold rounded-full">TOP 3</span>
               </div>
 
-              {/* Complaints Vertical List */}
-              <div className="flex flex-col gap-4">
+              <div className="flex-1 flex flex-col gap-2.5 min-h-0">
                 {isLoading ? (
-                  <div className="flex justify-center py-20">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                  <div className="flex-1 flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   </div>
                 ) : Array.isArray(recentComplaints) && recentComplaints.length > 0 ? (
                   <>
-                    {/* 실제 민원 카드 리스트 */}
-                    {recentComplaints.map((complaint) => (
+                    {/* TypeError 방지를 위해 slice 전 Array.isArray 확인 필수 */}
+                    {recentComplaints.slice(0, 3).map((complaint) => (
                       <div
                         key={complaint.id}
-                        className="bg-white p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-all cursor-pointer group"
+                        className="group flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-200 hover:bg-white transition-all cursor-pointer shrink-0"
                         onClick={() => navigate(`/applicant/complaints/${complaint.id}`)}
                       >
-                        <div className="flex justify-between items-start mb-3">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${complaint.complaintStatus === 'ANSWERED' ? 'bg-green-100 text-green-700' :
-                              complaint.complaintStatus === 'ASSIGNED' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                        <div className="flex items-center gap-4 overflow-hidden">
+                          <span className={`shrink-0 px-2 py-0.5 rounded text-[9px] font-bold text-white ${complaint.complaintStatus === 'ANSWERED' ? 'bg-green-500' :
+                              complaint.complaintStatus === 'ASSIGNED' ? 'bg-blue-500' : 'bg-orange-500'
                             }`}>
                             {complaint.complaintStatus}
                           </span>
-                          <span className="text-[11px] text-gray-400 font-medium">
+                          <h4 className="text-sm font-bold text-gray-800 group-hover:text-blue-600 truncate">
+                            {complaint.title}
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-[11px] text-gray-400">
                             {new Date(complaint.createdAt).toLocaleDateString()}
                           </span>
+                          <span className="text-gray-300 group-hover:translate-x-1 transition-transform">→</span>
                         </div>
-                        <h4 className="text-md font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">
-                          {complaint.title}
-                        </h4>
-                        <p className="text-xs text-gray-400">상세 내용 보기 →</p>
                       </div>
                     ))}
-
-                    {/* 3건 미만일 때 채워주는 Placeholder */}
-                    {recentComplaints.length < 3 && (
-                      [...Array(3 - recentComplaints.length)].map((_, index) => (
-                        <div
-                          key={`empty-${index}`}
-                          onClick={handleNewComplaint}
-                          className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 hover:border-blue-300 transition-all group h-[120px]"
-                        >
-                          <span className="text-xl mb-1 group-hover:scale-110 transition-transform">➕</span>
-                          <p className="text-xs font-semibold text-gray-400 group-hover:text-blue-600">새 민원 추가</p>
-                        </div>
-                      ))
-                    )}
+                    {/* 3건 미만 시 Placeholder (높이 최소화) */}
+                    {recentComplaints.length < 3 && [...Array(3 - recentComplaints.length)].map((_, i) => (
+                      <div key={i} onClick={handleNewComplaint} className="flex-1 border-2 border-dashed border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 text-xs hover:bg-gray-50 cursor-pointer">
+                        + 새 민원 추가
+                      </div>
+                    ))}
                   </>
                 ) : (
-                  /* 아예 민원이 없을 때 */
-                  <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl py-20 flex flex-col items-center justify-center">
-                    <span className="text-4xl mb-4">📄</span>
-                    <h3 className="text-md font-bold text-gray-700">신청한 민원이 없습니다</h3>
-                    <button onClick={handleNewComplaint} className="mt-4 text-sm text-blue-600 font-semibold hover:underline">+ 새 민원 작성</button>
+                  <div onClick={handleNewComplaint} className="flex-1 border-2 border-dashed border-gray-100 rounded-2xl flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-50">
+                    <span className="text-2xl mb-1">➕</span>
+                    <p className="text-xs font-bold">첫 번째 민원을 작성해보세요</p>
                   </div>
                 )}
               </div>
-            </div>
-          </section>
+            </section>
 
-          {/* [우측 섹션] 통계 및 키워드 - col-span-3 (60%) */}
-          <div className="lg:col-span-3 flex flex-col gap-8">
+            {/* 하단: 실시간 민원 키워드 (좌측 배치) */}
+            <section className="flex-1 bg-white rounded-[32px] border border-gray-100 shadow-sm p-6 flex flex-col overflow-hidden">
+              <div className="flex items-center gap-2 mb-4 shrink-0">
+                <span className="text-lg">🔍</span>
+                <h3 className="text-lg font-bold text-gray-800">실시간 민원 키워드</h3>
+              </div>
+              <div className="flex-1 min-h-0 bg-gray-50 rounded-2xl flex items-center justify-center p-2">
+                <KeywordCloud keywords={mockKeywords} />
+              </div>
+            </section>
+          </div>
 
-            {/* 우측 상단: 지역 민원 처리 현황 */}
-            <section className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden p-2">
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-6 px-4">
-                  <span className="text-lg">📊</span>
+          {/* [우측 섹션] 지역 민원 처리 현황 (파이 차트 강조 - 40% 비중) */}
+          <section className="lg:col-span-2 bg-white rounded-[32px] border border-gray-100 shadow-sm flex flex-col h-full overflow-hidden">
+            <div className="p-8 flex flex-col h-full">
+              <div className="flex flex-col gap-1 mb-6 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">📊</span>
                   <h3 className="text-lg font-bold text-gray-800">지역 민원 처리 현황</h3>
                 </div>
+                <p className="text-xs text-gray-400">최근 3개월 기준 분야별 처리 데이터</p>
+              </div>
+
+              {/* 차트 영역의 크기를 최대로 확보 */}
+              <div className="flex-1 min-h-0 flex flex-col justify-center transform scale-105 lg:scale-110">
                 <ResponseTimeStats
                   data={mockResponseTimeData}
                   overallStats={mockOverallStats}
                 />
               </div>
-            </section>
 
-            {/* 우측 하단: 민원 키워드 분석 */}
-            <section className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden p-2">
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-6 px-4">
-                  <span className="text-lg">🔍</span>
-                  <h3 className="text-lg font-bold text-gray-800">실시간 민원 키워드</h3>
+              {/* 하단 지표 요약 (우측 영역 하단에 밀착) */}
+              <div className="grid grid-cols-2 gap-3 mt-6 pt-6 border-t border-gray-50 shrink-0">
+                <div className="p-4 bg-blue-50/50 rounded-2xl text-center">
+                  <p className="text-[10px] text-blue-500 font-bold mb-1">평균 처리 속도</p>
+                  <p className="text-lg font-black text-blue-900">4.4일</p>
                 </div>
-                <KeywordCloud keywords={mockKeywords} />
+                <div className="p-4 bg-purple-50/50 rounded-2xl text-center">
+                  <p className="text-[10px] text-purple-500 font-bold mb-1">최단 처리 분야</p>
+                  <p className="text-lg font-black text-purple-900">안전/치안</p>
+                </div>
               </div>
-            </section>
+            </div>
+          </section>
 
-          </div>
         </div>
       </main>
     </div>
