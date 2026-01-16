@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
-import { ChevronLeft, ChevronRight, Eye, Search, Calendar, ArrowUpDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, Search, Calendar, ArrowUpDown, RefreshCcw } from 'lucide-react';
 import api from './AxiosInterface';
 import { useNavigate } from 'react-router-dom';
 
@@ -52,40 +52,39 @@ const SORT_LABELS: Record<SortOption, string> = {
 
 export default function PastComplaintsPage() {
   const navigate = useNavigate();
-
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
   const [currentPage, setCurrentPage] = useState(1);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const itemsPerPage = 10;
 
   const handleViewDetail = (id: string) => {
     navigate(`/applicant/complaints/${id}`);
   };
 
   // 2. API 호출 로직
+  // 조회 버튼 클릭 시 필터를 적용하기 위한 '트리거' 상태 (실제 필터링 로직에 반영)
+  const [searchTrigger, setSearchTrigger] = useState(0);
+
+  const itemsPerPage = 10;
+
   useEffect(() => {
     const fetchComplaints = async () => {
       try {
         setIsLoading(true);
         const response = await api.get('http://localhost:8080/api/applicant/complaints');
-
-        // 백엔드 데이터(Entity)를 프론트엔드 인터페이스(Complaint)로 변환
         const formattedData = response.data.map((item: any) => ({
           id: item.id.toString(),
           title: item.title,
-          category: item.category || '미분류', // 엔티티에 카테고리가 없다면 기본값
-          content: item.body, // DB의 body 필드를 content로 매핑
-          status: item.status.toLowerCase(), // RECEIVED -> received
-          submittedDate: item.createdAt.split('T')[0], // 2026-01-14T... -> 2026-01-14
-          department: item.departmentName, // 부서명이 있다면 매핑
+          category: item.category || '미분류',
+          content: item.body,
+          status: item.status.toLowerCase(),
+          submittedDate: item.createdAt.split('T')[0],
+          department: item.departmentName,
         }));
-
         setComplaints(formattedData);
       } catch (error) {
         console.error("데이터 로드 실패:", error);
@@ -96,51 +95,57 @@ export default function PastComplaintsPage() {
     fetchComplaints();
   }, []);
 
-  // Filter and sort complaints
+  // 필터 및 정렬 로직 (조회 버튼 클릭 시의 흐름을 위해 useMemo의 의존성 관리)
   const filteredAndSortedComplaints = useMemo(() => {
     let filtered = [...complaints];
 
-    // Filter by keyword (search in title, content, category, id)
     if (searchKeyword.trim()) {
       const keyword = searchKeyword.toLowerCase();
-      filtered = filtered.filter(
-        (c) =>
-          c.title.toLowerCase().includes(keyword) ||
-          c.content.toLowerCase().includes(keyword) ||
-          c.category.toLowerCase().includes(keyword) ||
-          c.id.toLowerCase().includes(keyword)
+      filtered = filtered.filter(c =>
+        c.title.toLowerCase().includes(keyword) ||
+        c.id.toLowerCase().includes(keyword)
       );
     }
+    if (startDate) filtered = filtered.filter(c => c.submittedDate >= startDate);
+    if (endDate) filtered = filtered.filter(c => c.submittedDate <= endDate);
 
-    // Filter by date range
-    if (startDate) {
-      filtered = filtered.filter((c) => c.submittedDate >= startDate);
-    }
-    if (endDate) {
-      filtered = filtered.filter((c) => c.submittedDate <= endDate);
-    }
-
-    // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'date-desc':
-          return b.submittedDate.localeCompare(a.submittedDate);
-        case 'date-asc':
-          return a.submittedDate.localeCompare(b.submittedDate);
-        case 'status':
-          return a.status.localeCompare(b.status);
-        case 'title':
-          return a.title.localeCompare(b.title);
-        default:
-          return 0;
+        case 'date-desc': return b.submittedDate.localeCompare(a.submittedDate);
+        case 'date-asc': return a.submittedDate.localeCompare(b.submittedDate);
+        case 'status': return a.status.localeCompare(b.status);
+        case 'title': return a.title.localeCompare(b.title);
+        default: return 0;
       }
     });
-
     return filtered;
-  }, [complaints, searchKeyword, startDate, endDate, sortBy]);
+  }, [complaints, searchTrigger, sortBy]); // searchTrigger가 변할 때만(조회 버튼 클릭) 필터링
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredAndSortedComplaints.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedComplaints.length / itemsPerPage));
+
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const offset = 2; // 현재 페이지 앞뒤로 보여줄 개수
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 || // 첫 페이지
+        i === totalPages || // 마지막 페이지
+        (i >= currentPage - offset && i <= currentPage + offset) // 현재 페이지 주변
+      ) {
+        pageNumbers.push(i);
+      } else if (
+        i === currentPage - offset - 1 ||
+        i === currentPage + offset + 1
+      ) {
+        pageNumbers.push('...'); // 생략 기호
+      }
+    }
+    // 중복 제거 (생략 기호가 여러 번 들어가는 것 방지)
+    return [...new Set(pageNumbers)];
+  };
+
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentComplaints = filteredAndSortedComplaints.slice(startIndex, endIndex);
@@ -149,33 +154,8 @@ export default function PastComplaintsPage() {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
-  // Reset to page 1 when filters change
-  const handleSearchChange = (value: string) => {
-    setSearchKeyword(value);
-    setCurrentPage(1);
-  };
-
-  const handleStartDateChange = (value: string) => {
-    setStartDate(value);
-    setCurrentPage(1);
-  };
-
-  const handleEndDateChange = (value: string) => {
-    setEndDate(value);
-    setCurrentPage(1);
-  };
-
-  const handleSortChange = (option: SortOption) => {
-    setSortBy(option);
-    setShowSortMenu(false);
-    setCurrentPage(1);
-  };
-
-  const handleClearFilters = () => {
-    setSearchKeyword('');
-    setStartDate('');
-    setEndDate('');
-    setSortBy('date-desc');
+  const handleSearch = () => {
+    setSearchTrigger(prev => prev + 1);
     setCurrentPage(1);
   };
 
@@ -196,10 +176,10 @@ export default function PastComplaintsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
-        <div className="max-w-7xl mx-auto">
+      <div className="bg-white border-b border-gray-200 py-4 shrink-0 shadow-sm">
+        <div className="max-w-[1700px] mx-auto px-10">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold text-gray-900">과거 민원 내역</h1>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">과거 민원 내역</h1>
             <Button
               onClick={onGoHome}
               variant="outline"
@@ -212,133 +192,82 @@ export default function PastComplaintsPage() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-[1700px] mx-auto px-10 py-8">
         <div className="space-y-6">
-          {/* Filters Section */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="space-y-4">
-              {/* Search and Sort Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Search Input */}
-                <div className="lg:col-span-2">
-                  <Label htmlFor="search" className="text-base mb-2 block">
-                    키워드 검색
-                  </Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="search"
-                      type="text"
-                      value={searchKeyword}
-                      onChange={(e) => handleSearchChange(e.target.value)}
-                      placeholder="민원 번호, 제목, 내용, 카테고리로 검색"
-                      className="text-base h-12 pl-11"
-                    />
-                  </div>
-                </div>
+          {/* [수정] Filters Section - 한 줄 구성 및 조회 버튼 추가 */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3">
 
-                {/* Sort Dropdown */}
-                <div className="relative">
-                  <Label className="text-base mb-2 block">정렬 기준</Label>
-                  <Button
-                    onClick={() => setShowSortMenu(!showSortMenu)}
-                    variant="outline"
-                    className="w-full h-12 justify-between text-base"
-                  >
-                    <span>{SORT_LABELS[sortBy]}</span>
-                    <ArrowUpDown className="w-4 h-4 ml-2" />
-                  </Button>
-                  {showSortMenu && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                      {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
-                        <button
-                          key={option}
-                          onClick={() => handleSortChange(option)}
-                          className={`w-full text-left px-4 py-3 text-base hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${sortBy === option ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700'
-                            }`}
-                        >
-                          {SORT_LABELS[option]}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              {/* 기간 설정 영역 */}
+              <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="h-8 w-32 text-xs border-gray-200 bg-white"
+                />
+                <span className="text-gray-300">~</span>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="h-8 w-32 text-xs border-gray-200 bg-white"
+                />
               </div>
 
-              {/* Date Range Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="startDate" className="text-base mb-2 block">
-                    시작 날짜
-                  </Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => handleStartDateChange(e.target.value)}
-                      className="text-base h-12 pl-11"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="endDate" className="text-base mb-2 block">
-                    종료 날짜
-                  </Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => handleEndDateChange(e.target.value)}
-                      className="text-base h-12 pl-11"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-end">
-                  <Button
-                    onClick={handleClearFilters}
-                    variant="outline"
-                    className="w-full h-12 text-base"
-                  >
-                    필터 초기화
-                  </Button>
-                </div>
+              {/* 검색어 입력 영역 - 길이 조정 */}
+              <div className="flex-1 min-w-[200px] max-w-[400px] relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="민원 번호 또는 제목 입력"
+                  className="pl-9 h-10 text-sm border-gray-200 focus:ring-1 focus:ring-gray-300"
+                />
               </div>
+
+              {/* 정렬 드롭다운 */}
+              <div className="relative">
+                <Button
+                  onClick={() => setShowSortMenu(!showSortMenu)}
+                  variant="outline"
+                  className="h-10 px-4 text-sm flex items-center gap-2 border-gray-200 bg-white"
+                >
+                  {SORT_LABELS[sortBy]} <ArrowUpDown className="w-3 h-3 text-gray-400" />
+                </Button>
+                {showSortMenu && (
+                  <div className="absolute top-full right-0 mt-1 w-40 bg-white border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden">
+                    {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => { setSortBy(option); setShowSortMenu(false); }}
+                        className="w-full text-left px-4 py-2.5 text-xs hover:bg-gray-50 transition-colors"
+                      >
+                        {SORT_LABELS[option]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 조회 버튼 - 이미지 참고 (회색 계열 디자인) */}
+              <Button
+                onClick={handleSearch}
+                className="bg-gray-700 hover:bg-gray-800 text-white h-10 px-6 font-bold text-sm flex items-center gap-2 rounded-lg"
+              >
+                조회 <Search className="w-4 h-4" />
+              </Button>
+
+              {/* 초기화 버튼 */}
+              <Button
+                variant="ghost"
+                onClick={() => { setSearchKeyword(''); setStartDate(''); setEndDate(''); setSortBy('date-desc'); setSearchTrigger(0); }}
+                className="h-10 px-3 text-gray-400 hover:text-gray-600"
+              >
+                <RefreshCcw className="w-4 h-4" />
+              </Button>
             </div>
-
-            {/* Active Filters Summary */}
-            {(searchKeyword || startDate || endDate || sortBy !== 'date-desc') && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm text-gray-600">활성 필터:</span>
-                  {searchKeyword && (
-                    <Badge variant="outline" className="text-sm">
-                      검색: {searchKeyword}
-                    </Badge>
-                  )}
-                  {startDate && (
-                    <Badge variant="outline" className="text-sm">
-                      시작: {startDate}
-                    </Badge>
-                  )}
-                  {endDate && (
-                    <Badge variant="outline" className="text-sm">
-                      종료: {endDate}
-                    </Badge>
-                  )}
-                  {sortBy !== 'date-desc' && (
-                    <Badge variant="outline" className="text-sm">
-                      정렬: {SORT_LABELS[sortBy]}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Results Summary */}
@@ -363,66 +292,59 @@ export default function PastComplaintsPage() {
 
             {/* Complaints List */}
             {currentComplaints.length > 0 ? (
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-100">
                 {currentComplaints.map((complaint) => (
                   <div
                     key={complaint.id}
-                    className="p-6 hover:bg-gray-50 transition-colors"
+                    className="px-6 py-3 hover:bg-gray-50 transition-colors group"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-3">
-                        {/* Title and ID */}
-                        <div className="flex items-start gap-3">
-                          <span className="text-sm font-medium text-gray-500 mt-1">
-                            {complaint.id}
-                          </span>
-                          <h3 className="text-xl font-semibold text-gray-900 flex-1">
+                    <div className="flex items-center justify-between gap-6">
+                      {/* 좌측: ID + 제목 & 내용 (한 줄 압축) */}
+                      <div className="flex-1 flex items-center gap-4 min-w-0">
+                        <span className="text-xs font-mono text-gray-400 shrink-0 w-16">
+                          {complaint.id}
+                        </span>
+
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <h3
+                            className="text-sm font-bold text-gray-900 truncate cursor-pointer hover:text-blue-600 shrink-0 max-w-[40%]"
+                            onClick={() => handleViewDetail(complaint.id)}
+                          >
                             {complaint.title}
                           </h3>
-                        </div>
-
-                        {/* Category and Status */}
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <Badge className="bg-gray-100 text-gray-700 border border-gray-300 text-sm px-3 py-1">
-                            {complaint.category}
-                          </Badge>
-                          <Badge className={`border text-sm px-3 py-1 ${STATUS_COLORS[complaint.status]}`}>
-                            {STATUS_LABELS[complaint.status]}
-                          </Badge>
+                          <span className="text-gray-300 shrink-0">|</span>
+                          <p className="text-sm text-gray-500 truncate flex-1">
+                            {complaint.content}
+                          </p>
                           {complaint.lastUpdate && (
-                            <span className="text-sm text-red-600 font-medium">
-                              🔔 업데이트됨
+                            <span className="shrink-0 text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold">
+                              NEW
                             </span>
-                          )}
-                        </div>
-
-                        {/* Content Preview */}
-                        <p className="text-gray-600 text-base line-clamp-2">
-                          {complaint.content}
-                        </p>
-
-                        {/* Meta Information */}
-                        <div className="flex items-center gap-6 text-sm text-gray-500">
-                          <span>제출일: {complaint.submittedDate}</span>
-                          {complaint.lastUpdate && (
-                            <span className="text-blue-600 font-medium">
-                              최종 업데이트: {complaint.lastUpdate}
-                            </span>
-                          )}
-                          {complaint.department && (
-                            <span>담당부서: {complaint.department}</span>
                           )}
                         </div>
                       </div>
 
-                      {/* View Detail Button */}
-                      <Button
-                        onClick={() => handleViewDetail(complaint.id)}
-                        className="bg-gray-900 hover:bg-gray-800 text-white h-11 px-6 flex items-center gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        상세보기
-                      </Button>
+                      {/* 중앙/우측: 메타 정보 (날짜, 부서) */}
+                      <div className="hidden md:flex items-center gap-8 shrink-0 text-xs text-gray-400">
+                        <div className="flex flex-col items-end">
+                          <span className="font-medium text-gray-500">{complaint.department || '미지정'}</span>
+                          <span>{complaint.submittedDate}</span>
+                        </div>
+                      </div>
+
+                      {/* 우측 끝: 상태 배지 + 상세보기 버튼 (수직 배치) */}
+                      <div className="flex flex-col items-center gap-1.5 shrink-0 min-w-[100px]">
+                        <Button
+                          onClick={() => handleViewDetail(complaint.id)}
+                          size="sm"
+                          className="bg-gray-900 hover:bg-gray-800 text-white h-8 w-full text-xs flex items-center justify-center gap-1"
+                        >
+                          상세보기
+                        </Button>
+                        <Badge className={`w-full justify-center border shadow-none text-[10px] py-0 px-2 h-5 ${STATUS_COLORS[complaint.status]}`}>
+                          {STATUS_LABELS[complaint.status]}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -436,58 +358,56 @@ export default function PastComplaintsPage() {
             )}
 
             {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="bg-gray-50 px-6 py-5 border-t border-gray-200">
-                <div className="flex items-center justify-center gap-2">
-                  <Button
-                    onClick={() => goToPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    variant="outline"
-                    className="h-10 px-4"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </Button>
+            <div className="bg-gray-50 px-6 py-5 border-t border-gray-200">
+              <div className="flex items-center justify-center gap-2">
+                {/* 이전 페이지 버튼 */}
+                <Button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  variant="outline"
+                  className="h-10 px-4"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
 
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
-                      // Show first 3, last 3, and current page context
-                      const pageNum = i + 1;
-                      if (
-                        pageNum <= 3 ||
-                        pageNum > totalPages - 3 ||
-                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                      ) {
-                        return (
-                          <Button
-                            key={pageNum}
-                            onClick={() => goToPage(pageNum)}
-                            variant={currentPage === pageNum ? 'default' : 'outline'}
-                            className={`h-10 w-10 ${currentPage === pageNum
-                              ? 'bg-gray-900 hover:bg-gray-800 text-white'
-                              : 'hover:bg-gray-100'
-                              }`}
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      } else if (pageNum === 4 || pageNum === totalPages - 3) {
-                        return <span key={pageNum} className="px-2 text-gray-400">...</span>;
-                      }
-                      return null;
-                    })}
-                  </div>
+                {/* [수정] 유동적인 페이지 번호 렌더링 */}
+                <div className="flex items-center gap-1">
+                  {getPageNumbers().map((pageNum, idx) => {
+                    if (pageNum === '...') {
+                      return (
+                        <span key={`dots-${idx}`} className="px-2 text-gray-400">
+                          ...
+                        </span>
+                      );
+                    }
 
-                  <Button
-                    onClick={() => goToPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    variant="outline"
-                    className="h-10 px-4"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </Button>
+                    return (
+                      <Button
+                        key={`page-${pageNum}`}
+                        onClick={() => goToPage(pageNum as number)}
+                        variant={currentPage === pageNum ? 'default' : 'outline'}
+                        className={`h-10 w-10 ${currentPage === pageNum
+                          ? 'bg-gray-900 hover:bg-gray-800 text-white font-bold shadow-md'
+                          : 'hover:bg-gray-100 text-gray-600'
+                          } transition-all`}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
                 </div>
+
+                {/* 다음 페이지 버튼 */}
+                <Button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  variant="outline"
+                  className="h-10 px-4"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </main>

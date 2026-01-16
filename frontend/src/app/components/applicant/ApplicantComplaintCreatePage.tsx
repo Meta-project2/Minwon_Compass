@@ -42,7 +42,6 @@ export default function ApplicantComplaintCreatePage() {
         onGoHome={handleGoHome}
         onViewComplaints={handleViewComplaints}
         onPreview={handlePreview}
-        onSubmit={handleSubmit}
       />
 
       {/* 모달: 미리보기 창 (상태가 true일 때만 표시) */}

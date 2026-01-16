@@ -1,3 +1,4 @@
+import ast
 import os
 import numpy as np
 import pandas as pd
@@ -30,6 +31,16 @@ def get_embedding(text):
     except Exception as e:
         print(f"Embedding Error: {e}")
         return None
+    
+def clean_keywords(raw_value):
+    if pd.isna(raw_value) or str(raw_value).strip() == "":
+        return []
+    try:
+        # 문자열 "['A', 'B']"를 진짜 리스트 ['A', 'B']로 변환
+        return ast.literal_eval(str(raw_value))
+    except (ValueError, SyntaxError):
+        # 만약 리스트 형태가 아닐 경우를 대비한 예외 처리
+        return [k.strip() for k in str(raw_value).split(',')]
 
 def migrate_data():
     # 1. 파일 읽기 (인코딩 에러 방지)
@@ -86,7 +97,7 @@ def migrate_data():
             ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
             
-            keywords_list = [k.strip() for k in str(row['keywords']).split(',')] if pd.notna(row['keywords']) else []
+            keywords_list = clean_keywords(row['keywords'])
             
             cur.execute(sql_child, (
                 new_complaint_id,

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'; // 훅 추가
 import api from './AxiosInterface'; // api 인스턴스 가져오기
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Calendar, Building2, User, MessageSquare, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, User, MessageSquare, ArrowUpDown, Home, FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 interface Message {
@@ -127,22 +127,34 @@ export default function ComplaintDetail() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
-        <div className="max-w-6xl mx-auto">
+      <nav className="bg-white border-b border-gray-200 py-4 shrink-0 shadow-sm">
+        <div className="max-w-[1700px] mx-auto px-10">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            {/* 좌측: 타이틀 (본문 시작 라인과 일치) */}
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">민원 상세 내역</h1>
+
+            {/* 우측: 버튼 그룹 (본문 끝 라인과 일치) */}
+            <div className="flex items-center gap-3">
               <Button
-                onClick={onGoBack}
                 variant="outline"
-                className="h-11 px-4"
+                onClick={() => navigate("/applicant/main")}
+                className="flex items-center gap-2 h-10 border-gray-200 text-gray-600"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <Home className="w-4 h-4" />
+                홈으로
               </Button>
-              <h1 className="text-2xl font-semibold text-gray-900">민원 상세 내역</h1>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/applicant/complaints')}
+                className="flex items-center gap-2 h-10 border-gray-200 text-gray-600"
+              >
+                <FileText className="w-4 h-4" />
+                과거 민원 보기
+              </Button>
             </div>
           </div>
         </div>
-      </div>
+      </nav>
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-8">
