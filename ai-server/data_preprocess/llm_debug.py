@@ -6,7 +6,7 @@ from ollama import Client
 client = Client(host='http://127.0.0.1:11434')
 DB_CONFIG = {
     "host": "localhost",
-    "database": "postgres",
+    "database": "complaint_db",
     "user": "postgres",
     "password": "0000",
     "port": 5432

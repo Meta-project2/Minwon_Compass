@@ -30,8 +30,8 @@ public class IncidentRepositoryImpl implements IncidentRepositoryCustom {
                 .select(Projections.constructor(IncidentListResponse.class,
                         incident,
                         complaint.count(),
-                        complaint.createdAt.min(), // 최초 발생일: 군집 내 가장 오래된 민원 날짜
-                        complaint.createdAt.max()  // 최근 발생일: 군집 내 가장 최신 민원 날짜
+                        complaint.receivedAt.min(), // 최초 발생일: 군집 내 가장 오래된 민원 날짜
+                        complaint.receivedAt.max()  // 최근 발생일: 군집 내 가장 최신 민원 날짜
                 ))
                 .from(incident)
                 .leftJoin(complaint).on(complaint.incident.eq(incident))
@@ -40,8 +40,8 @@ public class IncidentRepositoryImpl implements IncidentRepositoryCustom {
                         eqStatus(status)
                 )
                 .groupBy(incident.id)
-                .having(complaint.count().goe(5)) // [수정] 5개 이상인 군집만 필터링
-                .orderBy(complaint.createdAt.max().desc()) // 최신 사건 순 정렬
+                .having(complaint.count().goe(2)) // [수정] 5개 이상인 군집만 필터링
+                .orderBy(complaint.receivedAt.max().desc()) // 최신 사건 순 정렬
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -58,7 +58,7 @@ public class IncidentRepositoryImpl implements IncidentRepositoryCustom {
                                 JPAExpressions.select(complaint.incident.id)
                                         .from(complaint)
                                         .groupBy(complaint.incident.id)
-                                        .having(complaint.count().goe(5))
+                                        .having(complaint.count().goe(2))
                         )
                 )
                 .fetchOne();

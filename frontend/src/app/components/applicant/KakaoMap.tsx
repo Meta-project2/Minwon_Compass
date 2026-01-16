@@ -25,7 +25,7 @@ const KakaoMap = ({ address, onLocationChange, complaints, mapView, showSurgeOnl
     kakao.maps.load(() => {
       const options = {
         center: new kakao.maps.LatLng(37.5358, 127.1325), // 기본 중심지
-        level: 8, // 대시보드 가독성을 위해 초기 레벨을 조금 높임
+        level: 3, // 대시보드 가독성을 위해 초기 레벨을 조금 높임
       };
       const mapInstance = new kakao.maps.Map(mapContainer.current, options);
 
@@ -62,8 +62,15 @@ const KakaoMap = ({ address, onLocationChange, complaints, mapView, showSurgeOnl
 
           geocoder.coord2Address(latlng.getLng(), latlng.getLat(), (result: any, status: any) => {
             if (status === kakao.maps.services.Status.OK) {
-              const roadAddress = result[0].road_address?.address_name || result[0].address_name;
-              onLocationChange(latlng.getLat(), latlng.getLng(), roadAddress);
+              const addr = result[0].road_address;
+              const baseAddr = addr ? addr.address_name : result[0].address.address_name;
+
+              // [수정] 건물 이름(building_name)이 있다면 주소 뒤에 추가하여 더 상세하게 만듭니다.
+              const detailAddr = addr && addr.building_name
+                ? `${baseAddr} (${addr.building_name})`
+                : baseAddr;
+
+              onLocationChange(latlng.getLat(), latlng.getLng(), detailAddr);
             }
           });
         });

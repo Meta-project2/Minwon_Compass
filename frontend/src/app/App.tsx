@@ -105,7 +105,7 @@ function AppContent() {
         <Route path="/applicant/logout" element={<ApplicantLogout />} />
         <Route path="/applicant/login-success" element={<LoginSuccess />} />
         <Route path="/applicant/main" element={<ApplicantMainPage />} />
-        <Route path="/applicant/complaints/new" element={<ApplicantComplaintCreatePage />} />
+        <Route path="/applicant/complaints/form" element={<ApplicantComplaintCreatePage />} />
         <Route path="/applicant/signup" element={<ApplicantSignUpPage />} />
         <Route path="/applicant/find-id" element={<ApplicantFindIdPage />} />
         <Route path="/applicant/find-password" element={<ApplicantResetPwPage />} />
