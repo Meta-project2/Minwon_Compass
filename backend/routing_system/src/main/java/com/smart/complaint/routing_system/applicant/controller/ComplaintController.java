@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -32,7 +33,7 @@ public class ComplaintController {
 
     @Operation(summary = "민원 리스트 조회", description = "로그인한 사용자의 부서에 배정된 민원 리스트를 전부 조회합니다.")
     @GetMapping
-    public List<ComplaintResponse> getComplaints(
+    public Page<ComplaintResponse> getComplaints(
             @ModelAttribute ComplaintSearchCondition condition
     // @AuthenticationPrincipal UserDetails userDetails
     ) {

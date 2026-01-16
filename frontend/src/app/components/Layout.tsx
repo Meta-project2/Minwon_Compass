@@ -25,8 +25,8 @@ export function Layout({ children, currentPage, onNavigate, userRole }: LayoutPr
   const agentMenuItems = [
     { id: 'complaints', label: '민원함', icon: FileText },
     { id: 'incidents', label: '중복 민원', icon: Layers },
-    { id: 'dashboard', label: '민원 처리 통계', icon: Layers },
     { id: 'reroute-requests', label: '재이관 요청함', icon: FileText },
+    { id: 'dashboard', label: '민원 처리 통계', icon: Layers },
     { id: 'civil-service', label: '민원인 서비스', icon: Globe },
     // { id: 'knowledge-base', label: '지식베이스', icon: FileText },
     // { id: 'user-management', label: '사용자/부서 관리', icon: User },
@@ -35,11 +35,11 @@ export function Layout({ children, currentPage, onNavigate, userRole }: LayoutPr
 
   const adminMenuItems = [
     { id: 'complaints', label: '민원함', icon: FileText },
-        { id: 'incidents', label: '사건(군집)', icon: Layers },
-    { id: 'dashboard', label: '민원 처리 통계', icon: Layers },
+    { id: 'incidents', label: '중복 민원', icon: Layers },
     { id: 'reroute-requests', label: '재이관 요청함', icon: FileText },
-    { id: 'civil-service', label: '민원인 서비스', icon: Globe },
+    { id: 'dashboard', label: '민원 처리 통계', icon: Layers },
     { id: 'user-management', label: '사용자/부서 관리', icon: User },
+    { id: 'civil-service', label: '민원인 서비스', icon: Globe },
     // { id: 'knowledge-base', label: '지식베이스', icon: FileText },
     // { id: 'settings', label: '설정', icon: Settings },
   ];
@@ -121,12 +121,12 @@ export function Layout({ children, currentPage, onNavigate, userRole }: LayoutPr
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56" side="right" sideOffset={10}>
-                <DropdownMenuLabel>계정</DropdownMenuLabel>
+              <DropdownMenuContent align="start" className="w-56" side="top" sideOffset={10}>
+                {/* <DropdownMenuLabel>계정</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>내 정보</DropdownMenuItem>
                 <DropdownMenuItem>설정</DropdownMenuItem>
-                <DropdownMenuSeparator />
+                <DropdownMenuSeparator /> */}
                 <DropdownMenuItem>로그아웃</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

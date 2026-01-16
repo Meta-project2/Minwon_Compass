@@ -1,10 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Search, X, Eye, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, X, Eye, AlertCircle, ChevronLeft, ChevronRight, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { Card, CardContent } from './ui/card';
+import { Card } from './ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
 interface IncidentListPageProps {
@@ -28,7 +35,6 @@ const statusMap: Record<string, { label: string; color: string }> = {
   CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-700' },
 };
 
-// [수정] 대괄호 제거 및 간결한 제목 변환
 const cleanTitle = (rawTitle: string) => {
   if (!rawTitle) return "";
   return rawTitle.replace(/^\[.*?\]\s*/, '').split('(')[0].trim();
@@ -40,33 +46,36 @@ const formatDate = (dateString?: string) => {
 };
 
 export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
+  // --- 상태 관리 (기존 로직 유지) ---
   const [incidents, setIncidents] = useState<IncidentResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  
+
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
 
+  // --- 데이터 호출 (기존 로직 유지) ---
   const fetchIncidents = useCallback(async (pageParam: number) => {
     setLoading(true);
     try {
       const params: any = {
-        page: pageParam - 1, 
-        size: 10, 
+        page: pageParam - 1,
+        size: 10,
       };
       if (searchQuery.trim()) params.search = searchQuery;
       if (selectedStatus !== 'all') params.status = selectedStatus;
 
       const response = await axios.get('/api/agent/incidents', { params });
-      
+
       if (response.data && Array.isArray(response.data.content)) {
         setIncidents(response.data.content);
         setTotalPages(response.data.totalPages);
         setTotalElements(response.data.totalElements);
       } else {
         setIncidents([]);
+        setTotalElements(0);
       }
     } catch (error) {
       console.error('데이터 호출 에러:', error);
@@ -74,148 +83,246 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedStatus]); 
+  }, [searchQuery, selectedStatus]);
 
   useEffect(() => {
     fetchIncidents(page);
   }, [page, fetchIncidents]);
 
+  // --- 이벤트 핸들러 ---
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      setPage(1);
+      fetchIncidents(1);
+    }
+  };
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setSelectedStatus('all');
+    setPage(1);
+  };
+
+  // --- 페이지네이션 계산 (ComplaintList 스타일 UI를 위한 계산) ---
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxVisiblePages = 5;
+    const maxVisiblePages = 10; // 디자인에 맞춰 5 -> 10으로 조정 가능하나, 공간 확보를 위해 로직 유지
     let startPage = Math.max(1, page - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    if (endPage - startPage + 1 < maxVisiblePages) startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
     return pageNumbers;
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-50/50">
-      {/* 헤더 영역 */}
-      <div className="border-b border-border bg-card px-6 py-4 shadow-sm">
-        <h1 className="text-xl font-bold text-slate-900">사건(군집)</h1>
-        <p className="text-sm text-slate-400 font-medium">연관된 민원들을 하나의 사건으로 자동 관리합니다.</p>
-      </div>
-
-      {/* [수정] 간소화된 검색 및 필터 바 */}
-      <div className="px-6 py-4 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="사건 검색..."
-              className="pl-9 h-9 bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && setPage(1)}
-            />
-          </div>
-          <select 
-            className="h-9 rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm outline-none"
-            value={selectedStatus}
-            onChange={(e) => { setSelectedStatus(e.target.value); setPage(1); }}
-          >
-            <option value="all">전체 상태</option>
-            <option value="OPEN">발생</option>
-            <option value="IN_PROGRESS">대응중</option>
-            <option value="RESOLVED">해결</option>
-            <option value="CLOSED">종결</option>
-          </select>
-          <Button variant="ghost" size="sm" className="text-slate-400" onClick={() => {setSearchQuery(''); setSelectedStatus('all'); setPage(1);}}>
-            <X className="h-4 w-4 mr-1" /> 필터 초기화
-          </Button>
+    <div className="flex h-full">
+      <div className="flex-1 flex flex-col">
+        
+        {/* 상단 헤더 (ComplaintList 스타일) */}
+        <div className="h-16 border-b border-border bg-card px-6 shadow-sm flex items-center gap-3 shrink-0">
+          <h1 className="text-2.5xl font-bold text-slate-900">중복 민원</h1>
+          <p className="text-sm text-slate-400 font-medium pt-1">연관된 민원들을 하나의 그룹으로 자동 관리합니다.</p>
         </div>
-        <span className="text-xs font-medium text-slate-400 italic">총 {totalElements}건의 사건</span>
-      </div>
 
-      {/* 테이블 영역 */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden">
-        <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-md bg-white">
-          <div className="flex-1 overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-slate-50 z-10">
-                <TableRow>
-                  <TableHead className="w-[120px]  text-center">사건 ID</TableHead>
-                  <TableHead className=' text-center'>제목</TableHead>
-                  <TableHead className="text-center w-[100px]">민원수</TableHead>
-                  <TableHead className="w-[100px]">상태</TableHead>
-                  <TableHead className="w-[120px]">최초 발생일</TableHead>
-                  <TableHead className="w-[120px]">최근 발생일</TableHead>
-                  <TableHead className="text-right w-[80px] text-center">상세보기</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-20 text-slate-400">데이터 로드 중...</TableCell></TableRow>
-                ) : incidents.length > 0 ? (
-                  incidents.map((incident) => (
-                    <TableRow 
-                      key={incident.id} 
-                      className="hover:bg-slate-50/50 cursor-pointer transition-colors" 
-                      onClick={() => onViewDetail(incident.id)}
-                    >
-                      <TableCell className="font-mono text-[11px] font-semibold text-slate-400">{incident.id}</TableCell>
-                      <TableCell className="font-medium text-slate-800">{cleanTitle(incident.title)}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-bold border-none">{incident.complaintCount}건</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${statusMap[incident.status]?.color} border-none`}>
-                          {statusMap[incident.status]?.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-400">{formatDate(incident.openedAt)}</TableCell>
-                      <TableCell className="text-xs text-slate-400">{formatDate(incident.lastOccurred)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="ghost" className="text-blue-600 hover:bg-blue-50" onClick={(e) => { e.stopPropagation(); onViewDetail(incident.id); }}>
-                          <Eye className="h-4 w-4  text-center" />
-                        </Button>
+        {/* 메인 컨텐츠 영역 (ComplaintList 스타일 배경 및 패딩) */}
+        <div className="flex-1 overflow-auto px-6 pt-0 pb-6 bg-slate-100/50 flex flex-col">
+          
+          {/* 필터 바 */}
+          <div className="py-3 flex items-center gap-4 justify-left shrink-0">
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="사건 검색..."
+                  className="pl-9 bg-input-background pr-8 w-64"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => { setSearchQuery(''); setPage(1); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <Button className='border-2' variant="outline" onClick={() => { setPage(1); fetchIncidents(1); }}>검색</Button>
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* 상태 선택 Select */}
+              <Select value={selectedStatus} onValueChange={(val) => { setSelectedStatus(val); setPage(1); }}>
+                <SelectTrigger className="w-32 bg-input-background">
+                  <SelectValue placeholder="상태" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 상태</SelectItem>
+                  <SelectItem value="OPEN">발생</SelectItem>
+                  <SelectItem value="IN_PROGRESS">대응중</SelectItem>
+                  <SelectItem value="RESOLVED">해결</SelectItem>
+                  <SelectItem value="CLOSED">종결</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* 필터 초기화 */}
+              <Button variant="ghost" size="sm" className="ml-auto" onClick={resetFilters}>
+                <X className="h-4 w-4 mr-1" /> 필터 초기화
+              </Button>
+            </div>
+
+            {/* 전체 건수 표시 (ComplaintList 디자인) */}
+            <div className="flex items-center h-10 ml-2"> 
+              <div className="h-4 w-px bg-slate-300 mr-4"></div> {/* 구분선 */}
+              <span className="text-sm font-medium text-slate-600 whitespace-nowrap pt-0.5"> 
+                총 <span className="text-blue-600 font-bold">{totalElements}</span>건
+              </span>
+            </div>
+          </div>
+
+          {/* 테이블 카드 (ComplaintList 스타일) */}
+          <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-md bg-white rounded-md mb-4">
+            <div className="flex-1 overflow-auto">
+              <Table>
+                {/* 테이블 헤더 (Sticky, Slate-300, Bold, Borders) */}
+                <TableHeader className="sticky top-0 bg-slate-300 border-b-2 z-10">
+                  <TableRow>
+                    <TableHead className="w-[120px] text-center font-bold text-slate-900 border-r border-slate-400">사건 ID</TableHead>
+                    <TableHead className="text-center font-bold text-slate-900 border-r border-slate-400">제목</TableHead>
+                    <TableHead className="w-[100px] text-center font-bold text-slate-900 border-r border-slate-400">민원수</TableHead>
+                    <TableHead className="w-[100px] text-center font-bold text-slate-900 border-r border-slate-400">상태</TableHead>
+                    <TableHead className="w-[120px] text-center font-bold text-slate-900 border-r border-slate-400">최초 발생일</TableHead>
+                    <TableHead className="w-[120px] text-center font-bold text-slate-900 border-r border-slate-400">최근 발생일</TableHead>
+                    <TableHead className="text-center font-bold text-slate-900">관리</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-20 text-slate-400">
+                        <div className="flex justify-center items-center">
+                          <Loader2 className="animate-spin h-6 w-6 mr-2" /> 데이터 로드 중...
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-20">
-                      <div className="flex flex-col items-center gap-2 text-slate-400">
-                        <AlertCircle className="h-8 w-8" />
-                        <span className="text-sm font-medium">검색 결과가 없습니다.</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          
-          {/* [수정] 중앙 정렬된 페이지네이션 */}
-          {totalElements > 0 && (
-            <div className="border-t p-4 bg-white">
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="h-8">이전</Button>
-                  <div className="flex items-center gap-1">
-                    {getPageNumbers().map(pageNum => (
-                      <Button
-                        key={pageNum}
-                        variant={pageNum === page ? "default" : "ghost"}
-                        size="sm"
-                        className={`h-8 w-8 p-0 ${pageNum === page ? 'bg-slate-900 text-white font-bold' : 'text-slate-600'}`}
-                        onClick={() => setPage(pageNum)}
+                  ) : incidents.length > 0 ? (
+                    incidents.map((incident) => (
+                      <TableRow
+                        key={incident.id}
+                        className="cursor-pointer hover:bg-slate-100 border-b border-slate-200"
+                        onClick={() => onViewDetail(incident.id)}
                       >
-                        {pageNum}
-                      </Button>
-                    ))}
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8">다음</Button>
+                        <TableCell className="text-sm text-muted-foreground text-center font-mono">
+                          {incident.id}
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium truncate max-w-[400px] text-slate-800">
+                              {cleanTitle(incident.title)}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Badge variant="secondary" className="font-mono text-xs bg-slate-100 text-slate-600 border-none">
+                            {incident.complaintCount}건
+                          </Badge>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <div className="flex justify-center">
+                            <Badge className={`${statusMap[incident.status]?.color} border-none`}>
+                              {statusMap[incident.status]?.label}
+                            </Badge>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-sm text-muted-foreground text-center">
+                          {formatDate(incident.openedAt)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground text-center">
+                          {formatDate(incident.lastOccurred)}
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <div className="flex justify-center">
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-8 text-xs px-3 border border-slate-200" 
+                              onClick={(e) => { e.stopPropagation(); onViewDetail(incident.id); }}
+                            >
+                              <Eye className="h-3 w-3 mr-1.5" /> 열기
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-20">
+                        <div className="flex flex-col items-center gap-2 text-slate-400">
+                          <AlertCircle className="h-8 w-8" />
+                          <span className="text-sm font-medium">검색 결과가 없습니다.</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+
+          {/* 하단 페이지네이션 (ComplaintList 스타일 이식) */}
+          {totalElements > 0 && (
+            <div className="flex flex-col items-center justify-center gap-2 pb-0 shrink-0">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {getPageNumbers().map(pageNum => (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === page ? "default" : "ghost"}
+                      size="sm"
+                      className={`h-8 w-8 p-0 ${pageNum === page ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-600'}`}
+                      onClick={() => setPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  ))}
                 </div>
-                <span className="text-[10px] text-slate-300 font-medium italic">
-                  총 {totalElements}건 중 {(page - 1) * 10 + 1}-{Math.min(page * 10, totalElements)} 표시
-                </span>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           )}
-        </Card>
+
+        </div>
       </div>
     </div>
   );

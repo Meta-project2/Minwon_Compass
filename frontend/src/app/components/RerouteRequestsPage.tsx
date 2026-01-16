@@ -136,7 +136,7 @@ export function RerouteRequestsPage() {
         </div>
 
         {/* 메인 영역 (배경색 및 패딩 통일) */}
-        <div className="flex-1 overflow-auto p-6 bg-slate-100/50">
+        <div className="flex-1 overflow-auto px-6 pt-0 pb-6 bg-slate-100/50">
           
           {/* 필터 영역 (ComplaintListPage 스타일 통일) */}
           <div className="py-3 flex items-center gap-4 justify-left">

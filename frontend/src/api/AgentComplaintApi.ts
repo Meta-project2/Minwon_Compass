@@ -74,6 +74,16 @@ const parseId = (id: string | number): number => {
   return Number(idStr);
 };
 
+export interface PageResponse<T> {
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number; // 현재 페이지 (0-based)
+  first: boolean;
+  last: boolean;
+}
+
 export const AgentComplaintApi = {
 
   // 0. 내 정보 가져오기
