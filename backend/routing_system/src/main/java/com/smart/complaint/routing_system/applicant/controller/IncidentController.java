@@ -80,8 +80,59 @@ public class IncidentController {
                 .firstOccurred(incident.getOpenedAt() != null ? incident.getOpenedAt().format(formatter) : "-")
                 .lastOccurred(incident.getClosedAt() != null ? incident.getClosedAt().format(formatter) : "-")
                 .complaintCount(incident.getComplaintCount() != null ? incident.getComplaintCount() : complaints.size())
-                .avgProcessTime("4.5시간")
+                .avgProcessTime(calculateAverageProcessTime(complaints))
                 .complaints(complaintDtos) // 이제 에러 없이 정상 참조됩니다.
                 .build();
     }
+    private String calculateAverageProcessTime(List<Complaint> complaints) {
+        if (complaints == null || complaints.isEmpty()) return "0분";
+
+        long totalMinutes = 0;
+        int count = 0;
+
+        for (Complaint c : complaints) {
+            // 접수일(receivedAt)과 종결일(closedAt)이 모두 있을 때만 계산
+            if (c.getReceivedAt() != null && c.getClosedAt() != null) {
+                java.time.Duration duration = java.time.Duration.between(c.getReceivedAt(), c.getClosedAt());
+                totalMinutes += duration.toMinutes();
+                count++;
+            }
+        }
+
+        if (count == 0) return "대기 중";
+
+        long avgMinutes = totalMinutes / count;
+
+        // 단위 변환 로직 (분 -> 일, 시간, 분)
+        long days = avgMinutes / (24 * 60);
+        long remainingMinutesAfterDays = avgMinutes % (24 * 60);
+        long hours = remainingMinutesAfterDays / 60;
+
+        // 문자열 조합
+        StringBuilder sb = new StringBuilder();
+
+        if (days > 0) {
+            sb.append(days).append("일 ");
+        }
+        if (hours > 0) {
+            sb.append(hours).append("시간 ");
+        }
+
+        return sb.toString().trim();
+    }
+
+    // [추가 1] 제목 수정 기능
+    @PatchMapping("/{id}/title")
+    public void updateIncidentTitle(@PathVariable Long id, @RequestBody String newTitle) {
+        incidentService.updateTitle(id, newTitle);
+    }
+
+    // [추가 2] 민원 이동 기능 (A그룹 -> B그룹)
+    @PostMapping("/move")
+    public void moveComplaintsToIncident(
+            @RequestParam Long targetIncidentId,
+            @RequestBody List<Long> complaintIds) {
+        incidentService.moveComplaints(targetIncidentId, complaintIds);
+    }
+
 }

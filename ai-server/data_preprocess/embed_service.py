@@ -11,7 +11,7 @@ client = Client(host='http://127.0.0.1:11434')
 # ================= 설정 섹션 =================
 DB_CONFIG = {
     "host": "localhost",
-    "database": "postgres",
+    "database": "complaint_db",
     "user": "postgres",
     "password": "0000",
     "port": 5432

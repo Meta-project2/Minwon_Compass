@@ -1,5 +1,6 @@
 package com.smart.complaint.routing_system.applicant.service;
 
+import com.smart.complaint.routing_system.applicant.entity.Complaint;
 import com.smart.complaint.routing_system.applicant.entity.Incident;
 import com.smart.complaint.routing_system.applicant.repository.IncidentRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,4 +38,35 @@ public class IncidentService {
         List<Incident> subList = majorList.subList(start, end);
         return new PageImpl<>(subList, pageable, majorList.size());
     }
+    // [추가] 제목 변경 로직
+    @Transactional
+    public void updateTitle(Long incidentId, String newTitle) {
+        Incident incident = incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new IllegalArgumentException("사건을 찾을 수 없습니다."));
+        incident.setTitle(newTitle); // Entity에 setTitle 메서드가 있어야 합니다.
+    }
+
+    // [추가] 민원 이동 및 숫자 조정 로직 (핵심)
+    @Transactional
+    public void moveComplaints(Long targetIncidentId, List<Long> complaintIds) {
+        Incident targetIncident = incidentRepository.findById(targetIncidentId)
+                .orElseThrow(() -> new IllegalArgumentException("이동할 대상 사건이 없습니다."));
+
+        List<Complaint> complaints = complaintRepository.findAllById(complaintIds);
+
+        for (Complaint c : complaints) {
+            // 1. 원래 있던 사건의 민원 수 감소
+            if (c.getIncident() != null) {
+                Incident oldIncident = c.getIncident();
+                oldIncident.setComplaintCount(oldIncident.getComplaintCount() - 1);
+            }
+
+            // 2. 새로운 사건으로 이동
+            c.setIncident(targetIncident);
+        }
+
+        // 3. 대상 사건의 민원 수 증가
+        targetIncident.setComplaintCount(targetIncident.getComplaintCount() + complaints.size());
+    }
+
 }

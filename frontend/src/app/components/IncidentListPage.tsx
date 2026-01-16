@@ -94,8 +94,8 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
     <div className="h-full flex flex-col bg-slate-50/50">
       {/* 헤더 영역 */}
       <div className="border-b border-border bg-card px-6 py-4 shadow-sm">
-        <h1 className="text-xl font-bold text-slate-900">사건(군집)</h1>
-        <p className="text-sm text-slate-400 font-medium">연관된 민원들을 하나의 사건으로 자동 관리합니다.</p>
+        <h1 className="text-xl font-bold text-slate-900">민원 중복</h1>
+        <p className="text-sm text-slate-400 font-medium">연관된 민원들을 하나의 그룹으로 자동으로 묶어 관리합니다.</p>
       </div>
 
       {/* [수정] 간소화된 검색 및 필터 바 */}
@@ -104,7 +104,7 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="사건 검색..."
+              placeholder="민원 그룹 검색..."
               className="pl-9 h-9 bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
