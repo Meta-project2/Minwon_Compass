@@ -104,13 +104,13 @@ export function AdminDashboard() {
   return (
     <div className="h-full flex flex-col">
       <div className="h-16 border-b border-border bg-card px-6 shadow-sm flex items-center gap-3 shrink-0">
-          <h1 className="text-2.5xl font-bold text-slate-900">민원 처리 현황</h1>
-          <p className="text-sm text-slate-400 font-medium pt-1">사전 집계된 지표</p>
-        </div>
+        <h1 className="text-2.5xl font-bold text-slate-900">민원 처리 현황</h1>
+        <p className="text-sm text-slate-400 font-medium pt-1">사전 집계된 지표</p>
+      </div>
 
       {/* Global Filters */}
       {/* <div className="bg-card border-b border-border p-4"> */}
-        {/* <div className="flex flex-wrap gap-2 items-center">
+      {/* <div className="flex flex-wrap gap-2 items-center">
           <Select defaultValue="7d">
             <SelectTrigger className="w-32 bg-input-background">
               <SelectValue placeholder="기간" />
@@ -123,7 +123,7 @@ export function AdminDashboard() {
             </SelectContent>
           </Select> */}
 
-          {/* <Select defaultValue="all">
+      {/* <Select defaultValue="all">
             <SelectTrigger className="w-32 bg-input-background">
               <SelectValue placeholder="업무군" />
             </SelectTrigger>
@@ -135,7 +135,7 @@ export function AdminDashboard() {
             </SelectContent>
           </Select> */}
 
-          {/* <Select defaultValue="all">
+      {/* <Select defaultValue="all">
             <SelectTrigger className="w-32 bg-input-background">
               <SelectValue placeholder="부서" />
             </SelectTrigger>
@@ -157,7 +157,7 @@ export function AdminDashboard() {
             </SelectContent>
           </Select> */}
 
-          {/* <Button variant="ghost" size="sm" className="ml-auto">
+      {/* <Button variant="ghost" size="sm" className="ml-auto">
             <X className="h-4 w-4 mr-1" />
             필터 초기화
           </Button>
@@ -168,7 +168,7 @@ export function AdminDashboard() {
       <div className="flex-1 overflow-auto p-6">
         <div className="grid grid-cols-3 gap-4">
           {/* Widget 1: 민원 유입 추이 */}
-          <Card className="col-span-2">
+          <Card className="col-span-1">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">민원 접수 추이</CardTitle>
@@ -181,8 +181,8 @@ export function AdminDashboard() {
                       <SelectItem value="all">전체 부서</SelectItem>
                       <SelectItem value="road">도로관리과</SelectItem>
                       <SelectItem value="env">환경관리과</SelectItem> */}
-                      {/* 실제 부서 데이터 가져오게 */}
-                    {/* </SelectContent>
+                  {/* 실제 부서 데이터 가져오게 */}
+                  {/* </SelectContent>
                   </Select> */}
                 </div>
               </div>
@@ -247,8 +247,33 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
 
+          
+          {/* Widget 5: 라우팅 품질 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">민원 자동 배정 품질</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-3 border rounded">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="text-sm">재이관 승인율</span>
+                </div>
+                <div className="text-xl">87%</div>
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  <span className="text-sm">수동 이관율</span>
+                </div>
+                <div className="text-xl">13%</div>
+              </div>
+            </CardContent>
+          </Card>
+
+
           {/* Widget 3: 부서 유입·미처리 랭킹 */}
-          <Card className="col-span-2">
+          <Card className="col-span-1">
             <CardHeader>
               <CardTitle className="text-base">부서별 접수·처리 현황</CardTitle>
             </CardHeader>
@@ -266,8 +291,7 @@ export function AdminDashboard() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-
-          {/* Widget 2: 업무군 분포 */}
+                    {/* Widget 2: 업무군 분포 */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">민원 유형 분포</CardTitle>
@@ -295,28 +319,6 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Widget 5: 라우팅 품질 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">민원 자동 배정 품질</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="text-sm">재이관 승인율</span>
-                </div>
-                <div className="text-xl">87%</div>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  <span className="text-sm">수동 이관율</span>
-                </div>
-                <div className="text-xl">13%</div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Widget 6: 사건 재발 Top */}
           <Card>
