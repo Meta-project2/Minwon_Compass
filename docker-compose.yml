@@ -1,35 +1,90 @@
 version: '3.8'
+
 services:
+  # 1. PostgreSQL 데이터베이스
   db:
     build:
-      context: .
-      dockerfile: ./db/Dockerfile
+      context: ./db
     container_name: complaint-postgres
     restart: always
-    # .env 파일이 없으면 기본값(postgres/your_password)이 사용됩니다.
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-0000}
-      POSTGRES_DB: ${POSTGRES_DB:-complaint_db}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
     ports:
       - "5432:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     networks:
       - complaint-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  # 2. Langflow (AI 워크플로우 관리)
   langflow:
     image: langflowai/langflow:latest
+    container_name: complaint-langflow
     ports:
       - "7860:7860"
     volumes:
-      # 로컬의 ./langflow_data 폴더를 컨테이너 내부의 저장소와 연결합니다.
       - ./langflow_data:/app/langflow
     environment:
       - LANGFLOW_DATABASE_URL=sqlite:////app/langflow/langflow.db
     depends_on:
       - db
     networks:
-    - complaint-network
+      - complaint-network
+
+  # 3. FastAPI 서버 (AI 로직 및 전처리)
+  ai-server:
+    build:
+      context: ./ai-server
+    container_name: complaint-ai-server
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-0000}@db:5432/${POSTGRES_DB:-postgres}
+    depends_on:
+      - db
+    env_file:
+      - .env
+    networks:
+      - complaint-network
+
+  # 4. Spring Boot 서버 (메인 비즈니스 로직)
+  backend:
+    build:
+      context: ./backend/routing_system
+    env_file:
+      - .env
+    container_name: complaint-backend
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-postgres}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-0000}
+      - AI_SERVER_URL=http://ai-server:8000
+    depends_on:
+      db:
+        condition: service_healthy  # DB의 healthcheck가 통과할 때까지 대기
+      ai-server:
+        condition: service_started  # ai-server는 실행만 되면 시작
+    networks:
+      - complaint-network
+
+  # 5. Vite + Nginx (프론트엔드 및 리버스 프록시)
+  frontend:
+    build:
+      context: ./frontend
+    container_name: complaint-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - ai-server
+      - langflow
+    networks:
+      - complaint-network
 
 networks:
   complaint-network:

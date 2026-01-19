@@ -31,7 +31,7 @@ export function ResponseTimeStats({ data, overallStats }: ResponseTimeStatsProps
         <div className="p-5 bg-blue-50/50 rounded-3xl text-center border border-blue-100/50 shadow-sm transition-transform hover:scale-[1.02]">
           <div className="flex flex-col items-center gap-1.5 mb-2">
             <Clock className="w-4 h-4 text-blue-600" />
-            <span className="text-[11px] font-bold text-blue-400 uppercase tracking-tighter">평균 처리 시간</span>
+            <span className="text-[20px] font-bold text-blue-400 uppercase tracking-tighter">평균 처리 시간</span>
           </div>
           <p className="text-2xl font-black text-blue-900">{overallStats.averageResponseTime}일</p>
         </div>
@@ -39,7 +39,7 @@ export function ResponseTimeStats({ data, overallStats }: ResponseTimeStatsProps
         <div className="p-5 bg-blue-50/50 rounded-3xl text-center border border-blue-100/50 shadow-sm transition-transform hover:scale-[1.02]">
           <div className="flex flex-col items-center gap-1.5 mb-2">
             <Award className="w-4 h-4 text-green-600" />
-            <span className="text-[11px] font-bold text-green-400 uppercase tracking-tighter">최단 처리 분야</span>
+            <span className="text-[20px] font-bold text-green-400 uppercase tracking-tighter">최단 처리 분야</span>
           </div>
           <p className="text-2xl font-black text-green-900 leading-tight">{overallStats.fastestCategory}</p>
         </div>
@@ -47,7 +47,7 @@ export function ResponseTimeStats({ data, overallStats }: ResponseTimeStatsProps
         <div className="p-5 bg-blue-50/50 rounded-3xl text-center border border-blue-100/50 shadow-sm transition-transform hover:scale-[1.02]">
           <div className="flex flex-col items-center gap-1.5 mb-2">
             <TrendingDown className="w-4 h-4 text-purple-600" />
-            <span className="text-[11px] font-bold text-purple-400 uppercase tracking-tighter">처리 속도 개선</span>
+            <span className="text-[20px] font-bold text-purple-400 uppercase tracking-tighter">처리 속도 개선</span>
           </div>
           <p className="text-2xl font-black text-purple-900">+{overallStats.improvementRate}%</p>
         </div>

@@ -85,7 +85,7 @@ export function AdminDashboard() {
 
   const token = localStorage.getItem('accessToken');
   useEffect(() => {
-    fetch('http://localhost:8080/api/applicant/heatmap', {
+    fetch('/api/applicant/heatmap', {
       headers: {
         'Authorization': `Bearer ${token}`, // 토큰 추가
         'Content-Type': 'application/json'
@@ -104,13 +104,13 @@ export function AdminDashboard() {
   return (
     <div className="h-full flex flex-col">
       <div className="h-16 border-b border-border bg-card px-6 shadow-sm flex items-center gap-3 shrink-0">
-          <h1 className="text-2.5xl font-bold text-slate-900">민원 처리 현황</h1>
-          <p className="text-sm text-slate-400 font-medium pt-1">사전 집계된 지표</p>
-        </div>
+        <h1 className="text-2.5xl font-bold text-slate-900">민원 처리 현황</h1>
+        <p className="text-sm text-slate-400 font-medium pt-1">사전 집계된 지표</p>
+      </div>
 
       {/* Global Filters */}
       {/* <div className="bg-card border-b border-border p-4"> */}
-        {/* <div className="flex flex-wrap gap-2 items-center">
+      {/* <div className="flex flex-wrap gap-2 items-center">
           <Select defaultValue="7d">
             <SelectTrigger className="w-32 bg-input-background">
               <SelectValue placeholder="기간" />
@@ -123,7 +123,7 @@ export function AdminDashboard() {
             </SelectContent>
           </Select> */}
 
-          {/* <Select defaultValue="all">
+      {/* <Select defaultValue="all">
             <SelectTrigger className="w-32 bg-input-background">
               <SelectValue placeholder="업무군" />
             </SelectTrigger>
@@ -135,7 +135,7 @@ export function AdminDashboard() {
             </SelectContent>
           </Select> */}
 
-          {/* <Select defaultValue="all">
+      {/* <Select defaultValue="all">
             <SelectTrigger className="w-32 bg-input-background">
               <SelectValue placeholder="부서" />
             </SelectTrigger>
@@ -157,7 +157,7 @@ export function AdminDashboard() {
             </SelectContent>
           </Select> */}
 
-          {/* <Button variant="ghost" size="sm" className="ml-auto">
+      {/* <Button variant="ghost" size="sm" className="ml-auto">
             <X className="h-4 w-4 mr-1" />
             필터 초기화
           </Button>
@@ -181,8 +181,8 @@ export function AdminDashboard() {
                       <SelectItem value="all">전체 부서</SelectItem>
                       <SelectItem value="road">도로관리과</SelectItem>
                       <SelectItem value="env">환경관리과</SelectItem> */}
-                      {/* 실제 부서 데이터 가져오게 */}
-                    {/* </SelectContent>
+                  {/* 실제 부서 데이터 가져오게 */}
+                  {/* </SelectContent>
                   </Select> */}
                 </div>
               </div>

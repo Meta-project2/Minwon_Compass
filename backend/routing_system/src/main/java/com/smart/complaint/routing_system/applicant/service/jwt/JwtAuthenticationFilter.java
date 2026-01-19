@@ -72,8 +72,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 System.err.println("인증 객체 생성 중 에러 발생: " + e.getMessage());
                 e.printStackTrace();
             }
-        } else {
-            System.out.println("Invalid or missing JWT token" + (token == null ? "" : ": " + token));
         }
 
         filterChain.doFilter(request, response);

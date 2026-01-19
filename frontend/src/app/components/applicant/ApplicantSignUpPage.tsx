@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Check, X, Eye, EyeOff } from 'lucide-react';
+import api from './AxiosInterface';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
@@ -56,7 +57,7 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
 
     // 아이디 중복 확인 API 호출
     try {
-      await axios.post(`http://localhost:8080/api/applicant/check-id`, { checkString: userId, type: "id" });
+      await api.post(`/applicant/check-id`, { checkString: userId, type: "id" });
       setIsIdAvailable(true);
       Swal.fire({ icon: 'success', text: '사용 가능한 아이디입니다.' });
     } catch (error) {
@@ -106,7 +107,7 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
     }
 
     try {
-      const response = await axios.post(`http://localhost:8080/api/applicant/check-id`, {
+      const response = await api.post(`/applicant/check-id`, {
         checkString: email,
         type: "email"
       });
@@ -123,7 +124,7 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
 
     try {
       // 실제 백엔드 API 연동
-      await axios.post(`http://localhost:8080/api/applicant/signup`, {
+      await api.post(`/applicant/signup`, {
         userId: userId,
         password: password,
         displayName: lastName + firstName,

@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Calendar, Building2, User, MessageSquare, ArrowUpDown, Home, FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
+import axios from 'axios';
 
 interface Message {
   id: string;
@@ -19,7 +20,7 @@ interface ComplaintDetail {
   title: string;
   category: string;
   content: string;
-  status: 'received' | 'categorizing' | 'assigned' | 'answered' | 'closed';
+  status: 'RECEIVED' | 'NORMALIZED' | 'RECOMMENDED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'CANCELED';
   submittedDate: string;
   lastUpdate?: string;
   department?: string;
@@ -28,19 +29,23 @@ interface ComplaintDetail {
 }
 
 const STATUS_LABELS = {
-  received: '접수됨',
-  categorizing: '분류중',
-  assigned: '담당자 배정',
-  answered: '답변 완료',
-  closed: '처리 완료',
+  RECEIVED: '접수됨',
+  NORMALIZED: '분류완료',
+  RECOMMENDED: '부서추천',
+  IN_PROGRESS: '처리중',
+  RESOLVED: '답변완료',
+  CLOSED: '종결',
+  CANCELED: '취소/반려',
 };
 
 const STATUS_COLORS = {
-  received: 'bg-blue-100 text-blue-700 border-blue-300',
-  categorizing: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-  assigned: 'bg-purple-100 text-purple-700 border-purple-300',
-  answered: 'bg-green-100 text-green-700 border-green-300',
-  closed: 'bg-gray-100 text-gray-700 border-gray-300',
+  RECEIVED: 'bg-blue-50 text-blue-700 border-blue-200',      // 신규 접수: 청량한 블루
+  NORMALIZED: 'bg-cyan-50 text-cyan-700 border-cyan-200',    // 분석 완료: 깨끗한 시안
+  RECOMMENDED: 'bg-purple-50 text-purple-700 border-purple-200', // 부서 추천: 신비로운 퍼플
+  IN_PROGRESS: 'bg-amber-50 text-amber-700 border-amber-200',  // 처리중: 주의가 필요한 오렌지/앰버
+  RESOLVED: 'bg-emerald-50 text-emerald-700 border-emerald-200', // 답변 완료: 신뢰의 그린
+  CLOSED: 'bg-slate-100 text-slate-600 border-slate-300',     // 종결: 차분한 그레이
+  CANCELED: 'bg-rose-50 text-rose-700 border-rose-200',      // 취소/반려: 경고의 레드/로즈
 };
 
 export default function ComplaintDetail() {
@@ -55,66 +60,115 @@ export default function ComplaintDetail() {
 
   const onGoBack = () => navigate('/applicant/complaints');
 
-  // 2. 데이터 Fetch 로직
-  useEffect(() => {
-    const fetchDetail = async () => {
-      try {
-        setIsLoading(true);
-        // 백엔드 상세 조회 API 호출
-        const response = await api.get(`http://localhost:8080/api/applicant/complaints/${id}`);
-        const data = response.data;
+  const fetchDetail = async () => {
+    try {
+      setIsLoading(true);
+      // 백엔드 상세 조회 API 호출
+      const response = await api.get(`applicant/complaints/${id}`);
+      const data = response.data;
 
-        // API 데이터를 화면 구조에 맞게 변환 (메시지 배열 생성)
-        const messages: Message[] = [
-          {
-            id: 'q-' + data.id,
+      // 0. 메시지 타임라인 구성
+      const allMessages: Message[] = [];
+
+      // 1. 원본 민원 내용 추가
+      allMessages.push({
+        id: 'orig-q-' + data.id,
+        sender: 'applicant',
+        senderName: '민원인(본인)',
+        content: data.body,
+        timestamp: new Date(data.createdAt).toLocaleString(),
+      });
+
+      // 2 원본 민원 답변 추가 (있을 경우)
+      if (data.answer) {
+        allMessages.push({
+          id: 'orig-a-' + data.id,
+          sender: 'department',
+          senderName: data.departmentName || '담당부서',
+          content: data.answer,
+          timestamp: new Date(data.updatedAt).toLocaleString(),
+        });
+      }
+
+      // 3. 추가 문의(children) 순회하며 추가
+      if (data.children && data.children.length > 0) {
+        data.children.forEach((child: any) => {
+          // 추가 질문
+          allMessages.push({
+            id: 'child-q-' + child.id,
             sender: 'applicant',
             senderName: '민원인(본인)',
-            content: data.body,
-            timestamp: data.createdAt?.split('T')[0] || '',
-          }
-        ];
-
-        // 답변이 있는 경우 답변 메시지 추가
-        if (data.answer) {
-          messages.push({
-            id: 'a-' + data.id,
-            sender: 'department',
-            senderName: data.departmentName || '담당부서',
-            content: data.answer,
-            timestamp: data.updatedAt?.split('T')[0] || '',
+            content: child.body,
+            timestamp: new Date(child.createdAt).toLocaleString(),
           });
-        }
 
-        setComplaint({
-          id: data.id.toString(),
-          title: data.title,
-          category: data.category || '일반민원',
-          content: data.body,
-          status: data.status.toLowerCase(),
-          submittedDate: data.createdAt?.split('T')[0] || '',
-          lastUpdate: data.updatedAt?.split('T')[0],
-          department: data.departmentName,
-          assignedTo: data.officerName, // 담당자 이름 매핑
-          messages: messages
+          // 추가 질문에 대한 답변 (있을 경우)
+          if (child.answer) {
+            allMessages.push({
+              id: 'child-a-' + child.id,
+              sender: 'department',
+              senderName: data.departmentName || '담당부서',
+              content: child.answer,
+              timestamp: new Date(child.updatedAt).toLocaleString(),
+            });
+          }
         });
-      } catch (error) {
-        console.error("상세 정보 로드 실패:", error);
-      } finally {
-        setIsLoading(false);
       }
-    };
 
+      setComplaint({
+        id: data.id.toString(),
+        title: data.title,
+        category: data.category || '일반민원',
+        content: data.body,
+        status: data.status,
+        submittedDate: new Date(data.createdAt).toLocaleDateString(),
+        lastUpdate: data.updatedAt ? new Date(data.updatedAt).toLocaleDateString() : undefined,
+        department: data.departmentName,
+        assignedTo: data.officerName, // 담당자 이름 매핑
+        messages: allMessages
+      });
+    } catch (error) {
+      console.error("상세 정보 로드 실패:", error);
+      Swal.fire('오류', '데이터를 불러오지 못했습니다.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 4. 데이터 Fetch 로직
+  useEffect(() => {
     if (id) fetchDetail();
   }, [id]);
 
+  // 새로운 문의 사항을 입력하기 
   const handleCommentSubmit = async () => {
+    // 메시지가 입력되지 않은 경우 return
+
+    const isPending = complaint?.status !== 'RESOLVED' && complaint?.status !== 'CLOSED';
+
+    if (isPending) {
+      Swal.fire({
+        title: '답변 대기 중',
+        text: '현재 진행 중인 문의에 대한 답변이 완료된 후 추가 문의를 하실 수 있습니다. 조금만 기다려주세요!',
+        icon: 'warning',
+        confirmButtonColor: '#3b82f6',
+        confirmButtonText: '확인'
+      });
+      return;
+    }
+
+    if (!newComment.trim()) return;
+
     try {
-      await api.post(`/api/applicant/complaints/${id}/comments`, {
-        content: newComment
+      await api.post(`applicant/complaints/${id}/comments`, {
+        parentComplaintId: complaint?.id,
+        title: `${complaint?.title}`,
+        body: newComment
       });
       setNewComment(''); // 입력창 초기화
+      Swal.fire('전송 완료', '추가 문의가 등록되었습니다.', 'success');
       // 이후 데이터 재호출(fetchDetail)을 통해 리스트 갱신
+      fetchDetail();
     } catch (error) {
       Swal.fire('전송 실패', '의견 전송 중 오류가 발생했습니다.', 'error');
     }
@@ -161,22 +215,19 @@ export default function ComplaintDetail() {
         <div className="space-y-6">
           {/* Complaint Header Information */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            {/* Title Section */}
-            <div className="bg-gray-100 border-b border-gray-200 px-6 py-6">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-4">
-                  <h2 className="text-2xl font-bold text-gray-900 flex-1">
-                    {complaint.title}
-                  </h2>
-                  <span className="text-gray-500 text-sm font-medium">
-                    {complaint.id}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <Badge className="bg-white text-gray-700 border border-gray-300 text-sm px-3 py-1.5">
+            <div className="bg-gray-100 border-b border-gray-200 px-6 py-4"> {/* py-6에서 py-4로 축소 */}
+              <div className="flex items-center justify-between">
+                {/* 좌측: 제목 */}
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {complaint.title}
+                </h2>
+
+                {/* 우측: 카테고리 및 상태 배지 (ID 제거) */}
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-white text-gray-700 border border-gray-300 text-xs px-2.5 py-1 font-medium">
                     {complaint.category}
                   </Badge>
-                  <Badge className={`border text-sm px-3 py-1.5 ${STATUS_COLORS[complaint.status]}`}>
+                  <Badge className={`border text-xs px-2.5 py-1 font-bold ${STATUS_COLORS[complaint.status]}`}>
                     {STATUS_LABELS[complaint.status]}
                   </Badge>
                 </div>
@@ -236,53 +287,43 @@ export default function ComplaintDetail() {
               </div>
             </div>
 
-            {/* Messages Container */}
+            {/* 챗창 구현 */}
             <div className="p-6 space-y-6 bg-gray-50 min-h-[400px]">
-              {complaint.messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender === 'applicant' ? 'justify-start' : 'justify-end'
-                    }`}
-                >
-                  <div
-                    className={`max-w-[75%] ${message.sender === 'applicant' ? 'items-start' : 'items-end'
-                      }`}
-                  >
-                    {/* Sender Name and Timestamp */}
-                    <div
-                      className={`flex items-center gap-2 mb-2 ${message.sender === 'applicant' ? 'justify-start' : 'justify-end'
-                        }`}
-                    >
-                      <span
-                        className={`text-sm font-semibold ${message.sender === 'applicant'
-                          ? 'text-gray-700'
-                          : 'text-gray-700'
-                          }`}
-                      >
-                        {message.senderName}
-                      </span>
-                      <span className="text-xs text-gray-500">{message.timestamp}</span>
-                    </div>
+              {complaint.messages.map((message) => {
+                const isMe = message.sender === 'applicant'; // 내가 보낸 메시지인지 확인
 
-                    {/* Message Bubble */}
-                    <div
-                      className={`rounded-2xl px-5 py-4 shadow-sm ${message.sender === 'applicant'
-                        ? 'bg-white border-2 border-gray-200 rounded-tl-sm'
-                        : 'bg-gray-900 text-white rounded-tr-sm'
-                        }`}
-                    >
-                      <p
-                        className={`text-base leading-relaxed whitespace-pre-wrap ${message.sender === 'applicant' ? 'text-gray-800' : 'text-white'
+                return (
+                  <div
+                    key={message.id}
+                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`} // 민원인 오른쪽(end)
+                  >
+                    <div className={`max-w-[75%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+
+                      {/* 이름과 시간 표시 */}
+                      <div className={`flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <span className="text-sm font-semibold text-gray-700">
+                          {message.senderName}
+                        </span>
+                        <span className="text-[10px] text-gray-400">{message.timestamp}</span>
+                      </div>
+
+                      {/* 메시지 말풍선 */}
+                      <div
+                        className={`rounded-2xl px-4 py-2 shadow-sm ${isMe
+                          ? 'bg-blue-600 text-white rounded-tr-none' // 내 말풍선: 파란색, 우측 상단 각짐
+                          : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none' // 상대방: 흰색, 좌측 상단 각짐
                           }`}
                       >
-                        {message.content}
-                      </p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                          {message.content}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
-              {/* No replies yet message */}
+              {/* 아직 답변이 없을 경우 */}
               {complaint.messages.filter(m => m.sender === 'department').length === 0 && (
                 <div className="text-center py-8">
                   <div className="inline-block bg-yellow-50 border-2 border-yellow-200 rounded-lg px-6 py-4">

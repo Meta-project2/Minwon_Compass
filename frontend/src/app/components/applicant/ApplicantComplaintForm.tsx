@@ -12,7 +12,7 @@ import { cn } from './ui/utils';
 import KakaoMap from './KakaoMap';
 import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from './AxiosInterface';
 
 interface NewComplaintFormProps {
   onGoHome: () => void;
@@ -89,6 +89,7 @@ export function ApplicantComplaintForm({ onGoHome, onViewComplaints, onPreview }
             timerInterval = setInterval(() => {
               i = (i + 1) % messages.length;
               Swal.update({ title: messages[i] });
+              showConfirmButton: false;
             }, 5000);
           },
           willClose: () => clearInterval(timerInterval)
@@ -100,7 +101,7 @@ export function ApplicantComplaintForm({ onGoHome, onViewComplaints, onPreview }
 
           // 4. API 호출과 최소 대기 시간을 동시에 실행 (둘 다 끝나야 진행)
           const [response] = await Promise.all([
-            axios.post('http://localhost:8080/api/applicant/complaint', submitData, {
+            api.post('applicant/complaint', submitData, {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'

@@ -6,39 +6,38 @@ import { Badge } from './ui/badge';
 import { ChevronLeft, ChevronRight, Eye, Search, Calendar, ArrowUpDown, RefreshCcw } from 'lucide-react';
 import api from './AxiosInterface';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 interface Complaint {
   id: string;
   title: string;
   category: string;
   content: string;
-  status: 'received' | 'categorizing' | 'assigned' | 'answered' | 'closed';
+  status: 'RECEIVED' | 'NORMALIZED' | 'RECOMMENDED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'CANCELED';
   submittedDate: string;
   lastUpdate?: string;
   department?: string;
   assignedTo?: string;
 }
 
-interface PastComplaintsPageProps {
-  complaints: Complaint[];
-  onGoHome: () => void;
-  onViewDetail: (complaintId: string) => void;
-}
-
 const STATUS_LABELS = {
-  received: '접수됨',
-  categorizing: '분류중',
-  assigned: '담당자 배정',
-  answered: '답변 완료',
-  closed: '처리 완료',
+  RECEIVED: '접수됨',
+  NORMALIZED: '분류완료',
+  RECOMMENDED: '부서추천',
+  IN_PROGRESS: '처리중',
+  RESOLVED: '답변완료',
+  CLOSED: '종결',
+  CANCELED: '취소/반려',
 };
 
 const STATUS_COLORS = {
-  received: 'bg-blue-100 text-blue-700 border-blue-300',
-  categorizing: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-  assigned: 'bg-purple-100 text-purple-700 border-purple-300',
-  answered: 'bg-green-100 text-green-700 border-green-300',
-  closed: 'bg-gray-100 text-gray-700 border-gray-300',
+  RECEIVED: 'bg-blue-50 text-blue-700 border-blue-200',      // 신규 접수: 청량한 블루
+  NORMALIZED: 'bg-cyan-50 text-cyan-700 border-cyan-200',    // 분석 완료: 깨끗한 시안
+  RECOMMENDED: 'bg-purple-50 text-purple-700 border-purple-200', // 부서 추천: 신비로운 퍼플
+  IN_PROGRESS: 'bg-amber-50 text-amber-700 border-amber-200',  // 처리중: 주의가 필요한 오렌지/앰버
+  RESOLVED: 'bg-emerald-50 text-emerald-700 border-emerald-200', // 답변 완료: 신뢰의 그린
+  CLOSED: 'bg-slate-100 text-slate-600 border-slate-300',     // 종결: 차분한 그레이
+  CANCELED: 'bg-rose-50 text-rose-700 border-rose-200',      // 취소/반려: 경고의 레드/로즈
 };
 
 type SortOption = 'date-desc' | 'date-asc' | 'status' | 'title';
@@ -60,28 +59,28 @@ export default function PastComplaintsPage() {
   const [endDate, setEndDate] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+  // 조회 버튼 클릭 시 필터를 적용하기 위한 '트리거' 상태 (실제 필터링 로직에 반영)
+  const [searchTrigger, setSearchTrigger] = useState(0);
 
   const handleViewDetail = (id: string) => {
     navigate(`/applicant/complaints/${id}`);
   };
 
-  // 2. API 호출 로직
-  // 조회 버튼 클릭 시 필터를 적용하기 위한 '트리거' 상태 (실제 필터링 로직에 반영)
-  const [searchTrigger, setSearchTrigger] = useState(0);
-
   const itemsPerPage = 10;
 
+  // 2. API 호출 로직
   useEffect(() => {
     const fetchComplaints = async () => {
       try {
         setIsLoading(true);
-        const response = await api.get('http://localhost:8080/api/applicant/complaints');
+        const response = await api.get('/applicant/complaints');
         const formattedData = response.data.map((item: any) => ({
           id: item.id.toString(),
           title: item.title,
           category: item.category || '미분류',
           content: item.body,
-          status: item.status.toLowerCase(),
+          status: item.status,
           submittedDate: item.createdAt.split('T')[0],
           department: item.departmentName,
         }));
@@ -99,6 +98,12 @@ export default function PastComplaintsPage() {
   const filteredAndSortedComplaints = useMemo(() => {
     let filtered = [...complaints];
 
+    // 상태 탭 필터링 추가
+    if (selectedStatus !== 'ALL') {
+      filtered = filtered.filter(c => c.status === selectedStatus);
+    }
+
+    // 검색어 필터링
     if (searchKeyword.trim()) {
       const keyword = searchKeyword.toLowerCase();
       filtered = filtered.filter(c =>
@@ -119,10 +124,13 @@ export default function PastComplaintsPage() {
       }
     });
     return filtered;
-  }, [complaints, searchTrigger, sortBy]); // searchTrigger가 변할 때만(조회 버튼 클릭) 필터링
+  }, [complaints, searchTrigger, sortBy, selectedStatus]); // searchTrigger가 변할 때만(조회 버튼 클릭) 필터링
 
   // Calculate pagination
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedComplaints.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentComplaints = filteredAndSortedComplaints.slice(startIndex, endIndex);
 
   const getPageNumbers = () => {
     const pageNumbers = [];
@@ -145,10 +153,6 @@ export default function PastComplaintsPage() {
     // 중복 제거 (생략 기호가 여러 번 들어가는 것 방지)
     return [...new Set(pageNumbers)];
   };
-
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentComplaints = filteredAndSortedComplaints.slice(startIndex, endIndex);
 
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
@@ -254,7 +258,7 @@ export default function PastComplaintsPage() {
               {/* 조회 버튼 - 이미지 참고 (회색 계열 디자인) */}
               <Button
                 onClick={handleSearch}
-                className="bg-gray-700 hover:bg-gray-800 text-white h-10 px-6 font-bold text-sm flex items-center gap-2 rounded-lg"
+                className="bg-blue-700 hover:bg-blue-800 text-white h-10 px-6 font-bold text-sm flex items-center gap-2 rounded-lg"
               >
                 조회 <Search className="w-4 h-4" />
               </Button>
@@ -265,30 +269,53 @@ export default function PastComplaintsPage() {
                 onClick={() => { setSearchKeyword(''); setStartDate(''); setEndDate(''); setSortBy('date-desc'); setSearchTrigger(0); }}
                 className="h-10 px-3 text-gray-400 hover:text-gray-600"
               >
-                <RefreshCcw className="w-4 h-4" />
+                <RefreshCcw className="w-4 h-4" />필터초기화
               </Button>
             </div>
           </div>
 
+          {/* 3. 상태 탭 (글자 크게) */}
+          <div className="flex border-b-4 border-gray-200 bg-white rounded-t-3xl px-6">
+            {['ALL', 'RECEIVED', 'NORMALIZED', 'RECOMMENDED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map((tab) => {
+              const isActive = selectedStatus === tab;
+              const count = tab === 'ALL' ? complaints.length : complaints.filter(c => c.status === tab).length;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => { setSelectedStatus(tab); setCurrentPage(1); }}
+                  className={`px-8 py-6 text-xl font-black transition-all relative ${isActive ? 'text-blue-600 border-b-4 border-blue-600' : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                >
+                  {tab === 'ALL' ? '전체' : STATUS_LABELS[tab as keyof typeof STATUS_LABELS]}
+                  <span className={`ml-2 text-sm px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Results Summary */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="bg-gray-100 px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <p className="text-gray-700 text-base">
-                  총 <span className="font-bold text-lg">{filteredAndSortedComplaints.length}</span>건의 민원
-                  {filteredAndSortedComplaints.length !== complaints.length && (
-                    <span className="text-gray-500 text-sm ml-2">
-                      (전체 {complaints.length}건 중)
-                    </span>
-                  )}
-                </p>
-                {totalPages > 0 && (
-                  <p className="text-gray-600 text-sm">
-                    {currentPage} / {totalPages} 페이지
-                  </p>
-                )}
+            {/* 컬럼 헤더 영역 - 리스트와 열을 맞춤 */}
+            {currentComplaints.length > 0 && (
+              <div className="px-6 py-3 bg-gray-100 border-b border-gray-200 flex items-center gap-6 text-xs font-bold text-gray-600 uppercase tracking-tight">
+                {/* 1. 번호 컬럼 */}
+                <div className="w-16 shrink-0 text-center">번호</div>
+                {/* 세로 구분선 */}
+                <div className="h-3 w-[1px] bg-gray-300 shrink-0" />
+                {/* 2. 제목 컬럼 */}
+                <div className="flex-1 px-2">민원 제목 및 상세 내용</div>
+                {/* 세로 구분선 (데스크탑에서만 표시) */}
+                <div className="hidden md:block h-3 w-[1px] bg-gray-300 shrink-0" />
+                {/* 3. 부서/날짜 컬럼 */}
+                <div className="hidden md:block min-w-[120px] text-center">담당부서 / 접수일</div>
+                {/* 세로 구분선 */}
+                <div className="h-3 w-[1px] bg-gray-300 shrink-0" />
+                {/* 4. 진행 상태 컬럼 */}
+                <div className="min-w-[100px] text-center">진행 상태</div>
               </div>
-            </div>
+            )}
 
             {/* Complaints List */}
             {currentComplaints.length > 0 ? (
@@ -296,55 +323,52 @@ export default function PastComplaintsPage() {
                 {currentComplaints.map((complaint) => (
                   <div
                     key={complaint.id}
-                    className="px-6 py-3 hover:bg-gray-50 transition-colors group"
+                    className="px-6 py-4 hover:bg-gray-50 transition-colors group flex items-center gap-6"
                   >
-                    <div className="flex items-center justify-between gap-6">
-                      {/* 좌측: ID + 제목 & 내용 (한 줄 압축) */}
-                      <div className="flex-1 flex items-center gap-4 min-w-0">
-                        <span className="text-xs font-mono text-gray-400 shrink-0 w-16">
-                          {complaint.id}
-                        </span>
+                    {/* 1. 번호: 헤더와 동일하게 w-16 설정 */}
+                    <div className="w-16 shrink-0 text-center text-xs font-mono text-gray-400">
+                      {complaint.id}
+                    </div>
 
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <h3
-                            className="text-sm font-bold text-gray-900 truncate cursor-pointer hover:text-blue-600 shrink-0 max-w-[40%]"
-                            onClick={() => handleViewDetail(complaint.id)}
-                          >
-                            {complaint.title}
-                          </h3>
-                          <span className="text-gray-300 shrink-0">|</span>
-                          <p className="text-sm text-gray-500 truncate flex-1">
-                            {complaint.content}
-                          </p>
-                          {complaint.lastUpdate && (
-                            <span className="shrink-0 text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold">
-                              NEW
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                    {/* 세로 구분선 */}
+                    <div className="h-8 w-[1px] bg-gray-100 shrink-0" />
 
-                      {/* 중앙/우측: 메타 정보 (날짜, 부서) */}
-                      <div className="hidden md:flex items-center gap-8 shrink-0 text-xs text-gray-400">
-                        <div className="flex flex-col items-end">
-                          <span className="font-medium text-gray-500">{complaint.department || '미지정'}</span>
-                          <span>{complaint.submittedDate}</span>
-                        </div>
-                      </div>
-
-                      {/* 우측 끝: 상태 배지 + 상세보기 버튼 (수직 배치) */}
-                      <div className="flex flex-col items-center gap-1.5 shrink-0 min-w-[100px]">
-                        <Button
+                    {/* 2. 제목 및 상세 내용: flex-1 설정 */}
+                    <div className="flex-1 px-2 min-w-0">
+                      <div className="flex items-center gap-3">
+                        <h3
+                          className="text-sm font-bold text-gray-900 truncate cursor-pointer hover:text-blue-600 max-w-[40%]"
                           onClick={() => handleViewDetail(complaint.id)}
-                          size="sm"
-                          className="bg-gray-900 hover:bg-gray-800 text-white h-8 w-full text-xs flex items-center justify-center gap-1"
                         >
-                          상세보기
-                        </Button>
-                        <Badge className={`w-full justify-center border shadow-none text-[10px] py-0 px-2 h-5 ${STATUS_COLORS[complaint.status]}`}>
-                          {STATUS_LABELS[complaint.status]}
-                        </Badge>
+                          {complaint.title}
+                        </h3>
                       </div>
+                    </div>
+
+                    {/* 세로 구분선 (데스크탑) */}
+                    <div className="hidden md:block h-8 w-[1px] bg-gray-100 shrink-0" />
+
+                    {/* 3. 담당부서/날짜: min-w-[120px] 설정 */}
+                    <div className="hidden md:flex flex-col items-center justify-center min-w-[120px] shrink-0 text-[11px] text-gray-400">
+                      <span className="font-medium text-gray-500">{complaint.department || '미지정'}</span>
+                      <span>{complaint.submittedDate}</span>
+                    </div>
+
+                    {/* 세로 구분선 */}
+                    <div className="h-8 w-[1px] bg-gray-100 shrink-0" />
+
+                    {/* 4. 상태 및 버튼: min-w-[100px] 설정 */}
+                    <div className="flex flex-col items-center gap-1.5 shrink-0 min-w-[100px]">
+                      <Button
+                        onClick={() => handleViewDetail(complaint.id)}
+                        size="sm"
+                        className="bg-blue-900 hover:bg-blue-800 text-white h-7 w-full text-[11px] py-0"
+                      >
+                        상세보기
+                      </Button>
+                      <Badge className={`w-full justify-center border shadow-none text-[9px] py-0 h-4 ${STATUS_COLORS[complaint.status]}`}>
+                        {STATUS_LABELS[complaint.status]}
+                      </Badge>
                     </div>
                   </div>
                 ))}

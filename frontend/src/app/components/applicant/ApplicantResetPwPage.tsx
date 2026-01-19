@@ -5,7 +5,7 @@ import { Label } from './ui/label';
 import { Mail, AlertCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import axios from 'axios';
+import api from './AxiosInterface';
 
 interface ResetPasswordPageProps {
   onResetSuccess?: () => void;
@@ -52,7 +52,7 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
     setIsVerifying(true);
     try {
       // 1. 여기서 실제 백엔드 API를 호출합니다 (이전에 만든 sendMail 로직 연결)
-      await axios.post('http://localhost:8080/api/applicant/newpw',
+      await api.post('/applicant/newpw',
         { email: email },
       );
 
@@ -75,11 +75,11 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
       setIsVerifying(false);
     }
 
-    
+
   };
 
   const handleCancel = () => {
-      navigate("/applicant/login"); 
+    navigate("/applicant/login");
   };
 
   return (

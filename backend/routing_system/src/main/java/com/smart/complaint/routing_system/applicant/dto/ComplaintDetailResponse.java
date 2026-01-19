@@ -13,19 +13,16 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.Comparator;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class ComplaintDetailResponse {
     // 1. 민원 기본 정보 (공통)
-    private String id;           // C2026-xxxx
-    private Long originalId;     // DB PK
+    private String id; // C2026-xxxx
+    private Long originalId; // DB PK
     private String title;
 
     // [변경] 본문/답변 필드는 history 리스트로 이동하므로 메인에서는 제거하거나 대표값만 유지
@@ -35,13 +32,13 @@ public class ComplaintDetailResponse {
     private String receivedAt;
     private ComplaintStatus status; // 대표 상태 (부모 기준)
     private String departmentName; // 담당 부서명 (없으면 미배정)
-    private String category;       // 업무군
+    private String category; // 업무군
 
     private Long answeredBy;
-    private String managerName;    // 담당자 이름
+    private String managerName; // 담당자 이름
 
     // 2. 사건(군집) 정보
-    private String incidentId;         // I-2026-xxxx
+    private String incidentId; // I-2026-xxxx
     private String incidentTitle;
     private IncidentStatus incidentStatus;
     private Long incidentComplaintCount;
@@ -50,7 +47,8 @@ public class ComplaintDetailResponse {
     private List<ComplaintHistoryDto> history = new ArrayList<>();
 
     // 생성자
-    public ComplaintDetailResponse(Complaint c, ComplaintNormalization n, Incident i, Long incidentCount, String deptName) {
+    public ComplaintDetailResponse(Complaint c, ComplaintNormalization n, Incident i, Long incidentCount,
+            String deptName) {
         // 기본 정보 매핑
         this.originalId = c.getId();
         this.id = String.format("C2026-%04d", c.getId());
