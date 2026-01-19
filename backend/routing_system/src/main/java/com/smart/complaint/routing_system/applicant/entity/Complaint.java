@@ -35,7 +35,7 @@ public class Complaint {
 
     @Column(columnDefinition = "TEXT", nullable = false) // PostgreSQL TEXT 타입 매핑
     private String body;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "tag", nullable = false, columnDefinition = "tag_type")
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -60,7 +60,7 @@ public class Complaint {
 
     // District 객체를 바로 참조!
     @ManyToOne(fetch = FetchType.LAZY) // 실무 필수: 필요할 때만 조회 (성능 최적화)
-    @JoinColumn(name = "district_id")  // DB의 fk 컬럼명 지정
+    @JoinColumn(name = "district_id") // DB의 fk 컬럼명 지정
     private District district;
 
     // Enum 매핑 (String으로 저장/조회)
@@ -73,7 +73,7 @@ public class Complaint {
     @Column(name = "current_department_id")
     private Long currentDepartmentId;
 
-    //AI 최초 예측 부서 (성능 측정용)
+    // AI 최초 예측 부서 (성능 측정용)
     @Column(name = "ai_predicted_department_id")
     private Long aiPredictedDepartmentId;
 
@@ -105,6 +105,7 @@ public class Complaint {
     // mappedBy는 ChildComplaint의 필드명 'parentComplaint'와 일치해야 함
     @Builder.Default
     @OneToMany(mappedBy = "parentComplaint", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OrderBy("createdAt ASC")
     private List<ChildComplaint> childComplaints = new ArrayList<>();
 
     // 담당자 지정 (Assign)
@@ -127,8 +128,8 @@ public class Complaint {
     }
 
     // 재이관 요청 시 상태 변경
-    public void statusToReroute(){
-        this.status = ComplaintStatus.RECOMMENDED; //재이관 대기중 상태로 변경
+    public void statusToReroute() {
+        this.status = ComplaintStatus.RECOMMENDED; // 재이관 대기중 상태로 변경
     }
 
     // 재이관 승인 시 상태 초기화 (Reroute Approved)

@@ -2,7 +2,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 
 const api = axios.create({
-    baseURL: 'http://localhost:8080', // 백엔드 주소
+    baseURL: '/api', // 백엔드 주소
 });
 
 // 요청 인터셉터 (토큰 주입)

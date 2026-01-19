@@ -43,7 +43,7 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
     setIsSearching(true);
 
     try {
-      const response = await axios.post('http://localhost:8080/api/applicant/userinfo',
+      const response = await axios.post('/api/applicant/userinfo',
         { email: email }, // 1. POST는 두 번째 인자가 Body 데이터입니다.
       );
 
@@ -69,7 +69,7 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
   };
 
   const handleCancel = () => {
-      navigate("/applicant/login"); 
+    navigate("/applicant/login");
   };
 
   return (

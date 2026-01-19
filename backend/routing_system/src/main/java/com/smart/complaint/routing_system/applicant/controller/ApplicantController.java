@@ -3,6 +3,8 @@ package com.smart.complaint.routing_system.applicant.controller;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDetailDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintHeatMap;
+import com.smart.complaint.routing_system.applicant.dto.ComplaintInquiryDto;
+import com.smart.complaint.routing_system.applicant.dto.ComplaintListDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSubmitDto;
 import com.smart.complaint.routing_system.applicant.dto.UserCheckDto;
 import com.smart.complaint.routing_system.applicant.dto.UserLoginRequest;
@@ -14,6 +16,7 @@ import com.smart.complaint.routing_system.applicant.service.ComplaintService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,12 +29,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
-import org.springframework.web.bind.annotation.RequestParam;
 
 // 민원인 컨트롤러
 @Tag(name = "민원인 컨트롤러", description = "민원인용 민원 관리 API")
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 public class ApplicantController {
 
     private final ApplicantService applicantService;
@@ -96,17 +99,20 @@ public class ApplicantController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "가장 최근 작성한 민원 3개 조회", description = "JWT에서 사용자의 아이디를 확인하고 이를 통해 민원 조회")
+    @Operation(summary = "가장 최근 작성한 민원 3개 조회", description = "로그인 시 본인 민원, 비로그인 시 전체 최신 민원 반환")
     @GetMapping("/api/applicant/complaints/top3")
-    public ResponseEntity<List<ComplaintDto>> getTop3RecentComplaints(@AuthenticationPrincipal String applicantId) {
-
-        System.out.println("현재 로그인한 사용자:" + applicantId);
-
-        // 현재 로그인한 사용자의 최근 3개 민원 조회
-        Long id = Long.parseLong(applicantId);
-        List<ComplaintDto> complaints = applicantService.getTop3RecentComplaints(id);
-
-        return ResponseEntity.ok(complaints);
+    public ResponseEntity<List<ComplaintDto>> getTop3RecentComplaints(@AuthenticationPrincipal Object principal) {
+        Long id = null;
+        if (principal != null && !principal.equals("anonymousUser")) {
+            try {
+                id = Long.parseLong(principal.toString());
+            } catch (NumberFormatException e) {
+                log.error("사용자 ID 파싱 에러: {}", principal);
+                // 에러 시 id는 그대로 null 유지
+            }
+        }
+        List<ComplaintDto> myComplaints = applicantService.getTop3RecentComplaints(id);
+        return ResponseEntity.ok(myComplaints);
     }
 
     @Operation(summary = "민원 상세 조회", description = "민원 ID를 통해 특정 민원의 상세 내역과 답변을 조회")
@@ -120,25 +126,21 @@ public class ApplicantController {
 
     @Operation(summary = "모든 민원 조회", description = "JWT를 통해 전체 민원을 조회")
     @GetMapping("/api/applicant/complaints")
-    public ResponseEntity<List<ComplaintDetailDto>> getAllComplaints(@AuthenticationPrincipal String applicantId,
+    public ResponseEntity<List<ComplaintListDto>> getAllComplaints(@AuthenticationPrincipal String applicantId,
             String keyword) {
 
         System.out.println("현재 로그인한 사용자:" + applicantId);
         // 현재 로그인한 사용자의 모든 민원 조회
-        List<ComplaintDetailDto> complaints = applicantService.getAllComplaints(applicantId, keyword);
+        List<ComplaintListDto> complaints = applicantService.getAllComplaints(applicantId, keyword);
 
         return ResponseEntity.ok(complaints);
     }
 
-    @Operation(summary = "모든 민원 조회(lat + lon)", description = "JWT를 통해 전체 민원과 위치정보 조회")
+    @Operation(summary = "모든 민원 조회(lat + lon)", description = "지도에 표시할 모든 민원을 조회")
     @GetMapping("/api/applicant/heatmap")
-    public ResponseEntity<List<ComplaintHeatMap>> getAllComplaintsWithLatLon(
-            @AuthenticationPrincipal String applicantId,
-            String keyword) {
+    public ResponseEntity<List<ComplaintHeatMap>> getAllComplaintsWithLatLon() {
 
-        System.out.println("현재 로그인한 사용자:" + applicantId);
-        // 현재 로그인한 사용자의 모든 민원 조회
-        List<ComplaintHeatMap> complaints = applicantService.getAllComplaintsWithLatLon(applicantId);
+        List<ComplaintHeatMap> complaints = applicantService.getAllComplaintsWithLatLon();
 
         return ResponseEntity.ok(complaints);
     }
@@ -148,9 +150,17 @@ public class ApplicantController {
             @RequestBody ComplaintSubmitDto complaintSubmitDto) {
 
         Long id = complaintService.receiveComplaint(applicantId, complaintSubmitDto);
-        complaintService.analyzeComplaint(id, complaintSubmitDto);
+        complaintService.analyzeComplaint(id, applicantId, complaintSubmitDto);
 
         return ResponseEntity.ok("전송이 완료되었습니다.");
+    }
+
+    @PostMapping("/api/applicant/complaints/{id}/comments")
+    public ResponseEntity<String> postMethodName(@PathVariable Long id, @RequestBody ComplaintInquiryDto inquiryDto) {
+
+        complaintService.crateNewInquiry(id, inquiryDto);
+
+        return ResponseEntity.ok("");
     }
 
     /*

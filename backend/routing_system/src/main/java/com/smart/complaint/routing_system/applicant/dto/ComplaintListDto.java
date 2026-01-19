@@ -1,29 +1,29 @@
 package com.smart.complaint.routing_system.applicant.dto;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
 import com.smart.complaint.routing_system.applicant.entity.Complaint;
 
-public record ComplaintHeatMap(
+public record ComplaintListDto(
         Long id,
         String title,
+        String body,
+        String answer,
+        String addressText,
         ComplaintStatus status,
         LocalDateTime createdAt,
-        BigDecimal lat,
-        BigDecimal lon) {
-    public static ComplaintHeatMap from(Complaint entity) {
-        // null 방어 로직 추가
-        if (entity.getLat() == null || entity.getLon() == null) {
-            return null;
-        }
-        return new ComplaintHeatMap(
+        LocalDateTime updatedAt) {
+    public static ComplaintListDto from(Complaint entity, List<ChildComplaintDto> complaintDtos) {
+        return new ComplaintListDto(
                 entity.getId(),
                 entity.getTitle(),
+                entity.getBody(),
+                entity.getAnswer(),
+                entity.getAddressText(),
                 entity.getStatus(),
                 entity.getCreatedAt(),
-                entity.getLat(),
-                entity.getLon());
+                entity.getUpdatedAt());
     }
 }

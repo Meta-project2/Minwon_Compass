@@ -25,7 +25,7 @@ const ApplicationLoginPage = () => {
         const validateToken = async () => {
             try {
                 // 2. 백엔드 검증 시도
-                await axios.get('http://localhost:8080/api/auth/validate', {
+                await axios.get('/api/auth/validate', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
@@ -110,7 +110,7 @@ const ApplicationLoginPage = () => {
 
         // 3. 모든 검증 통과 시에만 API 호출
         try {
-            const response = await axios.post('http://localhost:8080/api/applicant/login', {
+            const response = await axios.post('/api/applicant/login', {
                 userId: userId,
                 password: password
             });
@@ -155,7 +155,7 @@ const ApplicationLoginPage = () => {
     const handleLogin = (provider: string) => {
         // 도커 환경이거나 로컬 환경인 경우에 맞춰 백엔드 주소를 입력합니다.
         // 브라우저 기준이므로 localhost:8080(Spring)을 호출합니다.
-        window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
+        window.location.href = `/oauth2/authorization/${provider}`;
     };
 
     const handleSignUp = () => {

@@ -1,12 +1,16 @@
 package com.smart.complaint.routing_system.applicant.service;
 
+import com.smart.complaint.routing_system.applicant.config.BusinessException;
 import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
+import com.smart.complaint.routing_system.applicant.domain.ErrorMessage;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintAnswerRequest;
+import com.smart.complaint.routing_system.applicant.dto.ComplaintInquiryDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintRerouteRequest;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSubmitDto;
 import com.smart.complaint.routing_system.applicant.entity.ChildComplaint;
 import com.smart.complaint.routing_system.applicant.entity.Complaint;
 import com.smart.complaint.routing_system.applicant.entity.ComplaintReroute;
+import com.smart.complaint.routing_system.applicant.repository.ChildComplaintRepository;
 import com.smart.complaint.routing_system.applicant.repository.ComplaintRepository;
 import com.smart.complaint.routing_system.applicant.repository.ComplaintRerouteRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +38,7 @@ public class ComplaintService {
 
     private final ComplaintRepository complaintRepository;
     private final ComplaintRerouteRepository rerouteRepository;
+    private final ChildComplaintRepository childComplaintRepository;
     private final RestTemplate restTemplate;
 
     /**
@@ -192,15 +197,20 @@ public class ComplaintService {
     }
 
     @Transactional
-    public void analyzeComplaint(Long id, ComplaintSubmitDto complaintSubmitDto) {
-        String pythonUrl = "http://localhost:8000/api/complaints/preprocess";
+    public void analyzeComplaint(Long id, String applicantId, ComplaintSubmitDto complaintSubmitDto) {
+        String pythonUrl = "http://complaint-ai-server:8000/api/complaints/preprocess";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         Map<String, Object> pythonRequest = new HashMap<>();
         pythonRequest.put("id", id); // 생성된 ID 추가
         pythonRequest.put("title", complaintSubmitDto.getTitle());
-        pythonRequest.put("content", complaintSubmitDto.getBody());
+        pythonRequest.put("body", complaintSubmitDto.getBody());
+        pythonRequest.put("addressText", complaintSubmitDto.getAddressText());
+        pythonRequest.put("lat", complaintSubmitDto.getLat());
+        pythonRequest.put("lon", complaintSubmitDto.getLon());
+        pythonRequest.put("applicantId", applicantId);
+        pythonRequest.put("districtId", 3);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(pythonRequest, headers);
         try {
@@ -212,6 +222,40 @@ public class ComplaintService {
             }
         } catch (Exception e) {
             log.error("AI 분석 서버 통신 실패 (민원은 접수됨): {}", e.getMessage());
+        }
+    }
+
+    @Transactional
+    public void crateNewInquiry(Long id, ComplaintInquiryDto inquiryDto) {
+
+        try {
+            // 1. 부모 민원 존재 여부 및 상태 확인
+            Complaint parent = complaintRepository.findById(id)
+                    .orElseThrow(() -> new BusinessException(ErrorMessage.COMPLAINT_NOT_FOUND));
+
+            // 2. 답변이 완료되지 않은 상태라면 추가 문의 제한
+            // status가 RESOLVED(답변완료)나 CLOSED(종결)가 아닌 경우 예외 발생
+            if (parent.getStatus() != ComplaintStatus.RESOLVED && parent.getStatus() != ComplaintStatus.CLOSED) {
+                throw new BusinessException(ErrorMessage.PENDING_ANSWER_EXISTS);
+            }
+
+            try {
+                // 3. ChildComplaint 엔티티 생성 및 저장
+                ChildComplaint child = ChildComplaint.builder()
+                        .parentComplaint(parent)
+                        .title(inquiryDto.title())
+                        .body(inquiryDto.body())
+                        .status(ComplaintStatus.RECEIVED)
+                        .build();
+
+                childComplaintRepository.save(child);
+
+            } catch (Exception e) {
+                log.error("새 문의 저장 중 문제 발생: {}", e.getMessage());
+                throw new BusinessException(ErrorMessage.DATABASE_ERROR);
+            }
+        } catch (Exception e) {
+            log.error("새 문의 저장 중 문제 발생: {}", e.getMessage());
         }
     }
 }

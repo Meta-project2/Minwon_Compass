@@ -4,7 +4,6 @@ import java.security.SecureRandom;
 import java.util.List;
 
 import com.smart.complaint.routing_system.applicant.repository.ComplaintRepository;
-import com.smart.complaint.routing_system.applicant.repository.ComplaintRepositoryImpl;
 import com.smart.complaint.routing_system.applicant.repository.UserRepository;
 import com.smart.complaint.routing_system.applicant.service.jwt.JwtTokenProvider;
 
@@ -17,9 +16,11 @@ import org.springframework.stereotype.Service;
 
 import com.smart.complaint.routing_system.applicant.config.BusinessException;
 import com.smart.complaint.routing_system.applicant.domain.UserRole;
+import com.smart.complaint.routing_system.applicant.dto.ChildComplaintDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDetailDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintHeatMap;
+import com.smart.complaint.routing_system.applicant.dto.ComplaintListDto;
 import com.smart.complaint.routing_system.applicant.dto.UserLoginRequest;
 import com.smart.complaint.routing_system.applicant.dto.UserSignUpDto;
 import com.smart.complaint.routing_system.applicant.entity.Complaint;
@@ -156,23 +157,23 @@ public class ApplicantService {
     public ComplaintDetailDto getComplaintDetails(Long complaintId) {
 
         log.info("사용자: " + complaintId);
-        ComplaintDetailDto foundComplaint = complaintRepository.findById(complaintId)
-                .map(ComplaintDetailDto::from)
+        Complaint foundComplaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new BusinessException(ErrorMessage.COMPLAINT_NOT_FOUND));
 
-        return foundComplaint;
+        List<ChildComplaintDto> childComplaintDto = complaintRepository.findChildComplaintsByParentId(complaintId);
+
+        return ComplaintDetailDto.from(foundComplaint, childComplaintDto);
     }
 
-    public List<ComplaintDetailDto> getAllComplaints(String applicantId, String keyword) {
+    public List<ComplaintListDto> getAllComplaints(String applicantId, String keyword) {
 
         Long id = Long.parseLong(applicantId);
 
         return complaintRepository.findAllByApplicantId(id, keyword);
     }
 
-    public List<ComplaintHeatMap> getAllComplaintsWithLatLon(String applicantId) {
-        Long id = Long.parseLong(applicantId);
+    public List<ComplaintHeatMap> getAllComplaintsWithLatLon() {
 
-        return complaintRepository.getAllComplaintsWithLatLon(id);
+        return complaintRepository.getAllComplaintsWithLatLon();
     }
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface KakaoMapProps {
   // 민원 제출 페이지용
@@ -8,14 +9,16 @@ interface KakaoMapProps {
   complaints?: any[];
   mapView?: string;
   showSurgeOnly?: boolean;
+  onViewDetail: (id: string) => void;
 }
 
-const KakaoMap = ({ address, onLocationChange, complaints, mapView, showSurgeOnly }: KakaoMapProps) => {
+const KakaoMap = ({ address, onLocationChange, complaints, mapView, showSurgeOnly, onViewDetail }: KakaoMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const [searchMarker, setSearchMarker] = useState<any>(null);
   const [clusterer, setClusterer] = useState<any>(null);
   const [dataMarkers, setDataMarkers] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   // 1. 지도 초기화 (최초 1회)
   useEffect(() => {
@@ -25,7 +28,7 @@ const KakaoMap = ({ address, onLocationChange, complaints, mapView, showSurgeOnl
     kakao.maps.load(() => {
       const options = {
         center: new kakao.maps.LatLng(37.5358, 127.1325), // 기본 중심지
-        level: 3, // 대시보드 가독성을 위해 초기 레벨을 조금 높임
+        level: 6,
       };
       const mapInstance = new kakao.maps.Map(mapContainer.current, options);
 
@@ -40,15 +43,26 @@ const KakaoMap = ({ address, onLocationChange, complaints, mapView, showSurgeOnl
       const clustererInstance = new kakao.maps.MarkerClusterer({
         map: mapInstance,
         averageCenter: true,
-        minLevel: 6,
-        styles: [{
+        minClusterSize: 2,
+        // 클러스터에 포함된 마커 개수를 기준으로 3가지 구간
+        calculator: [10, 30],
+        styles: [{ // 10개 미만: 초록색
+          width: '30px', height: '30px',
+          background: 'rgba(52, 211, 153, 0.8)', // Tailwind emerald-400
+          borderRadius: '15px', color: '#000',
+          textAlign: 'center', fontWeight: 'bold', lineHeight: '31px'
+        },
+        { // 10~30개: 노랑색
+          width: '40px', height: '40px',
+          background: 'rgba(251, 191, 36, 0.8)', // Tailwind amber-400
+          borderRadius: '20px', color: '#000',
+          textAlign: 'center', fontWeight: 'bold', lineHeight: '41px'
+        },
+        { // 30개 초과: 빨간색
           width: '50px', height: '50px',
-          background: 'rgba(255, 68, 68, 0.8)',
-          borderRadius: '50%',
-          color: '#fff',
-          textAlign: 'center',
-          fontWeight: 'bold',
-          lineHeight: '50px'
+          background: 'rgba(248, 113, 113, 0.8)', // Tailwind red-400
+          borderRadius: '25px', color: '#fff',
+          textAlign: 'center', fontWeight: 'bold', lineHeight: '51px'
         }]
       });
 
@@ -113,11 +127,37 @@ const KakaoMap = ({ address, onLocationChange, complaints, mapView, showSurgeOnl
       ? complaints.filter(c => c.isSurge === true)
       : complaints;
 
+    // 정보창(InfoWindow) 객체 생성
+    const infowindow = new kakao.maps.InfoWindow({ zIndex: 1 });
+
     const newMarkers = filteredData.map((item: any) => {
-      return new kakao.maps.Marker({
+      const marker = new kakao.maps.Marker({
         position: new kakao.maps.LatLng(item.lat, item.lon),
-        // title: item.title // 이 줄이 에러난다면 삭제!
+        clickable: true
       });
+
+      kakao.maps.event.addListener(marker, 'mouseover', () => {
+        infowindow.setContent(`
+                <div style="padding:5px;font-size:12px;min-width:150px;">
+                    <div style="font-weight:bold;margin-bottom:3px;">${item.title}</div>
+                    <div style="color:#666;">상태: ${item.status}</div>
+                    <div>접수일자: ${new Date(item.createdAt).toLocaleDateString()}</div>
+                </div>
+            `);
+        infowindow.open(map, marker);
+      });
+
+      // [마우스 뗐을 때] 정보창 닫기
+      kakao.maps.event.addListener(marker, 'mouseout', () => {
+        infowindow.close();
+      });
+
+      // [클릭했을 때] 해당 상세 페이지로 이동
+      kakao.maps.event.addListener(marker, 'click', () => {
+        onViewDetail(String(item.id));
+      });
+
+      return marker;
     });
 
     if (mapView === 'heatmap') {

@@ -121,6 +121,7 @@ public class IncidentController {
         return sb.toString().trim();
     }
 
+    /*
     // [추가 1] 제목 수정 기능
     @PatchMapping("/{id}/title")
     public void updateIncidentTitle(@PathVariable Long id, @RequestBody String newTitle) {
@@ -134,5 +135,6 @@ public class IncidentController {
             @RequestBody List<Long> complaintIds) {
         incidentService.moveComplaints(targetIncidentId, complaintIds);
     }
+    */
 
 }

@@ -4,7 +4,7 @@ import { RecentComplaints } from './recent-complaints';
 import { ResponseTimeStats } from './response-time-stats';
 import { KeywordCloud } from './keyword-cloud';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from './AxiosInterface';
 import Swal from 'sweetalert2';
 
 interface ComplaintDto {
@@ -50,18 +50,31 @@ const mockKeywords = [
 const ApplicantMainPage = () => {
 
   const navigate = useNavigate();
+  const [recentComplaints, setRecentComplaints] = useState<ComplaintDto[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(!!localStorage.getItem('accessToken'));
 
-  const handleViewComplaints = () => {
-    console.log('과거 민원 보기');
-    navigate('/applicant/complaints');
-    // Navigate to complaints list view
+  // 공통 인증 체크 로직
+  const checkAuth = (action: () => void) => {
+    if (!isLoggedIn) {
+      Swal.fire({
+        title: '로그인 필요',
+        text: '이 기능을 이용하려면 로그인이 필요합니다.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: '로그인 하러 가기',
+        cancelButtonText: '나중에 하기'
+      }).then((result) => {
+        if (result.isConfirmed) navigate('/applicant/login');
+      });
+    } else {
+      action();
+    }
   };
 
-  const handleNewComplaint = () => {
-    console.log('새 민원 작성');
-    navigate('/applicant/complaints/form');
-    // Navigate to new complaint form
-  };
+  // 메인 화면에서 이동할 경우 auth 확인
+  const handleViewComplaints = () => checkAuth(() => navigate('/applicant/complaints'));
+  const handleNewComplaint = () => checkAuth(() => navigate('/applicant/complaints/form'));
 
   const handleLogout = () => {
     Swal.fire({
@@ -76,46 +89,25 @@ const ApplicantMainPage = () => {
     }).then((result) => {
       if (result.isConfirmed) {
         localStorage.removeItem('accessToken');
+        setIsLoggedIn(false); // 상태 업데이트
+        setRecentComplaints([]); // 데이터 초기화
         Swal.fire(
           '로그아웃 완료',
           '성공적으로 로그아웃되었습니다.',
           'success'
-        ).then(() => {
-          navigate('/applicant/login');
-        });
+        )
       }
     });
   };
 
-  const [recentComplaints, setRecentComplaints] = useState<ComplaintDto[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
   useEffect(() => {
-
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      Swal.fire({
-        title: '로그인 필요',
-        text: '민원 서비스를 이용하기 위해서는 로그인이 필요합니다!',
-        icon: 'warning',
-        confirmButtonText: '로그인 하러 가기'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          navigate('/applicant/login');
-        }
-      });
-      return;
-    }
 
     const fetchRecentComplaints = async () => {
       try {
         const token = localStorage.getItem('accessToken');
         // 백엔드 API 호출 - 최근 3개의 민원 불러오기
         // 백엔드에서 만든 최신 3개 전용 API 호출
-        const response = await axios.get('http://localhost:8080/api/applicant/complaints/top3', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
+        const response = await api.get('/applicant/complaints/top3');
         setRecentComplaints(response.data);
       } catch (error) {
         console.error("최신 민원 로드 실패:", error);
@@ -126,11 +118,12 @@ const ApplicantMainPage = () => {
     };
     fetchRecentComplaints();
     // 빈 배열: 한 번만 실행, accessToken: 변경 시 재실행
-  }, []);
+  }, [isLoggedIn]);
 
   return (
     <div className="min-h-screen bg-[#F4F7FB] overflow-hidden font-sans text-slate-900">
       <Toolbar
+        isLoggedIn={isLoggedIn} // 로그인 상태 전달
         onViewComplaints={handleViewComplaints}
         onNewComplaint={handleNewComplaint}
         onLogout={handleLogout}
@@ -143,13 +136,18 @@ const ApplicantMainPage = () => {
           {/* [좌측 섹션] 민원 TOP3 + 키워드 맵 (60%) */}
           <div className="lg:col-span-2 flex flex-col gap-8 h-full overflow-hidden">
             {/* 최근 민원 현황 */}
-            <section className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-8 flex flex-col shrink-0">
-              <div className="flex justify-between items-center mb-4">
+            <section className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-8 flex flex-col shrink-0 h-[340px]">
+              <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">📋</span>
                   <h3 className="text-lg font-bold text-gray-800">최근 민원 현황</h3>
                 </div>
-                <span className="px-3 py-1 bg-blue-600 text-white text-[10px] font-bold rounded-full">TOP 3</span>
+                <button
+                  onClick={handleViewComplaints}
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-full transition-colors shadow-sm flex items-center gap-1"
+                >
+                  민원 더 보기 +
+                </button>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -165,7 +163,7 @@ const ApplicantMainPage = () => {
                       <div
                         key={complaint.id}
                         className="group flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-200 hover:bg-white transition-all cursor-pointer h-[64px] shrink-0"
-                        onClick={() => navigate(`/applicant/complaints/${complaint.id}`)}
+                        onClick={() => checkAuth(() => navigate(`/applicant/complaints/${complaint.id}`))}
                       >
                         <div className="flex items-center gap-4 overflow-hidden">
                           <span className={`shrink-0 px-2 py-0.5 rounded-md text-[9px] font-bold text-white ${complaint.complaintStatus === 'ANSWERED' ? 'bg-green-500' :
@@ -201,26 +199,21 @@ const ApplicantMainPage = () => {
                     onClick={handleNewComplaint}
                     className="flex-1 border-2 border-dashed border-gray-100 rounded-2xl flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-50 transition-colors"
                   >
-                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-50 transition-colors">
-                      <span className="text-2xl group-hover:scale-110 transition-transform">➕</span>
+                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                      <span className="text-2xl">➕</span>
                     </div>
-                    <p className="text-sm font-bold text-gray-500 group-hover:text-blue-500 transition-colors">
-                      첫 번째 민원을 작성해보세요
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1 ">
-                    </p>
+                    <p className="text-sm font-bold text-gray-500">첫 번째 민원을 작성해보세요</p>
                   </div>
                 )}
               </div>
             </section>
 
             {/* 2. 실시간 민원 키워드: flex-1을 사용하여 남는 아래쪽 모든 공간 차지 */}
-            <section className="flex-1 bg-white/60 backdrop-blur-sm rounded-[40px] border border-blue-100/50 shadow-lg shadow-blue-900/5 p-8 flex flex-col overflow-hidden min-h-0">
-              <div className="flex items-center gap-2 mb-2 shrink-0">
+            <section className="flex-1 bg-white/60 backdrop-blur-sm rounded-[40px] border border-blue-100/50 shadow-lg p-8 flex flex-col overflow-hidden min-h-0">
+              <div className="flex items-center gap-2 mb-4 shrink-0">
                 <span className="text-lg">🔍</span>
                 <h3 className="text-lg font-bold text-gray-800">실시간 민원 키워드</h3>
               </div>
-              {/* 키워드 맵이 컨테이너 크기에 맞춰 꽉 차도록 설정 */}
               <div className="flex-1 min-h-0 bg-gray-50 rounded-[24px] overflow-hidden">
                 <KeywordCloud keywords={mockKeywords} />
               </div>
