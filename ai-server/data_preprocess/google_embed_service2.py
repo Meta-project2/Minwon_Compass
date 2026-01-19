@@ -12,7 +12,7 @@ DB_CONFIG = {
     "host": "localhost",
     "database": "postgres",
     "user": "postgres",
-    "password": "sanghpw",
+    "password": "0000",
     "port": 5432
 }
 

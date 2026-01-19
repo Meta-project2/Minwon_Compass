@@ -12,11 +12,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from './ui/input';
 
 // [이식] 사용자님이 보내주신 민원 상세 페이지 컴포넌트
-import { ComplaintDetailPage } from './ComplaintDetailPage'; 
+import { ComplaintDetailPage } from './ComplaintDetailPage';
 
 interface IncidentDetailPageProps {
   incidentId: string;
   onBack: () => void;
+  onViewComplaint: (id: string) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
@@ -47,9 +48,8 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
         setLoading(true);
         const response = await axios.get(`/api/agent/incidents/${incidentId}`);
         setIncidentData(response.data);
-        setTempTitle(cleanTitle(response.data.title));
       } catch (error) {
-        console.error("데이터 조회 실패");
+        console.error("사건 상세 조회 실패:", error);
       } finally {
         setLoading(false);
       }
@@ -68,7 +68,7 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
 
   const filteredComplaints = useMemo(() => {
     if (!incidentData) return [];
-    return incidentData.complaints.filter((c: any) => 
+    return incidentData.complaints.filter((c: any) =>
       c.title.toLowerCase().includes(innerSearch.toLowerCase()) || c.id.toLowerCase().includes(innerSearch.toLowerCase())
     );
   }, [incidentData, innerSearch]);
@@ -84,7 +84,7 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
 
   return (
     <div className="h-full flex flex-col bg-slate-100/50 overflow-hidden relative">
-      
+
       {/* 1. 상단 배너: 심플 & 트렌디 편집 모드 */}
       <div className="h-16 border-b border-border bg-card px-6 shadow-sm flex items-center gap-1 shrink-0">
         <Button variant="ghost" size="icon" onClick={onBack} className="text-slate-400 hover:text-slate-600 shrink-0 -ml-4 h-9 w-9">
@@ -94,8 +94,8 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
         <div className="flex flex-col justify-center overflow-hidden flex-1">
           {isEditingTitle ? (
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-1">
-              <Input 
-                value={tempTitle} 
+              <Input
+                value={tempTitle}
                 onChange={(e) => setTempTitle(e.target.value)}
                 className="h-8 text-lg font-bold bg-white border-blue-400 focus:ring-1 focus:ring-blue-500 w-[60%]"
                 autoFocus
@@ -106,7 +106,7 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
               </div>
             </div>
           ) : (
-            <div 
+            <div
               className="flex items-center gap-2 group cursor-pointer hover:bg-slate-100/80 p-1 -ml-1 rounded-md transition-all w-fit"
               onClick={() => setIsEditingTitle(true)}
             >
@@ -143,10 +143,10 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
                 <TableHeader className="sticky top-0 bg-slate-300 border-b-2 z-10">
                   <TableRow>
                     <TableHead className="w-[40px] text-center border-r border-slate-400">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="rounded border-slate-300"
-                        onChange={(e) => setSelectedIds(e.target.checked ? visibleComplaints.map(c => c.id) : [])} 
+                        onChange={(e) => setSelectedIds(e.target.checked ? visibleComplaints.map(c => c.id) : [])}
                       />
                     </TableHead>
                     <TableHead className="w-[120px] text-center font-bold text-slate-900 border-r border-slate-400">민원 ID</TableHead>
@@ -159,10 +159,10 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
                   {visibleComplaints.map((c) => (
                     <TableRow key={c.id} className={`${selectedIds.includes(c.id) ? 'bg-blue-50/50' : 'hover:bg-slate-50'} border-b border-slate-200 transition-colors`}>
                       <TableCell className="text-center">
-                        <input 
-                          type="checkbox" 
-                          checked={selectedIds.includes(c.id)} 
-                          onChange={() => setSelectedIds(prev => prev.includes(c.id) ? prev.filter(i => i !== c.id) : [...prev, c.id])} 
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(c.id)}
+                          onChange={() => setSelectedIds(prev => prev.includes(c.id) ? prev.filter(i => i !== c.id) : [...prev, c.id])}
                         />
                       </TableCell>
                       <TableCell className="text-xs font-mono text-center text-slate-600">{c.id}</TableCell>

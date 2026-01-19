@@ -7,6 +7,7 @@ import com.smart.complaint.routing_system.applicant.entity.Complaint;
 import com.smart.complaint.routing_system.applicant.entity.Incident;
 import com.smart.complaint.routing_system.applicant.repository.ComplaintRepository;
 import com.smart.complaint.routing_system.applicant.repository.IncidentRepository;
+import com.smart.complaint.routing_system.applicant.service.IncidentService; // [추가] Service import
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -30,6 +32,7 @@ public class IncidentController {
 
     private final IncidentRepository incidentRepository;
     private final ComplaintRepository complaintRepository;
+    private final IncidentService incidentService; // [추가] 비즈니스 로직 처리를 위해 주입
 
     @Operation(summary = "사건 목록 조회")
     @GetMapping
@@ -61,7 +64,6 @@ public class IncidentController {
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-        // [핵심 해결] 리스트를 변환하여 complaintDtos 변수에 담아줍니다.
         List<IncidentDetailResponse.IncidentComplaintDto> complaintDtos = complaints.stream()
                 .map(c -> IncidentDetailResponse.IncidentComplaintDto.builder()
                         .originalId(c.getId())
@@ -81,7 +83,7 @@ public class IncidentController {
                 .lastOccurred(incident.getClosedAt() != null ? incident.getClosedAt().format(formatter) : "-")
                 .complaintCount(incident.getComplaintCount() != null ? incident.getComplaintCount() : complaints.size())
                 .avgProcessTime(calculateAverageProcessTime(complaints))
-                .complaints(complaintDtos) // 이제 에러 없이 정상 참조됩니다.
+                .complaints(complaintDtos)
                 .build();
     }
     private String calculateAverageProcessTime(List<Complaint> complaints) {

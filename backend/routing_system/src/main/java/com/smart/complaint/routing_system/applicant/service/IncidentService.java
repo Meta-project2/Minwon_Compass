@@ -1,5 +1,6 @@
 package com.smart.complaint.routing_system.applicant.service;
 
+import com.smart.complaint.routing_system.applicant.entity.Complaint;
 import com.smart.complaint.routing_system.applicant.entity.Incident;
 import com.smart.complaint.routing_system.applicant.repository.IncidentRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -17,9 +19,12 @@ import java.util.List;
 public class IncidentService {
 
     private final IncidentRepository incidentRepository;
+    private final ComplaintRepository complaintRepository;
+
+    // ... 기존 getMajorIncidents 코드 유지 ...
 
     /**
-     * 5건 이상인 주요 사건만 가져오는 기능
+     * [기능 1] 사건 제목 수정
      */
     public Page<Incident> getMajorIncidents(Pageable pageable) {
         // 1. 아까 Repository에 만든 '5개 이상만 가져와!' 명령을 시킵니다.

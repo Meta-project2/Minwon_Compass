@@ -149,4 +149,12 @@ public class Complaint {
         // 반려되면 다시 우리 부서의 '접수' 상태로
         this.status = ComplaintStatus.RECEIVED;
     }
+
+    // [추가] 사건 방 이동/배정 메소드
+    public void assignIncident(Incident incident) {
+        this.incident = incident;
+        this.incidentLinkedAt = LocalDateTime.now();
+        // incidentLinkScore는 파이썬(AI) 재계산 전까지는 유지하거나 null 처리
+    }
+
 }
