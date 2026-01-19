@@ -8,9 +8,9 @@ load_dotenv()
 
 # DB 연결 정보 (환경 변수 또는 .env 활용 권장)
 DB_CONFIG = {
-    "dbname": "postgres",
+    "dbname": "complaint_db",
     "user": "myuser",
-    "password": os.getenv("POSTGRES_PASSWORD"),
+    "password": os.getenv("0000"),
     "host": "localhost",
     "port": 5432
 }

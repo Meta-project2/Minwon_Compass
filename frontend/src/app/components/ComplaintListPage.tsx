@@ -92,6 +92,10 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
       if (tagsOnly) params.hasTags = true;
 
       const data: any = await AgentComplaintApi.getAll(params);
+
+      console.log("받아온 데이터 타입:", typeof data);
+      console.log("받아온 데이터 구조:", data);
+      console.log("content는 배열인가?:", Array.isArray(data?.content));
       
       if (data && Array.isArray(data.content)) {
           setComplaints(data.content);
@@ -139,7 +143,7 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
 
   const selectedComplaintData = complaints.find((c) => c.id === selectedComplaintId);
 
-  // --- 페이징 UI 계산 로직 ---
+  // --- 페이징 UI 계산 로직 ---a
   const pageGroupSize = 10;
   const currentGroup = Math.ceil(currentPage / pageGroupSize);
   const startPage = (currentGroup - 1) * pageGroupSize + 1;
