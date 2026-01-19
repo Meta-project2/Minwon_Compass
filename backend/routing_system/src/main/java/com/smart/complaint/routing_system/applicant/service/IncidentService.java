@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -17,9 +18,12 @@ import java.util.List;
 public class IncidentService {
 
     private final IncidentRepository incidentRepository;
+    private final ComplaintRepository complaintRepository;
+
+    // ... 기존 getMajorIncidents 코드 유지 ...
 
     /**
-     * 5건 이상인 주요 사건만 가져오는 기능
+     * [기능 1] 사건 제목 수정
      */
     public Page<Incident> getMajorIncidents(Pageable pageable) {
         // 1. 아까 Repository에 만든 '5개 이상만 가져와!' 명령을 시킵니다.
@@ -37,6 +41,44 @@ public class IncidentService {
         List<Incident> subList = majorList.subList(start, end);
         return new PageImpl<>(subList, pageable, majorList.size());
     }
+<<<<<<< HEAD
+
+    /*
+     * // [추가] 제목 변경 로직
+     *
+     * @Transactional
+     * public void updateTitle(Long incidentId, String newTitle) {
+     * Incident incident = incidentRepository.findById(incidentId)
+     * .orElseThrow(() -> new IllegalArgumentException("사건을 찾을 수 없습니다."));
+     * incident.setTitle(newTitle); // Entity에 setTitle 메서드가 있어야 합니다.
+     * }
+     *
+     * // [추가] 민원 이동 및 숫자 조정 로직 (핵심)
+     *
+     * @Transactional
+     * public void moveComplaints(Long targetIncidentId, List<Long> complaintIds) {
+     * Incident targetIncident = incidentRepository.findById(targetIncidentId)
+     * .orElseThrow(() -> new IllegalArgumentException("이동할 대상 사건이 없습니다."));
+     *
+     * List<Complaint> complaints = complaintRepository.findAllById(complaintIds);
+     *
+     * for (Complaint c : complaints) {
+     * // 1. 원래 있던 사건의 민원 수 감소
+     * if (c.getIncident() != null) {
+     * Incident oldIncident = c.getIncident();
+     * oldIncident.setComplaintCount(oldIncident.getComplaintCount() - 1);
+     * }
+     *
+     * // 2. 새로운 사건으로 이동
+     * c.setIncident(targetIncident);
+     * }
+     *
+     * // 3. 대상 사건의 민원 수 증가
+     * targetIncident.setComplaintCount(targetIncident.getComplaintCount() +
+     * complaints.size());
+     * }
+     */
+=======
 //    // [추가] 제목 변경 로직
 //    @Transactional
 //    public void updateTitle(Long incidentId, String newTitle) {
@@ -67,5 +109,6 @@ public class IncidentService {
 //        // 3. 대상 사건의 민원 수 증가
 //        targetIncident.setComplaintCount(targetIncident.getComplaintCount() + complaints.size());
 //    }
+>>>>>>> d624cf004203b37948ba08108fab49fad3530f84
 
 }

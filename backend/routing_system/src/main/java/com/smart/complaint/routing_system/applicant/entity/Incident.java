@@ -45,4 +45,20 @@ public class Incident {
 
     @Column(name = "closed_at")
     private LocalDateTime closedAt;
+
+    // [추가] 제목 변경 메소드
+    public void updateTitle(String newTitle) {
+        this.title = newTitle;
+    }
+
+    // [추가] 민원 수 갱신 메소드
+    public void updateComplaintCount(int count) {
+        this.complaintCount = count;
+    }
+
+    // [추가] 최근 발생일 갱신
+    public void updateClosedAt(LocalDateTime lastOccurred) {
+        this.closedAt = lastOccurred;
+    }
+
 }
