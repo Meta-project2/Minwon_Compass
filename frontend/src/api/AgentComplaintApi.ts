@@ -84,6 +84,22 @@ export interface PageResponse<T> {
   last: boolean;
 }
 
+// 재이관 목록 응답 타입
+export interface ComplaintRerouteResponse {
+  rerouteId: number;
+  requestedAt: string;
+  complaintId: string;
+  complaintTitle: string;
+  address: string;
+  currentDeptName: string;
+  targetDeptName: string;
+  requesterName: string;
+  requestReason: string;
+  status: string;
+  aiRoutingRank: any; // JSON Object
+  category: string;
+}
+
 export const AgentComplaintApi = {
 
   // 0. 내 정보 가져오기
@@ -134,4 +150,17 @@ export const AgentComplaintApi = {
       reason,
     });
   },
+  
+  // 7. [목록] 모든 재이관 요청 가져오기
+getReroutes: async (params?: any) => {
+    // params 구조: { page, size, status, keyword, originDeptId, targetDeptId }
+    const response = await springApi.get<PageResponse<ComplaintRerouteResponse>>("/api/admin/complaints/reroutes", { params });
+    return response.data;
+  },
+
+  // 8. 로그아웃 요청 (Logout)
+  logout: async () => {
+    await springApi.post("/api/agent/logout");
+  },
+
 };

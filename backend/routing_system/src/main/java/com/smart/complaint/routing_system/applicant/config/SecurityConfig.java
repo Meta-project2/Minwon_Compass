@@ -55,7 +55,7 @@ public class SecurityConfig {
         @Order(1)
         public SecurityFilterChain agentFilterChain(HttpSecurity http) throws Exception {
                 http
-                                .securityMatcher("/api/agent/**")
+                                .securityMatcher("/api/agent/**", "/api/admin/**")
                                 .csrf(csrf -> csrf.disable())
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ★ 통일
                                 .sessionManagement(session -> session

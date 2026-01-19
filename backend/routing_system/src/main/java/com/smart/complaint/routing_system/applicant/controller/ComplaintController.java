@@ -35,7 +35,8 @@ public class ComplaintController {
     ) {
         // 로그인한 사람이 '3번 부서' 소속이라고 가정
         // 나중에는 userDetails에서 진짜 부서 ID
-        Long myDepartmentId = 3L;
+        Long myDepartmentId = 11L;
+
 
         return complaintRepository.search(myDepartmentId, condition);
     }

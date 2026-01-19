@@ -48,6 +48,11 @@ public class ComplaintNormalization {
     @Column(length = 255)
     private String locationHint;
 
+    // AI 라우팅 추천 결과 (JSON)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "routing_rank", columnDefinition = "jsonb")
+    private Object routingRank;
+
     // pgvector (1024차원) 매핑
     // Hibernate 6에서 vector 타입을 double[]로 처리하기 위한 설정
     @Column(name = "embedding", columnDefinition = "vector(1024)")

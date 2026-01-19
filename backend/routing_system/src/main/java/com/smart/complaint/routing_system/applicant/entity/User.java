@@ -39,6 +39,10 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
+    @ManyToOne(fetch = FetchType.EAGER) // 세션에서 바로 접근할 수 있게 EAGER 권장
+    @JoinColumn(name = "department_id")
+    private Department department;
+
     public void changePassword(String password) {
         this.password = password;
     }

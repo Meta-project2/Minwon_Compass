@@ -46,6 +46,8 @@ public class QComplaintNormalization extends EntityPathBase<ComplaintNormalizati
 
     public final StringPath respDept = createString("respDept");
 
+    public final SimplePath<Object> routingRank = createSimple("routingRank", Object.class);
+
     public final StringPath targetObject = createString("targetObject");
 
     public QComplaintNormalization(String variable) {

@@ -121,20 +121,18 @@ public class IncidentController {
         return sb.toString().trim();
     }
 
-    /*
-    // [추가 1] 제목 수정 기능
-    @PatchMapping("/{id}/title")
-    public void updateIncidentTitle(@PathVariable Long id, @RequestBody String newTitle) {
-        incidentService.updateTitle(id, newTitle);
-    }
-
-    // [추가 2] 민원 이동 기능 (A그룹 -> B그룹)
-    @PostMapping("/move")
-    public void moveComplaintsToIncident(
-            @RequestParam Long targetIncidentId,
-            @RequestBody List<Long> complaintIds) {
-        incidentService.moveComplaints(targetIncidentId, complaintIds);
-    }
-    */
+//    // [추가 1] 제목 수정 기능
+//    @PatchMapping("/{id}/title")
+//    public void updateIncidentTitle(@PathVariable Long id, @RequestBody String newTitle) {
+//        incidentService.updateTitle(id, newTitle);
+//    }
+//
+//    // [추가 2] 민원 이동 기능 (A그룹 -> B그룹)
+//    @PostMapping("/move")
+//    public void moveComplaintsToIncident(
+//            @RequestParam Long targetIncidentId,
+//            @RequestBody List<Long> complaintIds) {
+//        incidentService.moveComplaints(targetIncidentId, complaintIds);
+//    }
 
 }

@@ -1,465 +1,374 @@
-import { useEffect, useState } from 'react';
-import { X, TrendingUp, Clock, MapPin, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { X, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
+  Area, AreaChart, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
-import KakaoMap from './applicant/KakaoMap';
+import {
+  AdminDashboardApi,
+  DailyCountDto, TimeRangeDto, DeptStatusDto, GeneralStatsResponse, DepartmentFilterDto
+} from '../../api/AdminDashboardApi';
+import { format, subDays } from 'date-fns';
 
-const complaintTrendData = [
-  { date: '12/26', count: 45 },
-  { date: '12/27', count: 52 },
-  { date: '12/28', count: 48 },
-  { date: '12/29', count: 61 },
-  { date: '12/30', count: 55 },
-  { date: '12/31', count: 58 },
-  { date: '01/01', count: 67 },
-];
+// --- [복구] 디자인 헬퍼 함수 (원본 유지) ---
+const RADIAN = Math.PI / 180;
+function clamp01(n: number) { return Math.min(1, Math.max(0, n)); }
+function hexToRgb(hex: string) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+}
+function rgbToHex(r: number, g: number, b: number) {
+  const toHex = (v: number) => v.toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+function lightenHex(hex: string, amount = 0.55) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const a = clamp01(amount);
+  const r = Math.round(rgb.r + (255 - rgb.r) * a);
+  const g = Math.round(rgb.g + (255 - rgb.g) * a);
+  const b = Math.round(rgb.b + (255 - rgb.b) * a);
+  return rgbToHex(r, g, b);
+}
 
-const categoryDistribution = [
-  { name: '도로/교통', value: 35, color: '#3b82f6' },
-  { name: '환경/시설', value: 28, color: '#10b981' },
-  { name: '행정/민원', value: 20, color: '#f59e0b' },
-  { name: '복지/보건', value: 17, color: '#8b5cf6' },
-];
+// 라벨 렌더러
+const makePieLabelRenderer = (getColor: any) => (props: any) => {
+  const { cx, cy, midAngle, outerRadius, percent } = props;
+  if (percent < 0.05) return null;
+  const radius = outerRadius * 0.6;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight="bold" style={{ textShadow: '0px 0px 3px rgba(0,0,0,0.5)' }}>
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+};
 
-const departmentRanking = [
-  { dept: '도로관리과', received: 145, pending: 23 },
-  { dept: '환경관리과', received: 98, pending: 15 },
-  { dept: '시설관리과', received: 87, pending: 8 },
-  { dept: '복지정책과', received: 76, pending: 12 },
-  { dept: '교통행정과', received: 65, pending: 19 },
-];
-
-const processingTimeData = [
-  { range: '0-4시간', count: 45 },
-  { range: '4-8시간', count: 62 },
-  { range: '8-12시간', count: 38 },
-  { range: '12-24시간', count: 28 },
-  { range: '24시간+', count: 15 },
-];
-
-const recurringIncidents = [
-  { id: 'I-2026-001', title: '강일동 도로 파손 집중 발생', count: 12, trend: '+8' },
-  { id: 'I-2025-342', title: '고덕동 불법주차 반복', count: 15, trend: '+5' },
-  { id: 'I-2025-340', title: '명일동 소음 민원', count: 8, trend: '+4' },
-  { id: 'I-2025-340', title: '상일동 신호등 민원', count: 8, trend: '+3' },
-
-];
-
-const hotspotData = [
-  { id: 1, name: '역삼동', x: 35, y: 45, intensity: 'high', complaints: 12, category: '도로/교통' },
-  { id: 2, name: '삼성동', x: 55, y: 35, intensity: 'medium', complaints: 8, category: '도로/교통' },
-  { id: 3, name: '대치동', x: 45, y: 60, intensity: 'low', complaints: 5, category: '환경/시설' },
-  { id: 4, name: '잠실동', x: 70, y: 50, intensity: 'high', complaints: 10, category: '환경/시설' },
-];
+// --- 색상 정의 ---
+const COLORS = {
+  blue: '#3b82f6', green: '#10b981', yellow: '#f59e0b',
+  purple: '#8b5cf6', red: '#ef4444', orange: '#fb923c',
+  slate: '#64748b', gray: '#9ca3af'
+};
+const CATEGORY_PALETTE = [COLORS.blue, COLORS.green, COLORS.yellow, COLORS.purple, COLORS.orange];
 
 export function AdminDashboard() {
-  const [trendView, setTrendView] = useState<'daily' | 'weekly'>('daily');
-  const [mapView, setMapView] = useState<'heatmap' | 'marker'>('heatmap');
-  const [showSurgeOnly, setShowSurgeOnly] = useState(false);
-  const [selectedHotspot, setSelectedHotspot] = useState<any>(null);
-  const [complaints, setComplaints] = useState<any[]>([]); // DB 데이터 저장
+  // --- 상태 관리 ---
+  const [departments, setDepartments] = useState<DepartmentFilterDto[]>([]); // 부서 목록
+  const [period, setPeriod] = useState('7d');
+  const [dateRange, setDateRange] = useState({
+    start: format(subDays(new Date(), 6), 'yyyy-MM-dd'),
+    end: format(new Date(), 'yyyy-MM-dd')
+  });
 
-  const token = localStorage.getItem('accessToken');
+  // 위젯별 데이터 & 필터
+  const [trendData, setTrendData] = useState<DailyCountDto[]>([]);
+  const [trendFilter, setTrendFilter] = useState('all');
+
+  const [timeData, setTimeData] = useState<TimeRangeDto[]>([]);
+  const [timeFilter, setTimeFilter] = useState('all');
+
+  const [deptStatusData, setDeptStatusData] = useState<DeptStatusDto[]>([]);
+  const [deptStatusFilter, setDeptStatusFilter] = useState('all');
+
+  const [generalData, setGeneralData] = useState<GeneralStatsResponse | null>(null);
+
+  // --- 데이터 로드 ---
+  // 1. 초기 로드: 부서 목록
   useEffect(() => {
-    fetch('/api/applicant/heatmap', {
-      headers: {
-        'Authorization': `Bearer ${token}`, // 토큰 추가
-        'Content-Type': 'application/json'
-      }
-    })
-      .then(res => {
-        if (res.status === 302 || res.status === 401) {
-          throw new Error("인증 실패 또는 리다이렉트 발생");
-        }
-        return res.json();
-      })
-      .then(data => setComplaints(data))
-      .catch(err => console.error("데이터 로드 에러:", err));
+    AdminDashboardApi.getDepartments()
+      .then(setDepartments)
+      .catch(err => console.error("부서 목록 로드 실패:", err));
   }, []);
+
+  // 2. 위젯 데이터 로드
+  useEffect(() => { loadTrend(); }, [dateRange, trendFilter]);
+  useEffect(() => { loadTime(); }, [dateRange, timeFilter]);
+  useEffect(() => { loadDeptStatus(); }, [dateRange, deptStatusFilter]);
+  useEffect(() => { loadGeneral(); }, [dateRange]);
+
+  const loadTrend = async () => setTrendData(await AdminDashboardApi.getTrend(dateRange.start, dateRange.end, trendFilter));
+  const loadTime = async () => setTimeData(await AdminDashboardApi.getProcessingTime(dateRange.start, dateRange.end, timeFilter));
+  const loadDeptStatus = async () => setDeptStatusData(await AdminDashboardApi.getDeptStatus(dateRange.start, dateRange.end, deptStatusFilter));
+  const loadGeneral = async () => setGeneralData(await AdminDashboardApi.getGeneral(dateRange.start, dateRange.end));
+
+  const handlePeriodChange = (val: string) => {
+    setPeriod(val);
+    if (val === 'custom') return;
+    const today = new Date();
+    let start = today;
+    if (val === '1d') start = today;
+    else if (val === '7d') start = subDays(today, 6);
+    else if (val === '30d') start = subDays(today, 29);
+    setDateRange({ start: format(start, 'yyyy-MM-dd'), end: format(today, 'yyyy-MM-dd') });
+  };
+
+  // --- 데이터 가공 ---
+  // 1. 민원 유형 (Pie)
+  const pieChartData = useMemo(() => {
+    if (!generalData) return [];
+    const sorted = [...generalData.categoryStats].sort((a, b) => b.count - a.count);
+    const top5 = sorted.slice(0, 5).map((item, idx) => ({ name: item.categoryName, value: item.count, color: CATEGORY_PALETTE[idx] }));
+    const others = sorted.slice(5).reduce((acc, cur) => acc + cur.count, 0);
+    if (others > 0) top5.push({ name: '기타', value: others, color: COLORS.gray });
+    return top5;
+  }, [generalData]);
+
+  // 2. 처리 시간 (Pie + Gradient)
+  const procTimeChartData = useMemo(() => {
+    const colorMap: Record<string, string> = { "3일 이내": COLORS.green, "7일 이내": COLORS.blue, "14일 이내": COLORS.yellow, "14일 이상": COLORS.red };
+    return timeData.map(item => ({
+      name: item.range, value: item.count, color: colorMap[item.range] || COLORS.slate
+    }));
+  }, [timeData]);
+
+  // [수정] 동적 부서 필터 컴포넌트
+  const DeptFilterSelect = ({ value, onChange }: any) => (
+    <div className="ml-auto w-32">
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-8 text-xs bg-slate-50 border-slate-200"><SelectValue placeholder="전체" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">전체 부서</SelectItem>
+          {/* DB에서 가져온 departments 매핑 */}
+          {departments.map((dept) => (
+            <SelectItem key={dept.id} value={dept.id.toString()}>
+              {dept.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  if (!generalData) return <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div>;
 
   return (
     <div className="h-full flex flex-col">
+      {/* Header */}
       <div className="h-16 border-b border-border bg-card px-6 shadow-sm flex items-center gap-3 shrink-0">
         <h1 className="text-2.5xl font-bold text-slate-900">민원 처리 현황</h1>
-        <p className="text-sm text-slate-400 font-medium pt-1">사전 집계된 지표</p>
-      </div>
-
-      {/* Global Filters */}
-      {/* <div className="bg-card border-b border-border p-4"> */}
-      {/* <div className="flex flex-wrap gap-2 items-center">
-          <Select defaultValue="7d">
-            <SelectTrigger className="w-32 bg-input-background">
-              <SelectValue placeholder="기간" />
-            </SelectTrigger>
+        <div className="flex flex-wrap gap-2 items-center ml-auto">
+          <Select value={period} onValueChange={handlePeriodChange}>
+            <SelectTrigger className="w-32 bg-input-background"><SelectValue placeholder="기간 선택" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="1d">오늘</SelectItem>
-              <SelectItem value="7d">최근 7일</SelectItem>
-              <SelectItem value="30d">최근 30일</SelectItem>
-              <SelectItem value="custom">직접 선택</SelectItem>
-            </SelectContent>
-          </Select> */}
-
-      {/* <Select defaultValue="all">
-            <SelectTrigger className="w-32 bg-input-background">
-              <SelectValue placeholder="업무군" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 업무군</SelectItem>
-              <SelectItem value="road">도로/교통</SelectItem>
-              <SelectItem value="env">환경/시설</SelectItem>
-              <SelectItem value="admin">행정/민원</SelectItem>
-            </SelectContent>
-          </Select> */}
-
-      {/* <Select defaultValue="all">
-            <SelectTrigger className="w-32 bg-input-background">
-              <SelectValue placeholder="부서" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 부서</SelectItem>
-              <SelectItem value="road">도로관리과</SelectItem>
-              <SelectItem value="env">환경관리과</SelectItem>
+              <SelectItem value="1d">오늘</SelectItem><SelectItem value="7d">최근 7일</SelectItem><SelectItem value="30d">최근 30일</SelectItem><SelectItem value="custom">직접 선택</SelectItem>
             </SelectContent>
           </Select>
-
-          <Select defaultValue="all">
-            <SelectTrigger className="w-32 bg-input-background">
-              <SelectValue placeholder="행정동" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 행정동</SelectItem>
-              <SelectItem value="yeoksam">역삼동</SelectItem>
-              <SelectItem value="samsung">삼성동</SelectItem>
-            </SelectContent>
-          </Select> */}
-
-      {/* <Button variant="ghost" size="sm" className="ml-auto">
-            <X className="h-4 w-4 mr-1" />
-            필터 초기화
-          </Button>
+          {period === 'custom' && (
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md px-2 py-1 shadow-sm">
+              <input type="date" className="text-sm border-none outline-none" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} />
+              <span className="text-slate-400">~</span>
+              <input type="date" className="text-sm border-none outline-none" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} />
+            </div>
+          )}
+          <Button variant="ghost" size="sm" onClick={() => handlePeriodChange('7d')}><X className="h-4 w-4 mr-1" /> 초기화</Button>
         </div>
-      </div> */}
+      </div>
 
-      {/* Widgets Grid */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6 bg-slate-100/50">
         <div className="grid grid-cols-3 gap-4">
-          {/* Widget 1: 민원 유입 추이 */}
-          <Card className="col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">민원 접수 추이</CardTitle>
-                <div className="flex gap-2">
-                  {/* <Select defaultValue="all">
-                    <SelectTrigger className="w-32 bg-input-background">
-                      <SelectValue placeholder="부서" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">전체 부서</SelectItem>
-                      <SelectItem value="road">도로관리과</SelectItem>
-                      <SelectItem value="env">환경관리과</SelectItem> */}
-                  {/* 실제 부서 데이터 가져오게 */}
-                  {/* </SelectContent>
-                  </Select> */}
-                </div>
-              </div>
+
+          {/* 1. 접수 추이 */}
+          <Card className="col-span-1 shadow-sm">
+            <CardHeader className="flex flex-row items-center">
+              <div className="h-4 w-1 bg-blue-600 rounded-full mr-2" />
+              <CardTitle className="text-base font-bold">민원 접수 추이</CardTitle>
+              <DeptFilterSelect value={trendFilter} onChange={setTrendFilter} />
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={complaintTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
+                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.8} />
+                      <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="#334155" strokeWidth={2} />
-                </LineChart>
+                  <Area type="monotone" dataKey="count" stroke={COLORS.blue} fill="url(#colorTrend)" />
+                </AreaChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">처리 소요시간 분포</CardTitle>
-                {/* <div className="flex gap-2">
-        <Select defaultValue="all">
-          <SelectTrigger className="w-32 bg-input-background">
-            <SelectValue placeholder="부서" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 부서</SelectItem>
-            <SelectItem value="road">도로관리과</SelectItem>
-            <SelectItem value="env">환경관리과</SelectItem>
-          </SelectContent>
-        </Select>
-      </div> */}
-              </div>
+          {/* 2. 처리 시간 (그라데이션 & 꽉찬 파이 복구) */}
+          <Card className="col-span-1 shadow-sm">
+            <CardHeader className="flex flex-row items-center">
+              <div className="h-4 w-1 bg-green-600 rounded-full mr-2" />
+              <CardTitle className="text-base font-bold">처리 소요 시간</CardTitle>
+              <DeptFilterSelect value={timeFilter} onChange={setTimeFilter} />
             </CardHeader>
-            <CardContent>
-              <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={processingTimeData}
-                      label={({ name, count }) => `${name}`}
-                      labelLine={false}
-                      cx="50%"
-                      cy="45%" // 범례(Legend) 공간 확보를 위해 약간 위로 올림
-                      outerRadius={80}
-                      dataKey="count"
-                      nameKey="range"
-                    >
-                      {/* 5가지 구간에 맞춘 색상 할당 */}
-                      <Cell fill="#10b981" /> {/* 0-4시간 */}
-                      <Cell fill="#3b82f6" /> {/* 4-8시간 */}
-                      <Cell fill="#f59e0b" /> {/* 8-12시간 */}
-                      <Cell fill="#ef4444" /> {/* 12-24시간 */}
-                      <Cell fill="#8b5cf6" /> {/* 24시간+ */}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+            <CardContent className="px-1 py-0">
+              <div className="flex h-[180px] items-center justify-center">
+                <div className="w-[60%] h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      {/* [복구] 그라데이션 defs 동적 생성 */}
+                      <defs>
+                        {procTimeChartData.map((entry, idx) => (
+                          <linearGradient key={idx} id={`proc-${idx}`} x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor={entry.color} />
+                            <stop offset="100%" stopColor={lightenHex(entry.color)} />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      <Pie
+                        data={procTimeChartData}
+                        cx="50%" cy="50%"
+                        outerRadius={75}
+                        // innerRadius={0} // 꽉찬 원
+                        dataKey="value"
+                        labelLine={false}
+                        label={makePieLabelRenderer(null)}
+                      >
+                        {procTimeChartData.map((e, i) => (
+                          <Cell key={i} fill={`url(#proc-${i})`} stroke="white" strokeWidth={1} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* 범례 */}
+                <div className="w-[40%] pl-2 space-y-2">
+                  {procTimeChartData.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm text-slate-700">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="font-medium">{item.name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Widget 3: 부서 유입·미처리 랭킹 */}
-          <Card className="col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base">부서별 접수·처리 현황</CardTitle>
+          {/* 3. AI 정확도 */}
+          <Card className="col-span-1 shadow-sm">
+            <CardHeader className="flex flex-row items-center">
+              <div className="h-4 w-1 bg-purple-600 rounded-full mr-2" />
+              <CardTitle className="text-base font-bold">AI 자동 배정 정확도</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[180px] w-full flex items-center justify-center">
+                <div className={`w-40 h-40 rounded-full flex flex-col items-center justify-center shadow-xl text-white ${generalData.aiAccuracy >= 80 ? 'bg-gradient-to-br from-emerald-400 to-cyan-600 shadow-emerald-200' : 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-orange-200'}`}>
+                  <span className="text-4xl font-bold drop-shadow-sm">{generalData.aiAccuracy}%</span>
+                  <span className="text-sm opacity-90">일치율</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 4. 부서별 현황 (막대 그라데이션) */}
+          <Card className="col-span-1 shadow-sm">
+            <CardHeader className="flex flex-row items-center">
+              <div className="h-4 w-1 bg-blue-600 rounded-full mr-2" />
+              <CardTitle className="text-base font-bold">부서별 현황</CardTitle>
+              <DeptFilterSelect value={deptStatusFilter} onChange={setDeptStatusFilter} />
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={departmentRanking}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="dept" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="received" fill="#3b82f6" name="접수" />
-                  <Bar dataKey="pending" fill="#ef4444" name="미처리" />
+                <BarChart data={deptStatusData} barGap={4} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="barBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#60a5fa" /><stop offset="100%" stopColor="#3b82f6" /></linearGradient>
+                    <linearGradient id="barRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f87171" /><stop offset="100%" stopColor="#ef4444" /></linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="deptName" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: '#f1f5f9' }} />
+                  <Bar dataKey="received" name="접수" fill="url(#barBlue)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="pending" name="미처리" fill="url(#barRed)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Widget 2: 업무군 분포 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">민원 유형 분포</CardTitle>
+          {/* 5. 민원 유형 (Pie + Gradient) */}
+          <Card className="col-span-1 shadow-sm">
+            <CardHeader className="flex flex-row items-center">
+              <div className="h-4 w-1 bg-yellow-500 rounded-full mr-2" />
+              <CardTitle className="text-base font-bold">민원 유형 분포</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={categoryDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={60}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {categoryDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Widget 5: 라우팅 품질 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">민원 자동 배정 품질</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="text-sm">재이관 승인율</span>
+            <CardContent className="px-1 py-0">
+              <div className="flex h-[220px] items-center justify-center">
+                <div className="w-[60%] h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      {/* [복구] 그라데이션 defs */}
+                      <defs>
+                        {pieChartData.map((entry, idx) => (
+                          <linearGradient key={idx} id={`cat-${idx}`} x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor={entry.color} />
+                            <stop offset="100%" stopColor={lightenHex(entry.color)} />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%" cy="50%"
+                        outerRadius={75}
+                        dataKey="value"
+                        labelLine={false}
+                        label={makePieLabelRenderer(null)}
+                      >
+                        {pieChartData.map((e, i) => <Cell key={i} fill={`url(#cat-${i})`} stroke="white" strokeWidth={1} />)}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="text-xl">87%</div>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  <span className="text-sm">수동 이관율</span>
+                <div className="w-[40%] pl-2 space-y-2 overflow-y-auto max-h-[180px]">
+                  {pieChartData.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm text-slate-700">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="font-medium truncate" title={item.name}>{item.name}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="text-xl">13%</div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Widget 6: 사건 재발 Top */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">반복 민원 Top</CardTitle>
+          {/* 6. 반복 민원 (수직 정렬 Fix) */}
+          <Card className="col-span-1 shadow-sm">
+            <CardHeader className="flex flex-row items-center">
+              <div className="h-4 w-1 bg-red-600 rounded-full mr-2" />
+              <CardTitle className="text-base font-bold">반복 민원 Top 3</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {recurringIncidents.map((incident) => (
-                  <div key={incident.id} className="flex items-start justify-between p-2 border rounded text-sm">
-                    <div className="flex-1">
-                      <div className="mb-1">{incident.title}</div>
-                      <div className="text-xs text-muted-foreground">{incident.id}</div>
+                {generalData.recurringIncidents.map(inc => (
+                  <div key={inc.incidentId} className="flex items-center justify-between p-3 border border-slate-100 bg-white rounded-lg shadow-sm hover:bg-slate-50 transition-colors">
+                    <div className="flex-1 min-w-0 mr-3">
+                      <div className="text-sm font-semibold truncate" title={inc.title}>{inc.title}</div>
+                      {/* <div className="text-xs text-slate-500 font-mono">{inc.incidentId} | {inc.count}건</div> */}
+                      <div className="text-xs text-slate-500 font-mono">
+                        <Badge variant="secondary" className="px-2 py-0.5 h-auto">
+                          {inc.incidentId}
+                        </Badge>
+                      </div>
+
+
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      {/* <Badge variant="secondary">{incident.count}건</Badge> */}
-                      <Badge className="bg-red-100 text-red-700 text-xs">{incident.trend}</Badge>
-                    </div>
+                    <Badge className={`shrink-0 px-2 py-1 text-xs font-bold shadow-none ${inc.trend > 0 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                      {inc.trend > 0 ? `+${inc.trend}` : inc.trend}
+                    </Badge>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Widget 7: 지도 핫스팟 */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">민원 집중 지역</CardTitle>
-                <div className="flex gap-2">
-                  {/* <Select value={mapView} onValueChange={(v: any) => setMapView(v)}>
-                    <SelectTrigger className="w-24 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="heatmap">히트맵</SelectItem>
-                      <SelectItem value="marker">마커</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant={showSurgeOnly ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setShowSurgeOnly(!showSurgeOnly)}
-                  >
-                    급증만
-                  </Button> */}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Mock Map */}
-              <div className="relative h-64 bg-slate-100 rounded border overflow-hidden">
-                {/* Map placeholder */}
-                <KakaoMap
-                  complaints={complaints}
-                  mapView={mapView}
-                  showSurgeOnly={showSurgeOnly}
-                />
-                {/* Hotspot markers/heatmap */}
-
-              </div>
-
-              {/* Legend */}
-              <div className="mt-3 flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="h-3 w-3 rounded-full bg-red-500" />
-                  <span>높음</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="h-3 w-3 rounded-full bg-orange-500" />
-                  <span>보통</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                  <span>낮음</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
-
-      {/* Hotspot Detail Drawer */}
-      <Sheet open={!!selectedHotspot} onOpenChange={() => setSelectedHotspot(null)}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>{selectedHotspot?.name} 핫스팟 상세</SheetTitle>
-          </SheetHeader>
-          {selectedHotspot && (
-            <div className="mt-6 space-y-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">주요 업무군</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Badge variant="outline">{selectedHotspot.category}</Badge>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">최근 7일 추이</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={120}>
-                    <LineChart data={complaintTrendData.slice(0, 7)}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                      <YAxis tick={{ fontSize: 10 }} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="count" stroke="#334155" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">관련 민원/사건</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="p-2 border rounded cursor-pointer hover:bg-accent">
-                      <div className="flex items-center justify-between">
-                        <span>C2026-0001</span>
-                        <Badge className="bg-yellow-100 text-yellow-800 text-xs">처리중</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">도로 파손 보수 요청</p>
-                    </div>
-                    <div className="p-2 border rounded cursor-pointer hover:bg-accent">
-                      <div className="flex items-center justify-between">
-                        <span>I-2026-001</span>
-                        <Badge className="bg-yellow-100 text-yellow-800 text-xs">대응중</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">역삼동 도로 파손 집중 발생</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

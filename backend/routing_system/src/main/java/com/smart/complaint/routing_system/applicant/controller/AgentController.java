@@ -38,14 +38,14 @@ public class AgentController {
         HttpSession session = request.getSession(false);
 
         // 개발 편의: 세션 없으면 1번 유저(admin)
-        if (session == null || session.getAttribute("LOGIN_USER") == null) {
-            Map<String, Object> mockUser = new HashMap<>();
-            mockUser.put("id", 1L); // ID 1번
-            mockUser.put("username", "admin");
-            mockUser.put("displayName", "김공무(개발용)");
-            mockUser.put("role", "AGENT");
-            return ResponseEntity.ok(mockUser);
-        }
+//        if (session == null || session.getAttribute("LOGIN_USER") == null) {
+//            Map<String, Object> mockUser = new HashMap<>();
+//            mockUser.put("id", 1L); // ID 1번
+//            mockUser.put("username", "admin");
+//            mockUser.put("displayName", "김공무(개발용)");
+//            mockUser.put("role", "AGENT");
+//            return ResponseEntity.ok(mockUser);
+//        }
 
         User user = (User) session.getAttribute("LOGIN_USER");
         Map<String, Object> response = new HashMap<>();
@@ -53,6 +53,8 @@ public class AgentController {
         response.put("username", user.getUsername());
         response.put("displayName", user.getDisplayName());
         response.put("role", user.getRole());
+        String deptName = (user.getDepartment() != null) ? user.getDepartment().getName() : "소속 없음";
+        response.put("departmentName", deptName);
 
         return ResponseEntity.ok(response);
     }
@@ -108,6 +110,9 @@ public class AgentController {
         responseBody.put("username", user.getUsername());
         responseBody.put("role", user.getRole());
 
+        String deptName = (user.getDepartment() != null) ? user.getDepartment().getName() : "소속 없음";
+        responseBody.put("departmentName", deptName);
+        
         // 예: { "message": "로그인 성공", "username": "admin1", "role": "ADMIN" }
         return ResponseEntity.ok(responseBody);
     }
