@@ -102,7 +102,9 @@ async def preprocess_complaint(req: ComplaintRequest, request: Request):
     print(f"받은 원본 데이터: {body.decode()}")
     try:
         api_key = os.getenv("LANGFLOW_KEY")
-        url = "http://complaint-langflow:7860/api/v1/run/59369f82-0d62-414e-bd20-9bc5f9aa8a50"  # The complete API endpoint URL for this flow
+        # url = "http://complaint-langflow:7860/api/v1/run/59369f82-0d62-414e-bd20-9bc5f9aa8a50"  # The complete API endpoint URL for this flow
+        # 서버 전용 langflow api url
+        url = "http://34.158.210.224:7860/api/v1/run/fef3bc76-0d0f-45c7-b91a-e6c017b2b1e8"
 
         for i in req:
             print(i)
@@ -112,13 +114,22 @@ async def preprocess_complaint(req: ComplaintRequest, request: Request):
             "output_type": "chat",
             "input_type": "text",
             "tweaks": {
-                # 찾으신 ID를 정확히 매핑합니다
+                ''' 
                 "TextInput-MBAG": {
                     "input_value": req.title
                 },
                 "TextInput-NNDwa": {
                     "input_value": req.body
                 }
+                '''
+                # 서버 전용
+                "TITLE-QaZnz": {
+                    "input_value": req.title
+                },
+                "BODY-d62U4": {
+                    "input_value": req.body
+                }
+
             }
         }
         payload["session_id"] = str(uuid.uuid4())

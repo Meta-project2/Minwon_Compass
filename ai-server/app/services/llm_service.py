@@ -1,5 +1,4 @@
 import os
-import ollama
 from app import database
 from typing import List, Dict, Any
 from openai import OpenAI
