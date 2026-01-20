@@ -14,7 +14,37 @@ interface ResponseTimeStatsProps {
   };
 }
 
-const COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#ca8a04'];
+const COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#8B5CF6'];
+const GRADIENTS = [
+  { id: 'grad1', start: '#818CF8', end: '#4338CA' },
+  { id: 'grad2', start: '#F472B6', end: '#BE185D' },
+  { id: 'grad3', start: '#FBBF24', end: '#D97706' },
+  { id: 'grad4', start: '#34D399', end: '#047857' },
+  { id: 'grad5', start: '#A78BFA', end: '#6D28D9' },
+];
+
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, value, index }: any) => {
+  const RADIAN = Math.PI / 180;
+  const radius = outerRadius + 25;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  const labelColor = COLORS[index % COLORS.length];
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill={labelColor}
+      textAnchor={x > cx ? 'start' : 'end'}
+      dominantBaseline="central"
+      className="text-[15px]"
+    >
+      <tspan fontWeight="600">{name}: </tspan>
+      <tspan fontWeight="800" fontSize="20px"> {value}일</tspan>
+    </text>
+  );
+};
 
 export function ResponseTimeStats({ data, overallStats }: ResponseTimeStatsProps) {
   const pieData = data.map(item => ({
@@ -57,24 +87,50 @@ export function ResponseTimeStats({ data, overallStats }: ResponseTimeStatsProps
       <div className="flex-1 min-h-[300px] relative">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
+            <defs>
+              {GRADIENTS.map((grad) => (
+                <linearGradient key={grad.id} id={grad.id} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={grad.start} stopOpacity={1} />
+                  <stop offset="95%" stopColor={grad.end} stopOpacity={1} />
+                </linearGradient>
+              ))}
+            </defs>
+            <text
+              x={200}         // 전체 너비(400)의 절반
+              y={20}          // 상단 여백
+              fill="#333"     // 글자 색상
+              textAnchor="middle" // 가로 정렬 기준(중앙)
+              dominantBaseline="central" // 세로 정렬 기준
+              style={{ fontSize: '20px', fontWeight: 'bold' }}
+            >
+              분아별 평균 응답 시간
+            </text>
             <Pie
               data={pieData}
               cx="50%"
-              cy="45%" // 차트를 살짝 위로 올려 아래 범례 공간 확보
-              labelLine={true}
-              label={({ name, value }) => `${name}: ${value}일`} // 가독성을 위해 이름만 표시 (값은 툴팁으로)
-              outerRadius={95} // 차트 크기 소폭 확대
-              innerRadius={60} // 도넛 형태로 변경하여 더 세련되게 수정
+              cy="50%"
+              labelLine={{ stroke: '#9CA3AF', strokeWidth: 1 }}
+              label={renderCustomizedLabel} // 커스텀 라벨 적용
+              outerRadius={95}
               stroke="none"
               dataKey="value"
             >
               {pieData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell
+                  key={`cell-${index}`}
+                  fill={`url(#grad${(index % GRADIENTS.length) + 1})`} // 그라데이션 ID 연결
+                />
               ))}
             </Pie>
-            <Tooltip 
-              contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-              formatter={(value) => [`${value}일`, '평균 처리 시간']} 
+            <Tooltip
+              contentStyle={{
+                borderRadius: '16px',
+                border: 'none',
+                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                padding: '12px'
+              }}
+              itemStyle={{ fontWeight: 'bold' }}
+              formatter={(value) => [`${value}일`, '평균 처리 시간']}
             />
           </PieChart>
         </ResponsiveContainer>

@@ -60,8 +60,6 @@ public class QComplaint extends EntityPathBase<Complaint> {
 
     public final EnumPath<com.smart.complaint.routing_system.applicant.domain.ComplaintStatus> status = createEnum("status", com.smart.complaint.routing_system.applicant.domain.ComplaintStatus.class);
 
-    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.Tag> tag = createEnum("tag", com.smart.complaint.routing_system.applicant.domain.Tag.class);
-
     public final StringPath title = createString("title");
 
     public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt", java.time.LocalDateTime.class);

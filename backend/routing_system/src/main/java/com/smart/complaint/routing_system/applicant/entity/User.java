@@ -1,5 +1,7 @@
 package com.smart.complaint.routing_system.applicant.entity;
 
+import java.util.Map;
+
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -45,5 +47,10 @@ public class User {
 
     public void changePassword(String password) {
         this.password = password;
+    }
+
+    public Object update(Map<String,Object> attributes) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'update'");
     }
 }

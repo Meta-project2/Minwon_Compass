@@ -27,7 +27,7 @@ interface IncidentDetailPageProps {
   onBack: () => void;
 }
 
-const ITEMS_PER_PAGE = 8; // 6개 고정
+const ITEMS_PER_PAGE = 8; 
 
 const cleanTitle = (title: string) => title?.replace(/\[.*?\]/g, '').trim() || "";
 
@@ -89,9 +89,22 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
       if (!isEditingTitle) {
         setTempTitle(cleanTitle(response.data.title));
       }
-    };
-    if (incidentId) fetchDetail();
-  }, [incidentId]);
+      return response.data; 
+    } catch (error) {
+      console.error("데이터 조회 실패");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [incidentId, incidentData, isEditingTitle]);
+
+  useEffect(() => {
+    fetchDetail();
+  }, [fetchDetail]);
+
+  const showDialog = (type: 'alert' | 'confirm', title: string, message: string, onConfirm?: () => void) => {
+    setDialogConfig({ isOpen: true, type, title, message, onConfirm });
+  };
 
   const handleSaveTitle = async () => {
     try {
