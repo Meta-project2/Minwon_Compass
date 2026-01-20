@@ -68,8 +68,9 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 complaint.currentDepartmentId.eq(departmentId),
                                                 keywordContains(condition.getKeyword()),
                                                 statusEq(condition.getStatus()),
-                                                hasIncident(condition.getHasIncident()),
-                                                hasTags(condition.getHasTags()))
+                                                hasIncident(condition.getHasIncident())
+//                                                hasTags(condition.getHasTags())
+                                )
                                 .orderBy(getOrderSpecifier(condition.getSort())) // 정렬 적용
                                 .offset(condition.getOffset()) // 건너뛰기
                                 .limit(condition.getSize()) // 10개만 가져오기
@@ -100,8 +101,9 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 complaint.currentDepartmentId.eq(departmentId),
                                                 keywordContains(condition.getKeyword()),
                                                 statusEq(condition.getStatus()),
-                                                hasIncident(condition.getHasIncident()),
-                                                hasTags(condition.getHasTags()))
+                                                hasIncident(condition.getHasIncident())
+//                                                hasTags(condition.getHasTags())
+                                )
                                 .fetchOne();
 
                 if (total == null)
@@ -111,9 +113,15 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 return new PageImpl<>(content, PageRequest.of(condition.getPage() - 1, condition.getSize()), total);
         }
 
-        // [하단 조건 메서드 추가]
-        private BooleanExpression hasTags(Boolean hasTags) {
-                return (hasTags != null && hasTags) ? complaint.tag.isNotNull() : null;
+        /* 수정 전
+        private BooleanExpression hasTagsEq(Boolean hasTags) {
+            return (hasTags != null && hasTags) ? complaint.tag.isNotNull() : null;
+        }
+        */
+
+        // 수정 후: 기능을 아예 비활성화하거나 null을 반환하게 합니다.
+        private BooleanExpression hasTagsEq(Boolean hasTags) {
+                return null;
         }
 
         @Override
@@ -323,6 +331,11 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 complaint.lon))
                                 .from(complaint)
                                 .fetch();
+        }
+
+        @Override
+        public List<ComplaintHeatMap> getAllComplaintsWithLatLon(Long id) {
+                return List.of();
         }
 
         @Override

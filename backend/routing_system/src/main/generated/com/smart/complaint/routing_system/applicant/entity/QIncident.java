@@ -31,6 +31,8 @@ public class QIncident extends EntityPathBase<Incident> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final StringPath keywords = createString("keywords");
+
     public final DateTimePath<java.time.LocalDateTime> openedAt = createDateTime("openedAt", java.time.LocalDateTime.class);
 
     public final EnumPath<com.smart.complaint.routing_system.applicant.domain.IncidentStatus> status = createEnum("status", com.smart.complaint.routing_system.applicant.domain.IncidentStatus.class);

@@ -36,10 +36,10 @@ public class Complaint {
     @Column(columnDefinition = "TEXT", nullable = false) // PostgreSQL TEXT 타입 매핑
     private String body;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tag", nullable = false, columnDefinition = "tag_type")
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    private Tag tag;
+//    @Enumerated(EnumType.STRING)
+//    @Column(name = "tag", nullable = false, columnDefinition = "tag_type")
+//    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+//    private Tag tag;
 
     // DB 컬럼명은 그대로 두고, 자바 변수명은 올바르게 수정해서 매핑
     @Column(name = "answerd_by")
@@ -150,11 +150,10 @@ public class Complaint {
         this.status = ComplaintStatus.RECEIVED;
     }
 
-    // [추가] 사건 방 이동/배정 메소드
-    public void assignIncident(Incident incident) {
+    // [수정] 사건 방 이동을 가능하게 해주는 메서드 (Setter 대용)
+    public void setIncident(Incident incident) {
         this.incident = incident;
-        this.incidentLinkedAt = LocalDateTime.now();
-        // incidentLinkScore는 파이썬(AI) 재계산 전까지는 유지하거나 null 처리
+        this.incidentLinkedAt = LocalDateTime.now(); // 이동한 시간 기록
     }
 
 }

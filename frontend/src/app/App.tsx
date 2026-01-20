@@ -52,22 +52,19 @@ function AppContent() {
 
   const [userRole, setUserRole] = useState<'agent' | 'admin' | null>(null);
   const [userName, setUserName] = useState<string>('');
-  const [departmentName, setDepartmentName] = useState<string>(''); // [추가] 부서명 상태
+  const [departmentName, setDepartmentName] = useState<string>(''); 
   const [currentPage, setCurrentPage] = useState<Page>({ type: 'login' });
-  const [isLoading, setIsLoading] = useState(true); // 로딩 상태 추가 (깜빡임 방지)
+  const [isLoading, setIsLoading] = useState(true); 
+
+  // [수정 26-01-20] 사건 목록 페이지 번호를 기억하기 위한 상태 추가
+  const [savedIncidentPage, setSavedIncidentPage] = useState(1);
 
   // 새로고침 시 세션 복구
   useEffect(() => {
     const restoreSession = async () => {
-      // 민원인 페이지가 아닐 때만 수행
       if (!isApplicantPath) {
         try {
-          // 1. 백엔드에 내 정보 요청 (/api/agent/me)
           const userData = await AgentComplaintApi.getMe();
-          
-          // 2. 데이터가 있으면 역할 복구 (userData에 role이 있다고 가정)
-          // 백엔드는 "ADMIN", "AGENT" 대문자로 줌 -> 소문자로 변환 필요
-          // (Typescript 에러가 난다면 any로 감싸거나 DTO를 수정해야 함)
           const serverRole = (userData as any).role;
           const serverName = (userData as any).displayName; 
           const serverDept = (userData as any).departmentName;
@@ -76,9 +73,8 @@ function AppContent() {
              const roleLower = serverRole.toLowerCase() as 'agent' | 'admin';
              setUserRole(roleLower);
              setUserName(serverName || '알 수 없음');
-             setDepartmentName(serverDept || '소속 없음'); // [추가] 부서명 설정
+             setDepartmentName(serverDept || '소속 없음'); 
              
-             // 3. 로그인 페이지에 있었다면 대시보드나 목록으로 이동
              if (currentPage.type === 'login') {
                 if (roleLower === 'admin') setCurrentPage({ type: 'dashboard' });
                 else setCurrentPage({ type: 'complaints' });
@@ -89,30 +85,26 @@ function AppContent() {
           setUserRole(null);
         }
       }
-      setIsLoading(false); // 로딩 끝
+      setIsLoading(false); 
     };
 
     restoreSession();
-  }, [isApplicantPath]); // 의존성 배열
+  }, [isApplicantPath]); 
 
-  // 로그아웃 핸들러
   const handleLogout = async () => {
     try {
-      await AgentComplaintApi.logout(); // 1. 서버 세션 삭제
+      await AgentComplaintApi.logout(); 
     } catch (error) {
       console.error("로그아웃 실패:", error);
     } finally {
-      // 2. 프론트 상태 초기화
       setUserRole(null);
       setUserName('');
       setCurrentPage({ type: 'login' });
-      // 필요하다면: window.location.href = '/agent/login'; 로 강제 이동
     }
   };
 
   const handleLogin = (role: 'agent' | 'admin') => {
     setUserRole(role);
-    // Navigate to default page based on role
     if (role === 'admin') {
       setCurrentPage({ type: 'dashboard' });
     } else {
@@ -121,6 +113,10 @@ function AppContent() {
   };
 
   const handleNavigate = (page: string) => {
+    // [수정 26-01-20] 다른 메뉴로 이동할 때 사건 목록 페이지를 초기화하고 싶다면 여기서 setSavedIncidentPage(1) 호출
+    // 현재는 유지하고 싶으므로 그대로 둡니다. (원하면 아래 주석 해제)
+    // if (page !== 'incidents') setSavedIncidentPage(1);
+
     if (page === 'complaints') {
       setCurrentPage({ type: 'complaints' });
     } else if (page === 'incidents') {
@@ -154,16 +150,13 @@ function AppContent() {
     setCurrentPage({ type: listType });
   };
 
-  // 로딩중 화면 가리기
   if (isLoading && !isApplicantPath) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
 
-  // 민원인 페이지 처리
   if (isApplicantPath) {
     return (
       <Routes>
-        {/* 1. 민원인(Applicant) 페이지 경로 */}
         <Route path="/applicant/login" element={<ApplicantLoginPage />} />
         <Route path="/applicant/logout" element={<ApplicantLogout />} />
         <Route path="/applicant/login-success" element={<LoginSuccess />} />
@@ -180,18 +173,14 @@ function AppContent() {
 
   return (
     <Routes>
-      {/* 2. 상담원(Agent) 및 관리자(Admin) 페이지 경로 */}
       <Route path="/agent/*" element={
-        // 사용자 권한이 없으면 로그인 페이지로, 있으면 레이아웃과 해당 페이지로 이동
         !userRole ? (
           <LoginPage onLogin={(role) => {
-             // 로그인 성공 시 로직도 업데이트(이름을 로그인 응답에서 받거나, getMe를 다시 호출)
              setUserRole(role);
-             // 임시로 일단 getMe를 다시 호출해서 이름을 채움
              AgentComplaintApi.getMe().then(u => {
-         setUserName((u as any).displayName);
-         setDepartmentName((u as any).departmentName); // [추가]
-       });
+                setUserName((u as any).displayName);
+                setDepartmentName((u as any).departmentName);
+             });
              
              if(role === 'admin') setCurrentPage({type:'dashboard'});
              else setCurrentPage({type:'complaints'});
@@ -222,14 +211,21 @@ function AppContent() {
                 onBack={() => handleBackToList('complaints')}
               />
             )}
+            
+            {/* [수정 26-01-20] IncidentListPage에 savedPage와 onSavePage 전달 */}
             {currentPage.type === 'incidents' && (
-              <IncidentListPage onViewDetail={handleViewIncidentDetail} />
+              <IncidentListPage 
+                onViewDetail={handleViewIncidentDetail}
+                savedPage={savedIncidentPage} // 기억된 페이지 전달
+                onSavePage={setSavedIncidentPage} // 페이지 변경 시 기억 요청
+              />
             )}
+            
             {currentPage.type === 'incident-detail' && (
               <IncidentDetailPage
                 incidentId={currentPage.id}
                 onBack={() => handleBackToList('incidents')}
-                onViewComplaint={handleViewComplaintDetail}
+                // 여기서는 onViewComplaint를 통해 민원 상세로 갈 수도 있음 (타입 정의 필요 시 추가)
               />
             )}
             {currentPage.type === 'dashboard' && (
@@ -250,14 +246,6 @@ function AppContent() {
             {currentPage.type === 'user-management' && (
               <UserManagementPage />
             )}
-            {/* {currentPage.type === 'settings' && (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <h2 className="mb-2">설정</h2>
-                  <p className="text-muted-foreground">설정 페이지</p>
-                </div>
-              </div>
-            )} */}
           </Layout>
         )
       } />
