@@ -10,6 +10,7 @@ import { RerouteRequestsPage } from './components/RerouteRequestsPage';
 import { KnowledgeBaseListPage } from './components/KnowledgeBaseListPage';
 import { KnowledgeBaseDetailPage } from './components/KnowledgeBaseDetailPage';
 import { UserManagementPage } from './components/UserManagementPage';
+import HeatmapPage from './components/HeatMap';
 import { Toaster } from './components/ui/sonner';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import ApplicantLoginPage from './components/applicant/ApplicantLoginPage';
@@ -35,7 +36,8 @@ type Page =
   | { type: 'knowledge-base' }
   | { type: 'knowledge-base-detail'; id: string }
   | { type: 'user-management' }
-  | { type: 'settings' };
+  | { type: 'settings' }
+  | { type: 'heatmap' };
 
 export default function App() {
   return (
@@ -65,8 +67,12 @@ function AppContent() {
       if (!isApplicantPath) {
         try {
           const userData = await AgentComplaintApi.getMe();
+
+          // 2. 데이터가 있으면 역할 복구 (userData에 role이 있다고 가정)
+          // 백엔드는 "ADMIN", "AGENT" 대문자로 줌 -> 소문자로 변환 필요
+          // (Typescript 에러가 난다면 any로 감싸거나 DTO를 수정해야 함)
           const serverRole = (userData as any).role;
-          const serverName = (userData as any).displayName; 
+          const serverName = (userData as any).displayName;
           const serverDept = (userData as any).departmentName;
 
           if (serverRole) {
@@ -131,6 +137,8 @@ function AppContent() {
       setCurrentPage({ type: 'user-management' });
     } else if (page === 'settings') {
       setCurrentPage({ type: 'settings' });
+    } else if (page === 'heatmap') {
+      setCurrentPage({ type: 'heatmap' });
     }
   };
 
@@ -246,6 +254,17 @@ function AppContent() {
             {currentPage.type === 'user-management' && (
               <UserManagementPage />
             )}
+            {currentPage.type === 'heatmap' && (
+              <HeatmapPage />
+            )}
+            {/* {currentPage.type === 'settings' && (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <h2 className="mb-2">설정</h2>
+                  <p className="text-muted-foreground">설정 페이지</p>
+                </div>
+              </div>
+            )} */}
           </Layout>
         )
       } />

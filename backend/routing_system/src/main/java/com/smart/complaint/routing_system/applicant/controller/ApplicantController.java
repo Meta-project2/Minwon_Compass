@@ -5,9 +5,12 @@ import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintHeatMap;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintInquiryDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintListDto;
+import com.smart.complaint.routing_system.applicant.dto.ComplaintStatDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSubmitDto;
+import com.smart.complaint.routing_system.applicant.dto.KeywordsDto;
 import com.smart.complaint.routing_system.applicant.dto.UserCheckDto;
 import com.smart.complaint.routing_system.applicant.dto.UserLoginRequest;
+import com.smart.complaint.routing_system.applicant.dto.UserNewPasswordDto;
 import com.smart.complaint.routing_system.applicant.dto.UserSignUpDto;
 import com.smart.complaint.routing_system.applicant.dto.UserEmailDto;
 import com.smart.complaint.routing_system.applicant.service.ApplicantService;
@@ -20,9 +23,11 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
@@ -81,9 +86,9 @@ public class ApplicantController {
 
     @Operation(summary = "새 임시 비밀번호 발급", description = "이메일을 통해 임시 랜덤 비밀번호 발급")
     @PostMapping("/api/applicant/newpw")
-    public ResponseEntity<Map<String, String>> postMethodName(@RequestBody UserEmailDto emailDto) {
+    public ResponseEntity<Map<String, String>> postMethodName(@RequestBody UserNewPasswordDto userNewPasswordDto) {
 
-        applicantService.updatePassword(emailDto.email());
+        applicantService.updatePassword(userNewPasswordDto);
 
         return ResponseEntity.ok(null);
     }
@@ -145,6 +150,7 @@ public class ApplicantController {
         return ResponseEntity.ok(complaints);
     }
 
+    // 새로운 민원 생성
     @PostMapping("/api/applicant/complaint")
     public ResponseEntity<String> submitComplaint(@AuthenticationPrincipal String applicantId,
             @RequestBody ComplaintSubmitDto complaintSubmitDto) {
@@ -155,12 +161,38 @@ public class ApplicantController {
         return ResponseEntity.ok("전송이 완료되었습니다.");
     }
 
+    // 추가 민원 생성
     @PostMapping("/api/applicant/complaints/{id}/comments")
     public ResponseEntity<String> postMethodName(@PathVariable Long id, @RequestBody ComplaintInquiryDto inquiryDto) {
 
         complaintService.crateNewInquiry(id, inquiryDto);
 
         return ResponseEntity.ok("");
+    }
+
+    // 민원 통계 데이터
+    @GetMapping("/api/applicant/complaints-stat")
+    public ResponseEntity<ComplaintStatDto> calculateStat() {
+
+        ComplaintStatDto statDtos = complaintService.calculateStat();
+
+        return ResponseEntity.ok(statDtos);
+    }
+
+    @GetMapping("/api/applicant/complaints-keyword")
+    public ResponseEntity<List<KeywordsDto>> getKeywords() {
+
+        List<KeywordsDto> keywordsDto = complaintService.calculateKeywords();
+
+        return ResponseEntity.ok(keywordsDto);
+    }
+
+    @PutMapping("/api/applicant/complaints/{id}")
+    public ResponseEntity<String> cancelComplaint(@PathVariable Long id) {
+
+        complaintService.updateStatus(id);
+
+        return ResponseEntity.ok(null);
     }
 
     /*

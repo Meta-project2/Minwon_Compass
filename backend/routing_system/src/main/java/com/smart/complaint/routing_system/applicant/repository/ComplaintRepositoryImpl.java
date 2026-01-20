@@ -6,6 +6,7 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberTemplate;
+import com.querydsl.core.types.dsl.StringTemplate;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
@@ -13,6 +14,8 @@ import com.smart.complaint.routing_system.applicant.dto.ComplaintDetailResponse;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintResponse;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchCondition;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchResult;
+import com.smart.complaint.routing_system.applicant.dto.ComplaintStatDto;
+import com.smart.complaint.routing_system.applicant.dto.KeywordsDto;
 import com.smart.complaint.routing_system.applicant.dto.ChildComplaintDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDetailDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
@@ -21,11 +24,13 @@ import com.smart.complaint.routing_system.applicant.dto.ComplaintResponse;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchCondition;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchResult;
 import com.smart.complaint.routing_system.applicant.dto.AdminDashboardStatsDto.*;
+import com.smart.complaint.routing_system.applicant.dto.CategoryAvgDto;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintListDto;
 
+import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +51,9 @@ import static com.smart.complaint.routing_system.applicant.entity.QComplaint.com
 // 팀원의 Q클래스
 import com.smart.complaint.routing_system.applicant.entity.*;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 import org.springframework.util.StringUtils;
 
 @Repository
@@ -55,6 +63,7 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
         private static final Logger log = LoggerFactory.getLogger(ComplaintRepositoryImpl.class);
         private final JPAQueryFactory queryFactory;
         private final QComplaintNormalization normalization = QComplaintNormalization.complaintNormalization;
+        private final QDepartment department = QDepartment.department;
         private final QUser user = QUser.user;
 
         @Override
@@ -177,8 +186,10 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 complaint.addressText,
                                                 complaint.status, // Enum 타입 (예: RECEIVED)
                                                 complaint.createdAt, // LocalDateTime 타입
-                                                complaint.updatedAt))
+                                                complaint.updatedAt,
+                                                department.name))
                                 .from(complaint)
+                                .leftJoin(department).on(complaint.currentDepartmentId.eq(department.id))
                                 .where(
                                                 complaint.applicantId.eq(applicantId),
                                                 titleContains(keyword))
@@ -363,16 +374,16 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 QDepartment dept = QDepartment.department;
 
                 return queryFactory
-                        .select(Projections.constructor(DailyCountDto.class,
-                                dateTemplate,
-                                complaint.count()))
-                        .from(complaint)
-                        .leftJoin(dept).on(complaint.currentDepartmentId.eq(dept.id)) // 부서 조인
-                        .where(complaint.receivedAt.between(start, end)
-                                .and(deptIdEq(deptId, dept))) // 부서 필터 조건
-                        .groupBy(dateTemplate)
-                        .orderBy(dateTemplate.asc())
-                        .fetch();
+                                .select(Projections.constructor(DailyCountDto.class,
+                                                dateTemplate,
+                                                complaint.count()))
+                                .from(complaint)
+                                .leftJoin(dept).on(complaint.currentDepartmentId.eq(dept.id)) // 부서 조인
+                                .where(complaint.receivedAt.between(start, end)
+                                                .and(deptIdEq(deptId, dept))) // 부서 필터 조건
+                                .groupBy(dateTemplate)
+                                .orderBy(dateTemplate.asc())
+                                .fetch();
         }
 
         @Override
@@ -381,19 +392,21 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
 
                 // DB 조회
                 List<Tuple> results = queryFactory
-                        .select(complaint.receivedAt, complaint.closedAt)
-                        .from(complaint)
-                        .leftJoin(dept).on(complaint.currentDepartmentId.eq(dept.id))
-                        .where(complaint.receivedAt.between(start, end)
-                                .and(complaint.status.in(ComplaintStatus.RESOLVED, ComplaintStatus.CLOSED))
-                                .and(complaint.closedAt.isNotNull())
-                                .and(deptIdEq(deptId, dept))) // 부서 필터
-                        .fetch();
+                                .select(complaint.receivedAt, complaint.closedAt)
+                                .from(complaint)
+                                .leftJoin(dept).on(complaint.currentDepartmentId.eq(dept.id))
+                                .where(complaint.receivedAt.between(start, end)
+                                                .and(complaint.status.in(ComplaintStatus.RESOLVED,
+                                                                ComplaintStatus.CLOSED))
+                                                .and(complaint.closedAt.isNotNull())
+                                                .and(deptIdEq(deptId, dept))) // 부서 필터
+                                .fetch();
 
                 // Java 집계 로직 (기존과 동일)
                 Map<String, Long> countMap = new HashMap<>();
-                String[] ranges = {"3일 이내", "7일 이내", "14일 이내", "14일 이상"};
-                for (String r : ranges) countMap.put(r, 0L);
+                String[] ranges = { "3일 이내", "7일 이내", "14일 이내", "14일 이상" };
+                for (String r : ranges)
+                        countMap.put(r, 0L);
 
                 for (Tuple t : results) {
                         LocalDateTime received = t.get(complaint.receivedAt);
@@ -401,16 +414,21 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                         if (received != null && closed != null) {
                                 long days = java.time.Duration.between(received, closed).toDays();
                                 String label;
-                                if (days <= 3) label = "3일 이내";
-                                else if (days <= 7) label = "7일 이내";
-                                else if (days <= 14) label = "14일 이내";
-                                else label = "14일 이상";
+                                if (days <= 3)
+                                        label = "3일 이내";
+                                else if (days <= 7)
+                                        label = "7일 이내";
+                                else if (days <= 14)
+                                        label = "14일 이내";
+                                else
+                                        label = "14일 이상";
                                 countMap.put(label, countMap.get(label) + 1);
                         }
                 }
 
                 List<TimeRangeDto> response = new ArrayList<>();
-                for (String r : ranges) response.add(new TimeRangeDto(r, countMap.get(r)));
+                for (String r : ranges)
+                        response.add(new TimeRangeDto(r, countMap.get(r)));
                 return response;
         }
 
@@ -463,7 +481,8 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
 
         // [Helper] 부서 필터 조건 생성
         private BooleanExpression deptIdEq(Long deptId, QDepartment dept) {
-                if (deptId == null) return null;
+                if (deptId == null)
+                        return null;
                 // deptId가 들어오면, 해당 국(Parent)에 속한 부서인지 확인
                 return dept.parent.id.eq(deptId);
         }
@@ -471,34 +490,33 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
         @Override
         public List<CategoryStatDto> getCategoryStats(LocalDateTime start, LocalDateTime end) {
                 return queryFactory
-                        .select(Projections.constructor(CategoryStatDto.class,
-                                normalization.targetObject.coalesce("기타"),
-                                complaint.count()))
-                        .from(normalization)
-                        .join(normalization.complaint, complaint)
-                        .where(complaint.receivedAt.between(start, end))
-                        .groupBy(normalization.targetObject)
-                        .orderBy(complaint.count().desc())
-                        .fetch();
+                                .select(Projections.constructor(CategoryStatDto.class,
+                                                normalization.targetObject.coalesce("기타"),
+                                                complaint.count()))
+                                .from(normalization)
+                                .join(normalization.complaint, complaint)
+                                .where(complaint.receivedAt.between(start, end))
+                                .groupBy(normalization.targetObject)
+                                .orderBy(complaint.count().desc())
+                                .fetch();
         }
-
 
         // 5. 반복 민원 Top 3 (증감 포함)
         @Override
         public List<RecurringIncidentDto> getTopRecurringIncidents(LocalDateTime currentStart, LocalDateTime currentEnd,
-                                                                   LocalDateTime prevStart, LocalDateTime prevEnd) {
+                        LocalDateTime prevStart, LocalDateTime prevEnd) {
                 QIncident incident = QIncident.incident;
 
                 // 1단계: 이번 기간 Top 3 사건 조회
                 List<Tuple> topIncidents = queryFactory
-                        .select(incident.id, incident.title, complaint.count())
-                        .from(complaint)
-                        .join(complaint.incident, incident)
-                        .where(complaint.receivedAt.between(currentStart, currentEnd))
-                        .groupBy(incident.id, incident.title)
-                        .orderBy(complaint.count().desc())
-                        .limit(3)
-                        .fetch();
+                                .select(incident.id, incident.title, complaint.count())
+                                .from(complaint)
+                                .join(complaint.incident, incident)
+                                .where(complaint.receivedAt.between(currentStart, currentEnd))
+                                .groupBy(incident.id, incident.title)
+                                .orderBy(complaint.count().desc())
+                                .limit(3)
+                                .fetch();
 
                 List<RecurringIncidentDto> result = new ArrayList<>();
 
@@ -510,13 +528,14 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
 
                         // 직전 기간 카운트 (별도 쿼리 - 3번만 실행되므로 성능 이슈 없음)
                         Long prevCount = queryFactory
-                                .select(complaint.count())
-                                .from(complaint)
-                                .where(complaint.incident.id.eq(incId)
-                                        .and(complaint.receivedAt.between(prevStart, prevEnd)))
-                                .fetchOne();
+                                        .select(complaint.count())
+                                        .from(complaint)
+                                        .where(complaint.incident.id.eq(incId)
+                                                        .and(complaint.receivedAt.between(prevStart, prevEnd)))
+                                        .fetchOne();
 
-                        if (prevCount == null) prevCount = 0L;
+                        if (prevCount == null)
+                                prevCount = 0L;
 
                         long trend = currentCount - prevCount;
 
@@ -534,27 +553,135 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
         public Double getAiAccuracy(LocalDateTime start, LocalDateTime end) {
                 // 전체 건수
                 Long total = queryFactory
-                        .select(complaint.count())
-                        .from(complaint)
-                        .where(complaint.receivedAt.between(start, end)
-                                .and(complaint.aiPredictedDepartmentId.isNotNull())) // AI 예측값이 있는 것만 대상
-                        .fetchOne();
+                                .select(complaint.count())
+                                .from(complaint)
+                                .where(complaint.receivedAt.between(start, end)
+                                                .and(complaint.aiPredictedDepartmentId.isNotNull())) // AI 예측값이 있는 것만 대상
+                                .fetchOne();
 
-                if (total == null || total == 0) return 0.0;
+                if (total == null || total == 0)
+                        return 0.0;
 
                 // 일치 건수
                 Long matched = queryFactory
-                        .select(complaint.count())
-                        .from(complaint)
-                        .where(complaint.receivedAt.between(start, end)
-                                .and(complaint.aiPredictedDepartmentId.isNotNull())
-                                .and(complaint.aiPredictedDepartmentId.eq(complaint.currentDepartmentId)))
-                        .fetchOne();
+                                .select(complaint.count())
+                                .from(complaint)
+                                .where(complaint.receivedAt.between(start, end)
+                                                .and(complaint.aiPredictedDepartmentId.isNotNull())
+                                                .and(complaint.aiPredictedDepartmentId
+                                                                .eq(complaint.currentDepartmentId)))
+                                .fetchOne();
 
-                if (matched == null) matched = 0L;
+                if (matched == null)
+                        matched = 0L;
 
                 // 백분율 계산 (소수점 첫째자리까지 반올림 로직은 Java에서 처리하거나 DB에서 처리)
                 double accuracy = (double) matched / total * 100.0;
                 return Math.round(accuracy * 10) / 10.0;
+        }
+
+        @Override
+        public ComplaintStatDto geComplaintStatus() {
+
+                // 1. 기준점 (2025년 최신 날짜) - 이건 간단하니 QueryDSL 유지 가능
+                LocalDateTime baseDate = queryFactory
+                                .select(complaint.createdAt.max())
+                                .from(complaint)
+                                .where(complaint.createdAt.year().eq(2025))
+                                .fetchOne();
+                if (baseDate == null)
+                        baseDate = LocalDateTime.of(2025, 12, 31, 23, 59);
+
+                // 2. Native Query 통합 실행
+                // 여러 번 쿼리하는 것보다 하나의 큰 SQL로 가져오는 것이 성능상 훨씬 좋습니다.
+                String sql = "SELECT " +
+                                "  (SELECT ROUND(CAST(EXTRACT(EPOCH FROM AVG(updated_at - created_at)) / 86400 AS numeric), 1) FROM complaints) as total_avg, "
+                                +
+                                "  (SELECT cn.target_object FROM complaints c JOIN complaint_normalizations cn ON c.id = cn.complaint_id ORDER BY (c.updated_at - c.created_at) ASC LIMIT 1) as fastest_dept, "
+                                +
+                                "  (SELECT EXTRACT(EPOCH FROM AVG(updated_at - created_at)) FROM complaints WHERE created_at >= :currentStart AND created_at <= :currentEnd) as current_sec, "
+                                +
+                                "  (SELECT EXTRACT(EPOCH FROM AVG(updated_at - created_at)) FROM complaints WHERE created_at >= :prevStart AND created_at < :prevEnd) as prev_sec";
+
+                Query nativeQuery = entityManager.createNativeQuery(sql);
+                nativeQuery.setParameter("currentStart", baseDate.minusMonths(3));
+                nativeQuery.setParameter("currentEnd", baseDate);
+                nativeQuery.setParameter("prevStart", baseDate.minusMonths(6));
+                nativeQuery.setParameter("prevEnd", baseDate.minusMonths(3));
+
+                Object[] statsRow = (Object[]) nativeQuery.getSingleResult();
+
+                // 결과 매핑 (null 체크 포함)
+                double totalAvg = statsRow[0] != null ? ((Number) statsRow[0]).doubleValue() : 0.0;
+                String fastestDept = statsRow[1] != null ? (String) statsRow[1] : "없음";
+                Double currentSec = statsRow[2] != null ? ((Number) statsRow[2]).doubleValue() : null;
+                Double prevSec = statsRow[3] != null ? ((Number) statsRow[3]).doubleValue() : null;
+
+                // 3. 개선율 계산
+                double improvementRate = 0.0;
+                if (prevSec != null && currentSec != null && prevSec > 0) {
+                        improvementRate = Math.round(((prevSec - currentSec) / prevSec) * 1000) / 10.0;
+                }
+
+                // 4. 차트 데이터 (Top 5 부서 평균) - 이건 별도 Native Query로 실행
+                String chartSql = "SELECT cn.target_object as category, ROUND(CAST(EXTRACT(EPOCH FROM AVG(c.updated_at - c.created_at)) / 86400 AS numeric), 1) as avgDays "
+                                +
+                                "FROM complaints c JOIN complaint_normalizations cn ON c.id = cn.complaint_id " +
+                                "WHERE c.updated_at > c.created_at GROUP BY cn.target_object ORDER BY avgDays ASC LIMIT 5";
+
+                List<Object[]> chartResults = entityManager.createNativeQuery(chartSql).getResultList();
+                List<CategoryAvgDto> responseTimeData = chartResults.stream()
+                                .map(row -> new CategoryAvgDto((String) row[0], ((Number) row[1]).doubleValue()))
+                                .collect(Collectors.toList());
+
+                return new ComplaintStatDto(totalAvg, responseTimeData, fastestDept, improvementRate);
+        }
+
+        @PersistenceContext
+        private EntityManager entityManager;
+
+        @Override
+        public List<KeywordsDto> calculateKeywords() {
+                // 1. jsonb_array_elements_text 함수를 사용하는 템플릿 정의
+                // 이 함수는 배열 안의 요소들을 각각의 String 행으로 반환
+                String sql = "SELECT word as text, count(*) as value " +
+                                "FROM complaint_normalizations, jsonb_array_elements_text(keywords_jsonb) as word " +
+                                "GROUP BY word ORDER BY value DESC LIMIT 10";
+
+                @SuppressWarnings("unchecked")
+                List<Object[]> results = entityManager.createNativeQuery(sql).getResultList();
+
+                log.info("쿼리 결과물: " + results.toString());
+
+                // 3. Object 배열 결과를 KeywordsDto(record) 리스트로 변환
+                return results.stream()
+                                .map(row -> new KeywordsDto(
+                                                (String) row[0], // text
+                                                ((Number) row[1]).longValue() // count (value)
+                                ))
+                                .collect(Collectors.toList());
+        }
+
+        @Override
+        public ComplaintDetailDto findComplaintDetailById(Long id) {
+
+                return queryFactory
+                                .select(Projections.constructor(ComplaintDetailDto.class,
+                                                complaint.id,
+                                                complaint.title,
+                                                complaint.body,
+                                                complaint.answer,
+                                                complaint.addressText,
+                                                complaint.status,
+                                                complaint.createdAt,
+                                                complaint.updatedAt,
+                                                department.name, // d.name 매핑
+                                                Expressions.constant(new ArrayList<ChildComplaintDto>()) // children 필드는
+                                                                                                         // 빈 리스트로 초기화
+                                ))
+                                .from(complaint)
+                                .join(department).on(complaint.currentDepartmentId.eq(department.id))
+                                .where(complaint.id.eq(id))
+                                .fetchOne();
         }
 }

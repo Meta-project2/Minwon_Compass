@@ -7,13 +7,14 @@ import { ChevronLeft, ChevronRight, Eye, Search, Calendar, ArrowUpDown, RefreshC
 import api from './AxiosInterface';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 interface Complaint {
   id: string;
   title: string;
   category: string;
   content: string;
-  status: 'RECEIVED' | 'NORMALIZED' | 'RECOMMENDED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'CANCELED';
+  status: 'RECEIVED' | 'RECOMMENDED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'CANCELED';
   submittedDate: string;
   lastUpdate?: string;
   department?: string;
@@ -22,22 +23,20 @@ interface Complaint {
 
 const STATUS_LABELS = {
   RECEIVED: '접수됨',
-  NORMALIZED: '분류완료',
-  RECOMMENDED: '부서추천',
+  RECOMMENDED: '이관 대기중',
   IN_PROGRESS: '처리중',
   RESOLVED: '답변완료',
   CLOSED: '종결',
-  CANCELED: '취소/반려',
+  CANCELED: '취소',
 };
 
 const STATUS_COLORS = {
-  RECEIVED: 'bg-blue-50 text-blue-700 border-blue-200',      // 신규 접수: 청량한 블루
-  NORMALIZED: 'bg-cyan-50 text-cyan-700 border-cyan-200',    // 분석 완료: 깨끗한 시안
-  RECOMMENDED: 'bg-purple-50 text-purple-700 border-purple-200', // 부서 추천: 신비로운 퍼플
-  IN_PROGRESS: 'bg-amber-50 text-amber-700 border-amber-200',  // 처리중: 주의가 필요한 오렌지/앰버
-  RESOLVED: 'bg-emerald-50 text-emerald-700 border-emerald-200', // 답변 완료: 신뢰의 그린
+  RECEIVED: 'bg-blue-100 text-blue-700 border-blue-200',      // 신규 접수: 청량한 블루
+  RECOMMENDED: 'bg-purple-100 text-purple-700 border-purple-200', // 부서 추천: 신비로운 퍼플
+  IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-200',  // 처리중: 주의가 필요한 오렌지/앰버
+  RESOLVED: 'bg-emerald-100 text-emerald-700 border-emerald-200', // 답변 완료: 신뢰의 그린
   CLOSED: 'bg-slate-100 text-slate-600 border-slate-300',     // 종결: 차분한 그레이
-  CANCELED: 'bg-rose-50 text-rose-700 border-rose-200',      // 취소/반려: 경고의 레드/로즈
+  CANCELED: 'bg-rose-100 text-rose-700 border-rose-200',      // 취소/반려: 경고의 레드/로즈
 };
 
 type SortOption = 'date-desc' | 'date-asc' | 'status' | 'title';
@@ -67,30 +66,67 @@ export default function PastComplaintsPage() {
     navigate(`/applicant/complaints/${id}`);
   };
 
+  const fetchComplaints = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get('/applicant/complaints');
+      const formattedData = response.data.map((item: any) => ({
+        id: item.id.toString(),
+        title: item.title,
+        category: item.category || '미분류',
+        content: item.body,
+        status: item.status,
+        submittedDate: item.createdAt.split('T')[0],
+        department: item.departmentName,
+      }));
+      setComplaints(formattedData);
+    } catch (error) {
+      console.error("데이터 로드 실패:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    const result = await Swal.fire({
+      title: '민원을 취하하시겠습니까?',
+      text: '취하된 이후에도 제출하신 민원은 확인하실 수 있습니다.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: '네, 취하합니다',
+      cancelButtonText: '아니오',
+      // 2. 확인 버튼 클릭 시 실행될 비동기 로직 (처리 중 상태 유지)
+      showLoaderOnConfirm: true,
+      preConfirm: async () => {
+        try {
+          await api.put(`/applicant/complaints/${id}`);
+          return true;
+        } catch (error) {
+          Swal.showValidationMessage(`처리 중 오류가 발생했습니다: ${error}`);
+          return false;
+        }
+      },
+      allowOutsideClick: () => !Swal.isLoading() // 로딩 중 바깥 클릭 방지
+    });
+
+    // 3. 처리 완료 후 최종 알림
+    if (result.isConfirmed) {
+      await Swal.fire({
+        title: '취하 완료',
+        text: '민원이 성공적으로 취하되었습니다.',
+        icon: 'success',
+        confirmButtonText: '확인'
+      });
+      fetchComplaints();
+    }
+  };
+
   const itemsPerPage = 10;
 
   // 2. API 호출 로직
   useEffect(() => {
-    const fetchComplaints = async () => {
-      try {
-        setIsLoading(true);
-        const response = await api.get('/applicant/complaints');
-        const formattedData = response.data.map((item: any) => ({
-          id: item.id.toString(),
-          title: item.title,
-          category: item.category || '미분류',
-          content: item.body,
-          status: item.status,
-          submittedDate: item.createdAt.split('T')[0],
-          department: item.departmentName,
-        }));
-        setComplaints(formattedData);
-      } catch (error) {
-        console.error("데이터 로드 실패:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchComplaints();
   }, []);
 
@@ -276,7 +312,7 @@ export default function PastComplaintsPage() {
 
           {/* 3. 상태 탭 (글자 크게) */}
           <div className="flex border-b-4 border-gray-200 bg-white rounded-t-3xl px-6">
-            {['ALL', 'RECEIVED', 'NORMALIZED', 'RECOMMENDED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map((tab) => {
+            {['ALL', 'RECEIVED', 'RECOMMENDED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'CANCELED'].map((tab) => {
               const isActive = selectedStatus === tab;
               const count = tab === 'ALL' ? complaints.length : complaints.filter(c => c.status === tab).length;
               return (
@@ -296,88 +332,105 @@ export default function PastComplaintsPage() {
           </div>
 
           {/* Results Summary */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            {/* 컬럼 헤더 영역 - 리스트와 열을 맞춤 */}
+          <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200">
+            {/* 컬럼 헤더 영역 - 글씨 크기 키움(text-sm/base), 구분선 강화 */}
             {currentComplaints.length > 0 && (
-              <div className="px-6 py-3 bg-gray-100 border-b border-gray-200 flex items-center gap-6 text-xs font-bold text-gray-600 uppercase tracking-tight">
-                {/* 1. 번호 컬럼 */}
+              <div className="px-6 py-4 bg-gray-100 border-b-2 border-gray-300 flex items-center gap-4 text-sm font-bold text-gray-800 uppercase tracking-tight">
                 <div className="w-16 shrink-0 text-center">번호</div>
-                {/* 세로 구분선 */}
-                <div className="h-3 w-[1px] bg-gray-300 shrink-0" />
-                {/* 2. 제목 컬럼 */}
-                <div className="flex-1 px-2">민원 제목 및 상세 내용</div>
-                {/* 세로 구분선 (데스크탑에서만 표시) */}
-                <div className="hidden md:block h-3 w-[1px] bg-gray-300 shrink-0" />
-                {/* 3. 부서/날짜 컬럼 */}
-                <div className="hidden md:block min-w-[120px] text-center">담당부서 / 접수일</div>
-                {/* 세로 구분선 */}
-                <div className="h-3 w-[1px] bg-gray-300 shrink-0" />
-                {/* 4. 진행 상태 컬럼 */}
-                <div className="min-w-[100px] text-center">진행 상태</div>
+                <div className="h-4 w-[1.5px] bg-gray-400 shrink-0" /> {/* 더 진해진 구분선 */}
+
+                <div className="flex-1 px-4 text-center">민원 제목</div>
+                <div className="h-4 w-[1.5px] bg-gray-400 shrink-0" />
+
+                <div className="w-40 shrink-0 text-center">담당부서</div>
+                <div className="h-4 w-[1.5px] bg-gray-400 shrink-0" />
+
+                <div className="w-32 shrink-0 text-center">접수일</div>
+                <div className="h-4 w-[1.5px] bg-gray-400 shrink-0" />
+
+                <div className="w-32 shrink-0 text-center">진행 상태</div>
+                <div className="h-4 w-[1.5px] bg-gray-400 shrink-0" />
+
+                <div className="w-56 shrink-0 text-center">관리</div>
               </div>
             )}
 
-            {/* Complaints List */}
+            {/* Complaints List - 본문 글씨 크기 확대(text-base), 행 높이 조절 */}
             {currentComplaints.length > 0 ? (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y-2 divide-gray-200"> {/* 행 간 구분선도 강화 */}
                 {currentComplaints.map((complaint) => (
                   <div
                     key={complaint.id}
-                    className="px-6 py-4 hover:bg-gray-50 transition-colors group flex items-center gap-6"
+                    className="px-6 py-5 hover:bg-blue-50/30 transition-colors group flex items-center gap-4"
                   >
-                    {/* 1. 번호: 헤더와 동일하게 w-16 설정 */}
-                    <div className="w-16 shrink-0 text-center text-xs font-mono text-gray-400">
+                    {/* 1. 번호 */}
+                    <div className="w-16 shrink-0 text-center text-sm font-mono text-gray-500">
                       {complaint.id}
                     </div>
 
-                    {/* 세로 구분선 */}
-                    <div className="h-8 w-[1px] bg-gray-100 shrink-0" />
+                    <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" /> {/* 세로 구분선 진하게 */}
 
-                    {/* 2. 제목 및 상세 내용: flex-1 설정 */}
-                    <div className="flex-1 px-2 min-w-0">
-                      <div className="flex items-center gap-3">
-                        <h3
-                          className="text-sm font-bold text-gray-900 truncate cursor-pointer hover:text-blue-600 max-w-[40%]"
-                          onClick={() => handleViewDetail(complaint.id)}
-                        >
-                          {complaint.title}
-                        </h3>
-                      </div>
-                    </div>
-
-                    {/* 세로 구분선 (데스크탑) */}
-                    <div className="hidden md:block h-8 w-[1px] bg-gray-100 shrink-0" />
-
-                    {/* 3. 담당부서/날짜: min-w-[120px] 설정 */}
-                    <div className="hidden md:flex flex-col items-center justify-center min-w-[120px] shrink-0 text-[11px] text-gray-400">
-                      <span className="font-medium text-gray-500">{complaint.department || '미지정'}</span>
-                      <span>{complaint.submittedDate}</span>
-                    </div>
-
-                    {/* 세로 구분선 */}
-                    <div className="h-8 w-[1px] bg-gray-100 shrink-0" />
-
-                    {/* 4. 상태 및 버튼: min-w-[100px] 설정 */}
-                    <div className="flex flex-col items-center gap-1.5 shrink-0 min-w-[100px]">
-                      <Button
+                    {/* 2. 민원 제목 - 글씨 크기 확대 */}
+                    <div className="flex-1 px-4 min-w-0">
+                      <h3
+                        className="text-base font-bold text-gray-900 truncate cursor-pointer hover:text-blue-600 transition-colors"
                         onClick={() => handleViewDetail(complaint.id)}
+                      >
+                        {complaint.title}
+                      </h3>
+                    </div>
+
+                    <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" />
+
+                    {/* 3. 담당부서 */}
+                    <div className="w-40 shrink-0 text-center text-base text-gray-700 font-medium">
+                      {complaint.department || '미지정'}
+                    </div>
+
+                    <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" />
+
+                    {/* 4. 접수일 */}
+                    <div className="w-32 shrink-0 text-center text-sm text-gray-600">
+                      {complaint.submittedDate}
+                    </div>
+
+                    <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" />
+
+                    {/* 5. 진행 상태 - 라벨을 여기로 이동 */}
+                    <div className="w-32 shrink-0 flex justify-center">
+                      <Badge className={`px-3 py-1 text-[11px] font-bold border shadow-none rounded-md ${STATUS_COLORS[complaint.status]}`}>
+                        {STATUS_LABELS[complaint.status]}
+                      </Badge>
+                    </div>
+
+                    <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" />
+
+                    {/* 6. 관리 버튼 (취하, 상세보기) */}
+                    <div className="w-56 shrink-0 flex items-center gap-2 px-2">
+                      <Button
+                        variant="outline"
                         size="sm"
-                        className="bg-blue-900 hover:bg-blue-800 text-white h-7 w-full text-[11px] py-0"
+                        className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 h-9 font-bold text-xs"
+                        onClick={() => handleCancel(complaint.id)}
+                      >
+                        취하
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-blue-800 hover:bg-blue-900 text-white h-9 font-bold text-xs"
+                        onClick={() => handleViewDetail(complaint.id)}
                       >
                         상세보기
                       </Button>
-                      <Badge className={`w-full justify-center border shadow-none text-[9px] py-0 h-4 ${STATUS_COLORS[complaint.status]}`}>
-                        {STATUS_LABELS[complaint.status]}
-                      </Badge>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               /* Empty State */
-              <div className="p-12 text-center">
-                <p className="text-gray-500 text-lg">검색 조건에 맞는 민원이 없습니다.</p>
-                <p className="text-gray-400 text-sm mt-2">다른 검색어나 날짜 범위를 시도해보세요.</p>
+              <div className="p-20 text-center">
+                <p className="text-gray-500 text-xl font-bold">검색 조건에 맞는 민원이 없습니다.</p>
+                <p className="text-gray-400 text-base mt-2">다른 검색어나 날짜 범위를 시도해보세요.</p>
               </div>
             )}
 

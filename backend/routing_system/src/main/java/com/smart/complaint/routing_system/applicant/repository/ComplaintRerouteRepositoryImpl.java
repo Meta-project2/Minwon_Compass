@@ -18,7 +18,6 @@ import java.util.List;
 import static com.smart.complaint.routing_system.applicant.entity.QComplaintReroute.complaintReroute;
 import static com.smart.complaint.routing_system.applicant.entity.QComplaint.complaint;
 import static com.smart.complaint.routing_system.applicant.entity.QComplaintNormalization.complaintNormalization;
-import static com.smart.complaint.routing_system.applicant.entity.QDepartment.department;
 import static com.smart.complaint.routing_system.applicant.entity.QUser.user;
 
 @Repository

@@ -27,8 +27,8 @@ const KakaoMap = ({ address, onLocationChange, complaints, mapView, showSurgeOnl
 
     kakao.maps.load(() => {
       const options = {
-        center: new kakao.maps.LatLng(37.5358, 127.1325), // 기본 중심지
-        level: 6,
+        center: new kakao.maps.LatLng(37.5301, 127.1238), // 기본 중심지
+        level: 5,
       };
       const mapInstance = new kakao.maps.Map(mapContainer.current, options);
 
@@ -138,12 +138,20 @@ const KakaoMap = ({ address, onLocationChange, complaints, mapView, showSurgeOnl
 
       kakao.maps.event.addListener(marker, 'mouseover', () => {
         infowindow.setContent(`
-                <div style="padding:5px;font-size:12px;min-width:150px;">
-                    <div style="font-weight:bold;margin-bottom:3px;">${item.title}</div>
-                    <div style="color:#666;">상태: ${item.status}</div>
-                    <div>접수일자: ${new Date(item.createdAt).toLocaleDateString()}</div>
+            <div style="padding:10px; font-size:12px; min-width:200px; border-radius:8px; line-height:1.5;">
+                <div style="font-weight:bold; margin-bottom:5px; color:#1a1a1a; word-break:break-all;">
+                    ${item.title}
                 </div>
-            `);
+                <div style="color:#666; display:flex; justify-content:space-between;">
+                    <span>상태:</span>
+                    <span style="font-weight:600; color:#2563eb;">${item.status}</span>
+                </div>
+                <div style="color:#666; display:flex; justify-content:space-between; margin-top:2px;">
+                    <span>접수일자:</span>
+                    <span style="white-space:nowrap;">${new Date(item.createdAt).toLocaleDateString()}</span>
+                </div>
+            </div>
+        `);
         infowindow.open(map, marker);
       });
 

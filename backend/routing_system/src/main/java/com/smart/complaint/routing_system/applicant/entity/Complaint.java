@@ -156,4 +156,20 @@ public class Complaint {
         this.incidentLinkedAt = LocalDateTime.now(); // 이동한 시간 기록
     }
 
+    public void newInquiry() {
+        this.status = ComplaintStatus.IN_PROGRESS;
+    }
+
+    public void cancelComplaint() {
+        this.status = ComplaintStatus.CANCELED;
+    }
+
+    public void setDepartment(Long id) {
+        this.currentDepartmentId = id;
+    }
+
+    public void setAiPredicted(Long departmentId) {
+        this.aiPredictedDepartmentId = departmentId;
+    }
+
 }
