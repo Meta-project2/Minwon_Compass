@@ -32,7 +32,7 @@ public class QComplaintNormalization extends EntityPathBase<ComplaintNormalizati
 
     public final NumberPath<Integer> districtId = createNumber("districtId", Integer.class);
 
-    public final ArrayPath<double[], Double> embedding = createArray("embedding", double[].class);
+    public final ArrayPath<float[], Float> embedding = createArray("embedding", float[].class);
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 

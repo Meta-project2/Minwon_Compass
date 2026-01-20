@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Mail, AlertCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import api from './AxiosInterface';
@@ -12,13 +12,15 @@ interface ResetPasswordPageProps {
 }
 
 export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPageProps) {
+  const [loginId, setLoginId] = useState(''); // 아이디 상태 추가
   const [email, setEmail] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
-  // Email regex validation
+  const idRegex = /^[a-z0-9]{5,15}$/;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const isValidId = idRegex.test(loginId);
   const isValidEmail = emailRegex.test(email);
 
   // Mock function to verify email exists in database
@@ -31,6 +33,11 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
       return;
     }
 
+    if (!isValidId) {
+      Swal.fire({ icon: 'warning', title: '형식 오류', text: '아이디는 5~15자의 영문 소문자와 숫자만 입력 가능합니다.' });
+      return;
+    }
+
     if (!isValidEmail) {
       Swal.fire({ icon: 'warning', title: '형식 오류', text: '올바른 이메일 형식이 아닙니다. (예: example@email.com)' });
       return;
@@ -38,7 +45,7 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
   };
 
   const handleSendTempPassword = async () => {
-    if (!isValidEmail) return;
+    if (!isValidId || !isValidEmail) return;
 
     Swal.fire({
       title: '메일 발송 중...',
@@ -53,7 +60,7 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
     try {
       // 1. 여기서 실제 백엔드 API를 호출합니다 (이전에 만든 sendMail 로직 연결)
       await api.post('/applicant/newpw',
-        { email: email },
+        { id: loginId, email: email },
       );
 
       Swal.fire({
@@ -91,6 +98,20 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
         </div>
 
         <div className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="loginId" className="text-lg">아이디 *</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                id="loginId"
+                type="text"
+                value={loginId}
+                onChange={(e) => setLoginId(e.target.value)}
+                placeholder="가입하신 아이디를 입력하세요"
+                className="text-lg h-14 pl-12"
+              />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email" className="text-lg">이메일 주소 *</Label>
             <div className="relative">
@@ -139,7 +160,7 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
             <Button
               onClick={handleSendTempPassword}
               className="w-full h-14 text-lg"
-              disabled={!email || !isValidEmail || isVerifying}
+              disabled={!isValidId || !email || !isValidEmail || isVerifying}
             >
               {isVerifying ? '메일 발송 중...' : '임시 비밀번호 받기'}
             </Button>

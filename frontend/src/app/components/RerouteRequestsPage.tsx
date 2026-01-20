@@ -170,11 +170,13 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
   // AI 추천 데이터 파싱
   const getAiRecommendations = (request: ComplaintRerouteResponse) => {
     try {
+      console.log("전체 데이터:", selectedRequest);
+      console.log("AI 필드 타입:", typeof selectedRequest?.aiRoutingRank);
       if (!request.aiRoutingRank) return [];
       const data = typeof request.aiRoutingRank === 'string'
         ? JSON.parse(request.aiRoutingRank)
         : request.aiRoutingRank;
-      return data.recommendations || [];
+      return data || [];
     } catch (e) {
       return [];
     }
@@ -185,7 +187,7 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
   const currentGroup = Math.ceil(page / pageGroupSize);
   const startPage = (currentGroup - 1) * pageGroupSize + 1;
   const endPage = Math.min(startPage + pageGroupSize - 1, totalPages);
-  
+
   const hasPrevGroup = startPage > 1;
   const hasNextGroup = endPage < totalPages;
 
@@ -277,12 +279,12 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
                 <X className="h-4 w-4 mr-1" /> 필터 초기화
               </Button>
             </div>
-            
-            <div className="flex items-center h-10 ml-2"> 
-                <div className="h-4 w-px bg-slate-300 mr-4"></div>
-                <span className="text-sm font-medium text-slate-600 whitespace-nowrap pt-0.5"> 
-                  총 <span className="text-blue-600 font-bold">{totalElements.toLocaleString()}</span>건
-                </span>
+
+            <div className="flex items-center h-10 ml-2">
+              <div className="h-4 w-px bg-slate-300 mr-4"></div>
+              <span className="text-sm font-medium text-slate-600 whitespace-nowrap pt-0.5">
+                총 <span className="text-blue-600 font-bold">{totalElements.toLocaleString()}</span>건
+              </span>
             </div>
           </div>
         </div>
@@ -313,9 +315,8 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
                     requests.map((request) => (
                       <TableRow
                         key={request.rerouteId}
-                        className={`cursor-pointer hover:bg-slate-100 border-b border-slate-200 transition-colors ${
-                          selectedRequest?.rerouteId === request.rerouteId ? 'bg-blue-50/80' : ''
-                        }`}
+                        className={`cursor-pointer hover:bg-slate-100 border-b border-slate-200 transition-colors ${selectedRequest?.rerouteId === request.rerouteId ? 'bg-blue-50/80' : ''
+                          }`}
                         onClick={() => handleRowClick(request)}
                       >
                         <TableCell className="text-sm text-slate-500 text-center font-mono">
@@ -345,9 +346,9 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
                         </TableCell>
                         <TableCell className="text-center">
                           {/* ★ 1. 관리 버튼: 테두리 추가 및 '검토' 텍스트로 변경 */}
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             className="h-8 text-xs px-3 border border-slate-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-all"
                           >
                             <ArrowRightLeft className="h-3 w-3 mr-1.5" /> 검토
@@ -413,8 +414,8 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
             </Button>
           </div>
 
-          <div className="p-5 space-y-4"> 
-            
+          <div className="p-5 space-y-4">
+
             {/* 민원 정보 카드  */}
             <Card className="shadow-sm border-slate-200 overflow-hidden gap-3">
               <CardHeader className="py-2 px-4 !pb-0 bg-slate-50 border-b border-slate-100"> {/* py-3 -> py-2 */}

@@ -14,8 +14,11 @@ import {
 } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
+// [수정 26-01-20, 페이지 상태 유지를 위한 Props 추가]
 interface IncidentListPageProps {
   onViewDetail: (id: string) => void;
+  savedPage?: number; // 부모가 기억하고 있는 페이지 번호
+  onSavePage?: (page: number) => void; // 페이지가 바뀔 때 부모에게 알림
 }
 
 interface IncidentResponse {
@@ -45,16 +48,27 @@ const formatDate = (dateString?: string) => {
   return dateString.substring(0, 10);
 };
 
-export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
-  // --- 상태 관리 (기존 로직 유지) ---
+// [수정 26-01-20, Props 구조 분해 할당에 savedPage, onSavePage 추가]
+export function IncidentListPage({ onViewDetail, savedPage = 1, onSavePage }: IncidentListPageProps) {
+  // --- 상태 관리 ---
   const [incidents, setIncidents] = useState<IncidentResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
-  const [page, setPage] = useState(1);
+  // [수정 26-01-20, 초기 페이지를 부모가 기억하던 페이지(savedPage)로 설정]
+  const [page, setPage] = useState(savedPage);
+  
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
+
+  // [수정 26-01-20, 페이지 변경 시 부모에게도 알리는 래퍼 함수]
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    if (onSavePage) {
+      onSavePage(newPage); // 부모 컴포넌트(AgentPage)에 현재 페이지 저장 요청
+    }
+  };
 
   // --- 데이터 호출 (기존 로직 유지) ---
   const fetchIncidents = useCallback(async (pageParam: number) => {
@@ -92,7 +106,7 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
   // --- 이벤트 핸들러 ---
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      setPage(1);
+      handlePageChange(1); // [수정 26-01-20, setPage 대신 래퍼 함수 사용]
       fetchIncidents(1);
     }
   };
@@ -100,13 +114,13 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
   const resetFilters = () => {
     setSearchQuery('');
     setSelectedStatus('all');
-    setPage(1);
+    handlePageChange(1); // [수정 26-01-20, setPage 대신 래퍼 함수 사용]
   };
 
-  // --- 페이지네이션 계산 (ComplaintList 스타일 UI를 위한 계산) ---
+  // --- 페이지네이션 계산 ---
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxVisiblePages = 10; // 디자인에 맞춰 5 -> 10으로 조정 가능하나, 공간 확보를 위해 로직 유지
+    const maxVisiblePages = 10; 
     let startPage = Math.max(1, page - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
     
@@ -124,13 +138,13 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
     <div className="flex h-full">
       <div className="flex-1 flex flex-col">
         
-        {/* 상단 헤더 (ComplaintList 스타일) */}
+        {/* 상단 헤더 */}
         <div className="h-16 border-b border-border bg-card px-6 shadow-sm flex items-center gap-3 shrink-0">
           <h1 className="text-2.5xl font-bold text-slate-900">중복 민원</h1>
           <p className="text-sm text-slate-400 font-medium pt-1">연관된 민원들을 하나의 그룹으로 자동 관리합니다.</p>
         </div>
 
-        {/* 메인 컨텐츠 영역 (ComplaintList 스타일 배경 및 패딩) */}
+        {/* 메인 컨텐츠 영역 */}
         <div className="flex-1 overflow-auto px-6 pt-0 pb-6 bg-slate-100/50 flex flex-col">
           
           {/* 필터 바 */}
@@ -139,7 +153,7 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="사건 검색..."
+                  placeholder="중복 민원 검색 .."
                   className="pl-9 bg-input-background pr-8 w-64"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -147,19 +161,19 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
                 />
                 {searchQuery && (
                   <button
-                    onClick={() => { setSearchQuery(''); setPage(1); }}
+                    onClick={() => { setSearchQuery(''); handlePageChange(1); }} // [수정 26-01-20]
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
-              <Button className='border-2' variant="outline" onClick={() => { setPage(1); fetchIncidents(1); }}>검색</Button>
+              <Button className='border-2' variant="outline" onClick={() => { handlePageChange(1); fetchIncidents(1); }}>검색</Button>
             </div>
 
             <div className="flex flex-wrap gap-2 items-center">
               {/* 상태 선택 Select */}
-              <Select value={selectedStatus} onValueChange={(val) => { setSelectedStatus(val); setPage(1); }}>
+              <Select value={selectedStatus} onValueChange={(val) => { setSelectedStatus(val); handlePageChange(1); }}>
                 <SelectTrigger className="w-32 bg-input-background">
                   <SelectValue placeholder="상태" />
                 </SelectTrigger>
@@ -178,20 +192,19 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
               </Button>
             </div>
 
-            {/* 전체 건수 표시 (ComplaintList 디자인) */}
+            {/* 전체 건수 표시 */}
             <div className="flex items-center h-10 ml-2"> 
-              <div className="h-4 w-px bg-slate-300 mr-4"></div> {/* 구분선 */}
+              <div className="h-4 w-px bg-slate-300 mr-4"></div> 
               <span className="text-sm font-medium text-slate-600 whitespace-nowrap pt-0.5"> 
                 총 <span className="text-blue-600 font-bold">{totalElements}</span>건
               </span>
             </div>
           </div>
 
-          {/* 테이블 카드 (ComplaintList 스타일) */}
+          {/* 테이블 카드 */}
           <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-md bg-white rounded-md mb-4">
             <div className="flex-1 overflow-auto">
               <Table>
-                {/* 테이블 헤더 (Sticky, Slate-300, Bold, Borders) */}
                 <TableHeader className="sticky top-0 bg-slate-300 border-b-2 z-10">
                   <TableRow>
                     <TableHead className="w-[120px] text-center font-bold text-slate-900 border-r border-slate-400">사건 ID</TableHead>
@@ -281,7 +294,7 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
             </div>
           </Card>
 
-          {/* 하단 페이지네이션 (ComplaintList 스타일 이식) */}
+          {/* 하단 페이지네이션 */}
           {totalElements > 0 && (
             <div className="flex flex-col items-center justify-center gap-2 pb-0 shrink-0">
               <div className="flex items-center gap-2">
@@ -289,7 +302,7 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  onClick={() => handlePageChange(Math.max(1, page - 1))} // [수정 26-01-20]
                   disabled={page === 1}
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -302,7 +315,7 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
                       variant={pageNum === page ? "default" : "ghost"}
                       size="sm"
                       className={`h-8 w-8 p-0 ${pageNum === page ? 'bg-blue-600 hover:bg-blue-700' : 'text-slate-600'}`}
-                      onClick={() => setPage(pageNum)}
+                      onClick={() => handlePageChange(pageNum)} // [수정 26-01-20]
                     >
                       {pageNum}
                     </Button>
@@ -313,7 +326,7 @@ export function IncidentListPage({ onViewDetail }: IncidentListPageProps) {
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() => handlePageChange(Math.min(totalPages, page + 1))} // [수정 26-01-20]
                   disabled={page === totalPages}
                 >
                   <ChevronRight className="h-4 w-4" />

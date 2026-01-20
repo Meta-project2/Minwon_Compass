@@ -35,4 +35,8 @@ public class Department {
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    public Long getId() {
+        return id;
+    }
 }

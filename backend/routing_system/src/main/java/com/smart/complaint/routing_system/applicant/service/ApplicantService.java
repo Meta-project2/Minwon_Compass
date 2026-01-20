@@ -22,6 +22,7 @@ import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintHeatMap;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintListDto;
 import com.smart.complaint.routing_system.applicant.dto.UserLoginRequest;
+import com.smart.complaint.routing_system.applicant.dto.UserNewPasswordDto;
 import com.smart.complaint.routing_system.applicant.dto.UserSignUpDto;
 import com.smart.complaint.routing_system.applicant.entity.Complaint;
 import com.smart.complaint.routing_system.applicant.entity.User;
@@ -130,11 +131,11 @@ public class ApplicantService {
     }
 
     @Transactional
-    public Boolean updatePassword(String email) {
+    public Boolean updatePassword(UserNewPasswordDto userNewPasswordDto) {
 
         String newRandomPw = generateTemporaryPassword();
         // 2. 사용자 엔티티 조회
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByUsernameAndEmail(userNewPasswordDto.id(), userNewPasswordDto.email())
                 .orElseThrow(() -> new BusinessException(ErrorMessage.USER_NOT_FOUND));
 
         // 3. 비밀번호 암호화 후 엔티티 수정
@@ -144,7 +145,7 @@ public class ApplicantService {
         // save 없어도 transactional 어노테이션으로 자동 적용
 
         // 4. 이메일 발송
-        emailService.sendTemporaryPassword(email, newRandomPw);
+        emailService.sendTemporaryPassword(user.getEmail(), newRandomPw);
 
         return true;
     }
@@ -157,12 +158,11 @@ public class ApplicantService {
     public ComplaintDetailDto getComplaintDetails(Long complaintId) {
 
         log.info("사용자: " + complaintId);
-        Complaint foundComplaint = complaintRepository.findById(complaintId)
-                .orElseThrow(() -> new BusinessException(ErrorMessage.COMPLAINT_NOT_FOUND));
+        ComplaintDetailDto foundComplaint = complaintRepository.findComplaintDetailById(complaintId);
 
         List<ChildComplaintDto> childComplaintDto = complaintRepository.findChildComplaintsByParentId(complaintId);
 
-        return ComplaintDetailDto.from(foundComplaint, childComplaintDto);
+        return ComplaintDetailDto.withChildren(foundComplaint, childComplaintDto);
     }
 
     public List<ComplaintListDto> getAllComplaints(String applicantId, String keyword) {

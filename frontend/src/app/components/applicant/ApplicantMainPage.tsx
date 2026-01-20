@@ -6,6 +6,7 @@ import { KeywordCloud } from './keyword-cloud';
 import { useNavigate } from 'react-router-dom';
 import api from './AxiosInterface';
 import Swal from 'sweetalert2';
+import axios from 'axios';
 
 interface ComplaintDto {
   id: number;
@@ -47,12 +48,32 @@ const mockKeywords = [
   { text: '불법', value: 6 },
 ];
 
+
+interface ResponseTimeData {
+  category: string;
+  avgDays: number;
+}
+
+interface OverallStats {
+  averageResponseTime: number;
+  fastestCategory: string;
+  improvementRate: number;
+}
+
+interface KeywordData {
+  text: string;
+  value: number;
+}
+
 const ApplicantMainPage = () => {
 
   const navigate = useNavigate();
-  const [recentComplaints, setRecentComplaints] = useState<ComplaintDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(!!localStorage.getItem('accessToken'));
+  const [recentComplaints, setRecentComplaints] = useState<ComplaintDto[]>([]);
+  const [responseTimeData, setResponseTimeData] = useState<ResponseTimeData[]>([]);
+  const [overallStats, setOverallStats] = useState<OverallStats | null>(null);
+  const [keywords, setKeywords] = useState<KeywordData[]>([]);
 
   // 공통 인증 체크 로직
   const checkAuth = (action: () => void) => {
@@ -102,13 +123,32 @@ const ApplicantMainPage = () => {
 
   useEffect(() => {
 
+
+
     const fetchRecentComplaints = async () => {
       try {
         const token = localStorage.getItem('accessToken');
         // 백엔드 API 호출 - 최근 3개의 민원 불러오기
         // 백엔드에서 만든 최신 3개 전용 API 호출
-        const response = await api.get('/applicant/complaints/top3');
-        setRecentComplaints(response.data);
+        const [complaintsRes, statsRes, keywordsRes] = await Promise.all([
+          api.get('applicant/complaints/top3'),
+          api.get('applicant/complaints-stat'),   // 통계 데이터 URL
+          api.get('applicant/complaints-keyword') // 키워드 데이터 URL
+        ]);
+        // 1. 최근 민원 리스트
+        setRecentComplaints(complaintsRes.data);
+
+        // 2. 부서별 평균 시간 (차트용 데이터 리스트)
+        setResponseTimeData(statsRes.data.responseTimeData);
+
+        // 3. 전체 통계
+        setOverallStats({
+          averageResponseTime: statsRes.data.averageResponseTime,
+          fastestCategory: statsRes.data.fastestCategory,
+          improvementRate: statsRes.data.improvementRate
+        });
+        setKeywords(keywordsRes.data);
+        console.log("Stats Response:", statsRes.data)
       } catch (error) {
         console.error("최신 민원 로드 실패:", error);
       } finally {
@@ -136,8 +176,8 @@ const ApplicantMainPage = () => {
           {/* [좌측 섹션] 민원 TOP3 + 키워드 맵 (60%) */}
           <div className="lg:col-span-2 flex flex-col gap-8 h-full overflow-hidden">
             {/* 최근 민원 현황 */}
-            <section className="bg-white rounded-[40px] border border-gray-100 shadow-sm p-8 flex flex-col shrink-0 h-[340px]">
-              <div className="flex justify-between items-center mb-6">
+            <section className="flex-1 bg-white rounded-[40px] border border-gray-100 shadow-sm p-8 flex flex-col min-h-0">
+              <div className="flex justify-between items-center mb-6 shrink-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">📋</span>
                   <h3 className="text-lg font-bold text-gray-800">최근 민원 현황</h3>
@@ -150,7 +190,7 @@ const ApplicantMainPage = () => {
                 </button>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex-1 flex flex-col gap-2 min-h-0">
                 {isLoading ? (
                   <div className="flex-1 flex justify-center items-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -159,39 +199,41 @@ const ApplicantMainPage = () => {
                   /* 1. 민원이 1건이라도 있는 경우: 리스트 + 부족한 칸 채우기 */
                   <>
                     {/* 실제 민원 데이터 표시 (최대 3개) */}
-                    {recentComplaints.slice(0, 3).map((complaint) => (
-                      <div
-                        key={complaint.id}
-                        className="group flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-200 hover:bg-white transition-all cursor-pointer h-[64px] shrink-0"
-                        onClick={() => checkAuth(() => navigate(`/applicant/complaints/${complaint.id}`))}
-                      >
-                        <div className="flex items-center gap-4 overflow-hidden">
-                          <span className={`shrink-0 px-2 py-0.5 rounded-md text-[9px] font-bold text-white ${complaint.complaintStatus === 'ANSWERED' ? 'bg-green-500' :
-                            complaint.complaintStatus === 'ASSIGNED' ? 'bg-blue-500' : 'bg-orange-500'
-                            }`}>
-                            {complaint.complaintStatus}
-                          </span>
-                          <h4 className="text-sm font-bold text-gray-800 group-hover:text-blue-600 truncate">
-                            {complaint.title}
-                          </h4>
+                    <div className="flex-1 flex flex-col gap-3">
+                      {recentComplaints.slice(0, 3).map((complaint) => (
+                        <div
+                          key={complaint.id}
+                          className="group flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-200 hover:bg-white transition-all cursor-pointer flex-1 min-h-0"
+                          onClick={() => checkAuth(() => navigate(`/applicant/complaints/${complaint.id}`))}
+                        >
+                          <div className="flex items-center gap-4 overflow-hidden">
+                            <span className={`shrink-0 px-2 py-0.5 rounded-md text-[9px] font-bold text-white ${complaint.complaintStatus === 'ANSWERED' ? 'bg-green-500' :
+                              complaint.complaintStatus === 'ASSIGNED' ? 'bg-blue-500' : 'bg-orange-500'
+                              }`}>
+                              {complaint.complaintStatus}
+                            </span>
+                            <h4 className="text-sm font-bold text-gray-800 group-hover:text-blue-600 truncate">
+                              {complaint.title}
+                            </h4>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0 text-gray-400">
+                            <span className="text-[11px] font-medium">{new Date(complaint.createdAt).toLocaleDateString()}</span>
+                            <span className="group-hover:translate-x-1 transition-transform">→</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0 text-gray-400">
-                          <span className="text-[11px] font-medium">{new Date(complaint.createdAt).toLocaleDateString()}</span>
-                          <span className="group-hover:translate-x-1 transition-transform">→</span>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
 
-                    {/* 3건 미만일 때만 부족한 칸을 Placeholder로 채움 (1~2건일 때 작동) */}
-                    {recentComplaints.length < 3 && [...Array(3 - recentComplaints.length)].map((_, i) => (
-                      <div
-                        key={`empty-${i}`}
-                        onClick={handleNewComplaint}
-                        className="h-[64px] border-2 border-dashed border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 text-xs hover:bg-gray-50 hover:border-blue-100 cursor-pointer transition-colors shrink-0"
-                      >
-                        <span className="opacity-60">+ 새 민원 추가</span>
-                      </div>
-                    ))}
+                      {/* 3건 미만일 때만 부족한 칸을 Placeholder로 채움 (1~2건일 때 작동) */}
+                      {recentComplaints.length < 3 && [...Array(3 - recentComplaints.length)].map((_, i) => (
+                        <div
+                          key={`empty-${i}`}
+                          onClick={handleNewComplaint}
+                          className="flex-1 border-2 border-dashed border-gray-100 rounded-2xl flex items-center justify-center text-gray-400 text-xs hover:bg-gray-50 hover:border-blue-100 cursor-pointer transition-colors"
+                        >
+                          <span className="opacity-60">+ 새 민원 추가</span>
+                        </div>
+                      ))}
+                    </div>
                   </>
                 ) : (
                   /* 2. 민원이 아예 없는 경우 (0건): 큰 안내 상자만 표시 */
@@ -209,13 +251,17 @@ const ApplicantMainPage = () => {
             </section>
 
             {/* 2. 실시간 민원 키워드: flex-1을 사용하여 남는 아래쪽 모든 공간 차지 */}
-            <section className="flex-1 bg-white/60 backdrop-blur-sm rounded-[40px] border border-blue-100/50 shadow-lg p-8 flex flex-col overflow-hidden min-h-0">
+            <section className="flex-1 bg-white/60 rounded-[40px] border border-blue-100/50 shadow-sm p-8 flex flex-col min-h-0 overflow-hidden">
               <div className="flex items-center gap-2 mb-4 shrink-0">
                 <span className="text-lg">🔍</span>
                 <h3 className="text-lg font-bold text-gray-800">실시간 민원 키워드</h3>
               </div>
               <div className="flex-1 min-h-0 bg-gray-50 rounded-[24px] overflow-hidden">
-                <KeywordCloud keywords={mockKeywords} />
+                {isLoading ? (
+                  <div className="h-full flex items-center justify-center">로딩 중...</div>
+                ) : (
+                  <KeywordCloud keywords={keywords.length > 0 ? keywords : []} />
+                )}
               </div>
             </section>
           </div>
@@ -233,10 +279,12 @@ const ApplicantMainPage = () => {
 
               {/* 수정된 ResponseTimeStats 모듈 호출 */}
               <div className="flex-1 min-h-0">
-                <ResponseTimeStats
-                  data={mockResponseTimeData}
-                  overallStats={mockOverallStats}
-                />
+                {overallStats && ( // 데이터가 있을 때만 렌더링
+                  <ResponseTimeStats
+                    data={responseTimeData}
+                    overallStats={overallStats}
+                  />
+                )}
               </div>
             </div>
           </section>

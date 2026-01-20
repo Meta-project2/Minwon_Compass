@@ -1,18 +1,30 @@
 package com.smart.complaint.routing_system.applicant.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smart.complaint.routing_system.applicant.config.BusinessException;
 import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
 import com.smart.complaint.routing_system.applicant.domain.ErrorMessage;
+import com.smart.complaint.routing_system.applicant.dto.AiDto;
+import com.smart.complaint.routing_system.applicant.dto.AiDto.Analysis;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintAnswerRequest;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintInquiryDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintRerouteRequest;
+import com.smart.complaint.routing_system.applicant.dto.ComplaintStatDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSubmitDto;
+import com.smart.complaint.routing_system.applicant.dto.KeywordsDto;
 import com.smart.complaint.routing_system.applicant.entity.ChildComplaint;
 import com.smart.complaint.routing_system.applicant.entity.Complaint;
+import com.smart.complaint.routing_system.applicant.entity.ComplaintNormalization;
 import com.smart.complaint.routing_system.applicant.entity.ComplaintReroute;
+import com.smart.complaint.routing_system.applicant.entity.Department;
 import com.smart.complaint.routing_system.applicant.repository.ChildComplaintRepository;
+import com.smart.complaint.routing_system.applicant.repository.ComplaintNormalizationRepository;
 import com.smart.complaint.routing_system.applicant.repository.ComplaintRepository;
 import com.smart.complaint.routing_system.applicant.repository.ComplaintRerouteRepository;
+import com.smart.complaint.routing_system.applicant.repository.DepartmentRepository;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -36,9 +49,12 @@ import java.util.Map;
 @Transactional
 public class ComplaintService {
 
+    private final ObjectMapper objectMapper;
     private final ComplaintRepository complaintRepository;
     private final ComplaintRerouteRepository rerouteRepository;
     private final ChildComplaintRepository childComplaintRepository;
+    private final DepartmentRepository departmentRepository;
+    private final ComplaintNormalizationRepository complaintNormalizationRepository;
     private final RestTemplate restTemplate;
 
     /**
@@ -197,6 +213,79 @@ public class ComplaintService {
     }
 
     @Transactional
+    public void processAiResponse(String rawResponseBody, Long complaintId) {
+        try {
+            // 1. 전체 응답 파싱 (status, data) -> {"status": "success", "data": "..."} 받아온 데이터
+            AiDto.Response responseWrapper = objectMapper.readValue(rawResponseBody, AiDto.Response.class);
+
+            // 2. data 내 마크다운 제거 (```json ... ``` 부분 추출)
+            // langflow는 앞에 '''json을 붙인다
+            String cleanJson = responseWrapper.data()
+                    .replaceAll("```json", "")
+                    .replaceAll("```", "")
+                    .trim();
+
+            // 3. 실제 분석 데이터 객체로 변환 -> 추천 순위와 분석 데이터
+            AiDto.Analysis analysis = objectMapper.readValue(cleanJson, AiDto.Analysis.class);
+
+            // 4. DB 저장 처리
+            saveNormalizationData(complaintId, analysis, responseWrapper.embedding());
+
+        } catch (Exception e) {
+            log.error("AI 데이터 파싱 및 저장 실패: {}", e.getMessage());
+        }
+    }
+
+    private void saveNormalizationData(Long complaintId, AiDto.Analysis analysis, float[] embeddingArray)
+            throws Exception {
+
+        List<String> keywordList = Arrays.stream(analysis.originalAnalysis().keywords().split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+
+        String keywordsJson = objectMapper.writeValueAsString(keywordList);
+        String routingRankJson = objectMapper.writeValueAsString(analysis.recommendations());
+
+        String neutralSummary = String.format("%s %s %s",
+                analysis.originalAnalysis().topic(),
+                analysis.originalAnalysis().keywords(),
+                analysis.originalAnalysis().category());
+
+        Complaint complaint = complaintRepository.findById(complaintId)
+                .orElseThrow(() -> new BusinessException(ErrorMessage.COMPLAINT_NOT_FOUND));
+
+        // 2. 문자열 파싱: "도로과"만 추출
+        String targetDeptName = "미지정";
+        if (!analysis.recommendations().isEmpty()) {
+            String fullDept = analysis.recommendations().get(0).recommendedDept();
+            String[] parts = fullDept.split(" ");
+            targetDeptName = parts[parts.length - 1].trim();
+        }
+
+        Long nullDepartment = departmentRepository.findByName("미정")
+                .map(Department::getId)
+                .orElse(1L);
+        // 2. ID 조회 및 세팅 (조회 실패 시 0L)
+        Long departmentId = departmentRepository.findByName(targetDeptName)
+                .map(Department::getId)
+                .orElse(nullDepartment);
+
+        complaint.setDepartment(departmentId);
+        complaint.setAiPredicted(departmentId);
+
+        complaintNormalizationRepository.insertNormalization(
+                complaintId,
+                analysis.recommendations().isEmpty() ? "미지정" : analysis.recommendations().get(0).recommendedDept(),
+                neutralSummary,
+                analysis.originalAnalysis().topic(),
+                analysis.originalAnalysis().category(),
+                keywordsJson,
+                routingRankJson,
+                embeddingArray, // float[]를 그대로 전달
+                true);
+    }
+
     public void analyzeComplaint(Long id, String applicantId, ComplaintSubmitDto complaintSubmitDto) {
         String pythonUrl = "http://complaint-ai-server:8000/api/complaints/preprocess";
 
@@ -217,8 +306,18 @@ public class ComplaintService {
             // Python 서버 호출 (POST)
             ResponseEntity<String> response = restTemplate.postForEntity(pythonUrl, entity, String.class);
 
+            // 2. 응답 상태가 성공(2xx)인 경우에만 후속 처리 진행
             if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("AI 분석 및 정규화 데이터 저장 성공: {}", response.getBody());
+                String responseBody = response.getBody(); // 내용물(String)만 추출
+
+                log.info("AI 분석 서버 응답 수신 성공");
+
+                // 3. 추출한 String 본문을 파싱 로직으로 전달 id는 민원의 PK
+                processAiResponse(responseBody, id);
+
+                log.info("AI 분석 및 정규화 데이터 저장 성공");
+            } else {
+                log.warn("AI 분석 서버 응답은 성공이나 상태 코드가 2xx가 아님: {}", response.getStatusCode());
             }
         } catch (Exception e) {
             log.error("AI 분석 서버 통신 실패 (민원은 접수됨): {}", e.getMessage());
@@ -248,6 +347,9 @@ public class ComplaintService {
                         .status(ComplaintStatus.RECEIVED)
                         .build();
 
+                // 부모 민원의 상태 변화 -> IN_PROGRESS로
+                parent.newInquiry();
+                complaintRepository.save(parent);
                 childComplaintRepository.save(child);
 
             } catch (Exception e) {
@@ -257,5 +359,38 @@ public class ComplaintService {
         } catch (Exception e) {
             log.error("새 문의 저장 중 문제 발생: {}", e.getMessage());
         }
+    }
+
+    public ComplaintStatDto calculateStat() {
+        ComplaintStatDto statDto = null;
+        try {
+            statDto = complaintRepository.geComplaintStatus();
+        } catch (Exception e) {
+            log.error("통계 분석 중 문제 발생: {}", e.getMessage());
+            throw new BusinessException(ErrorMessage.DATABASE_ERROR);
+        }
+        return statDto;
+    }
+
+    public List<KeywordsDto> calculateKeywords() {
+        try {
+            List<KeywordsDto> keywordsDtos = complaintRepository.calculateKeywords();
+            return keywordsDtos;
+        } catch (Exception e) {
+            log.error("키워드 계산 중 문제 발생: {}", e.getMessage());
+            throw new BusinessException(ErrorMessage.DATABASE_ERROR);
+        }
+    }
+
+    @Transactional
+    public void updateStatus(Long id) {
+
+        Complaint complaint = complaintRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorMessage.COMPLAINT_NOT_FOUND));
+
+        log.info("찾은 민원: {}, 상태: {}", complaint.getId(), complaint.getStatus());
+        complaint.cancelComplaint();
+        log.info("변경 후 상태 찾은 민원: {}, 상태: {}", complaint.getId(), complaint.getStatus());
+        complaintRepository.save(complaint);
     }
 }
