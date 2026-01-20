@@ -15,18 +15,13 @@ public record ComplaintDetailDto(
         ComplaintStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
+        String departmentName,
         List<ChildComplaintDto> children // 자식 리스트
 ) {
-    public static ComplaintDetailDto from(Complaint entity, List<ChildComplaintDto> complaintDtos) {
+    public static ComplaintDetailDto withChildren(ComplaintDetailDto dto, List<ChildComplaintDto> children) {
         return new ComplaintDetailDto(
-                entity.getId(),
-                entity.getTitle(),
-                entity.getBody(),
-                entity.getAnswer(),
-                entity.getAddressText(),
-                entity.getStatus(),
-                entity.getCreatedAt(),
-                entity.getUpdatedAt(),
-                complaintDtos != null ? complaintDtos : List.of()); // 빈 리스트 또는 정렬된 리스트 전달
+                dto.id(), dto.title(), dto.body(), dto.answer(),
+                dto.addressText(), dto.status(), dto.createdAt(),
+                dto.updatedAt(), dto.departmentName(), children);
     }
 }

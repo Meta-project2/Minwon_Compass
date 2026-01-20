@@ -2,12 +2,15 @@ package com.smart.complaint.routing_system.applicant.repository;
 
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDetailResponse;
 import com.smart.complaint.routing_system.applicant.dto.ChildComplaintDto;
+import com.smart.complaint.routing_system.applicant.dto.ComplaintDetailDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintHeatMap;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintListDto;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintResponse;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchCondition;
 import com.smart.complaint.routing_system.applicant.dto.ComplaintSearchResult;
+import com.smart.complaint.routing_system.applicant.dto.ComplaintStatDto;
+import com.smart.complaint.routing_system.applicant.dto.KeywordsDto;
 import com.smart.complaint.routing_system.applicant.dto.AdminDashboardStatsDto.*;
 import java.time.LocalDateTime;
 
@@ -28,6 +31,8 @@ public interface ComplaintRepositoryCustom {
 
     List<ComplaintHeatMap> getAllComplaintsWithLatLon();
 
+    ComplaintDetailDto findComplaintDetailById(Long id);
+
     // 대시보드용 메서드
     // 1. 민원 접수 추이
     List<DailyCountDto> getDailyTrends(LocalDateTime start, LocalDateTime end, Long deptId);
@@ -47,4 +52,10 @@ public interface ComplaintRepositoryCustom {
     // 6. 반복 민원 Top 3
     List<RecurringIncidentDto> getTopRecurringIncidents(LocalDateTime start, LocalDateTime end, LocalDateTime prevStart, LocalDateTime prevEnd);
     List<ChildComplaintDto> findChildComplaintsByParentId(Long id);
+
+    // 7. 민원 분석
+    ComplaintStatDto geComplaintStatus();
+
+    // 8. 키워드 분석
+    List<KeywordsDto> calculateKeywords();
 }

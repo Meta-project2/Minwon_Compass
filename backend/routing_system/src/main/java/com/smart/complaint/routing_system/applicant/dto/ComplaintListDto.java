@@ -1,7 +1,6 @@
 package com.smart.complaint.routing_system.applicant.dto;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
 import com.smart.complaint.routing_system.applicant.entity.Complaint;
@@ -14,8 +13,9 @@ public record ComplaintListDto(
         String addressText,
         ComplaintStatus status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt) {
-    public static ComplaintListDto from(Complaint entity, List<ChildComplaintDto> complaintDtos) {
+        LocalDateTime updatedAt,
+        String departmentName) {
+    public static ComplaintListDto from(Complaint entity, String departmentName) {
         return new ComplaintListDto(
                 entity.getId(),
                 entity.getTitle(),
@@ -24,6 +24,7 @@ public record ComplaintListDto(
                 entity.getAddressText(),
                 entity.getStatus(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt());
+                entity.getUpdatedAt(),
+                departmentName);
     }
 }

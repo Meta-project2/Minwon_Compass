@@ -18,10 +18,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
             localStorage.removeItem('accessToken');
             Swal.fire('세션 만료', '다시 로그인해주세요.', 'warning').then(() => {
-                window.location.href = '/login';
+                window.location.href = '/applicant/login';
             });
         }
         return Promise.reject(error);

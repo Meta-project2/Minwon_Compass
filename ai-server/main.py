@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
+from openai import OpenAI
 from pydantic import BaseModel
 from app.services import llm_service
 from app import database
@@ -16,10 +17,8 @@ import textwrap
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
-import google.generativeai as genai
 from sqlalchemy import Integer, create_engine, Column, BigInteger, String, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import JSONB
 
 app = FastAPI(title="Complaint Analyzer AI")
@@ -33,6 +32,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def get_embedding(text: str):
+    try:
+        response = client.embeddings.create(
+            model="text-embedding-3-large",
+            input=text,
+            dimensions=1024
+        )
+
+        embedding_vector = response.data[0].embedding
+
+        # 디버깅용 차원 확인
+        print(f"임베딩된 차원: {len(embedding_vector)}")
+
+        return embedding_vector
+
+    except Exception as e:
+        print(f"OpenAI Embedding Error: {e}")
+        return None
 
 # 테스트
 @app.get("/")
@@ -82,7 +102,7 @@ async def preprocess_complaint(req: ComplaintRequest, request: Request):
     print(f"받은 원본 데이터: {body.decode()}")
     try:
         api_key = os.getenv("LANGFLOW_KEY")
-        url = "http://complaint-langflow:7860/api/v1/run/24e840bc-9129-4520-9773-d964f39d9cb8"  # The complete API endpoint URL for this flow
+        url = "http://complaint-langflow:7860/api/v1/run/59369f82-0d62-414e-bd20-9bc5f9aa8a50"  # The complete API endpoint URL for this flow
 
         for i in req:
             print(i)
@@ -93,10 +113,10 @@ async def preprocess_complaint(req: ComplaintRequest, request: Request):
             "input_type": "text",
             "tweaks": {
                 # 찾으신 ID를 정확히 매핑합니다
-                "TITLE-vVY6M": {
+                "TextInput-MBAG": {
                     "input_value": req.title
                 },
-                "BODY-mep0o": {
+                "TextInput-NNDwa": {
                     "input_value": req.body
                 }
             }
@@ -112,13 +132,31 @@ async def preprocess_complaint(req: ComplaintRequest, request: Request):
         result_json = response.json()
         ai_text = result_json['outputs'][0]['outputs'][0]['results']['message']['data']['text']
         
-        print(f"AI 분석 완료: {ai_text}")
+        embedding_vector = None
         
-        # 성공 시 실제 AI 분석 결과를 반환
+        try:
+            # 마크다운 태그 제거 후 JSON 파싱
+            clean_json_str = re.sub(r'```json\n|```', '', ai_text).strip()
+            inner_data = json.loads(clean_json_str)
+            
+            # 임베딩 대상 텍스트 생성 (주제와 키워드 결합)
+            original = inner_data.get("original_analysis", {})
+            text_to_embed = f"{original.get('topic', '')} {original.get('keywords', '')} {original.get('category', '')}"
+            
+            # 3. 임베딩 생성 호출
+            if text_to_embed.strip():
+                embedding_vector = get_embedding(text_to_embed)
+                print(f"임베딩 생성 완료 (차원: {len(embedding_vector)})")
+        except Exception as parse_err:
+            print(f"임베딩 처리 중 파싱 오류: {parse_err}")
+
+        # 4. 최종 결과 반환 (embedding 필드 추가)
         return {
             "status": "success",
-            "data": ai_text
+            "data": ai_text,
+            "embedding": embedding_vector  # Java의 double[]로 매핑됨
         }
+        
     except Exception as e:
         print(f"처리 중 오류 발생: {str(e)}")
         return {

@@ -54,9 +54,10 @@ public class ComplaintNormalization {
     private Object routingRank;
 
     // pgvector (1024차원) 매핑
-    // Hibernate 6에서 vector 타입을 double[]로 처리하기 위한 설정
+    // Java는 String으로 관리, DB는 vector로 관리
     @Column(name = "embedding", columnDefinition = "vector(1024)")
-    private double[] embedding;
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    private float[] embedding;
 
     @Builder.Default
     private Boolean isCurrent = true;

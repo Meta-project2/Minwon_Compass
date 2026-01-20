@@ -14,22 +14,30 @@ export function KeywordCloud({ keywords }: KeywordCloudProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!svgRef.current || !containerRef.current || !keywords.length) return;
+    if (!svgRef.current || !containerRef.current || !keywords || keywords.length === 0) return;
 
     d3.select(svgRef.current).selectAll('*').remove();
 
-    const width = 600;
-    const height = 350;
+    const width = 800;
+    const height = 250;
+
+    // 1. 데이터의 최소/최대값 추출
+    const minVal = d3.min(keywords, d => d.value) || 0;
+    const maxVal = d3.max(keywords, d => d.value) || 1;
+
+    // 2. 폰트 사이즈 스케일 생성 (20px에서 80px 사이로 자동 조절)
+    const fontSizeScale = d3.scaleLinear()
+      .domain([minVal, maxVal])
+      .range([20, 70]); // 기존 [25, 85]에서 조정
 
     const layout = cloud()
-      .size([width, height])
-      .words(keywords.map(d => ({ 
-        text: d.text, 
-        // 가로 배치는 공간을 더 많이 차지하므로 사이즈 배율을 살짝 조정합니다.
-        size: 20 + d.value * 7 
+      .size([width, height]) // 변경된 크기 적용
+      .words(keywords.map(d => ({
+        text: d.text,
+        size: fontSizeScale(d.value)
       })))
-      .padding(10) // 가로 배치 시 단어 간 겹침 방지를 위해 패딩 최적화
-      .rotate(() => 0) // [수정] 모든 키워드를 0도(가로)로 고정
+      .padding(10)
+      .rotate(() => 0)
       .font("Impact")
       .fontSize(d => d.size || 10)
       .on("end", draw);
@@ -37,6 +45,8 @@ export function KeywordCloud({ keywords }: KeywordCloudProps) {
     layout.start();
 
     function draw(words: any[]) {
+      console.log("배치 성공한 단어 개수:", words.length);
+
       const svg = d3.select(svgRef.current)
         .attr("viewBox", `0 0 ${width} ${height}`)
         .attr("width", "100%")
@@ -50,7 +60,6 @@ export function KeywordCloud({ keywords }: KeywordCloudProps) {
         .append("text")
         .style("font-size", d => `${d.size}px`)
         .style("font-family", "Impact")
-        // 가독성을 위해 D3 기본 색상 세트를 사용합니다.
         .style("fill", () => d3.schemeCategory10[Math.floor(Math.random() * 10)])
         .attr("text-anchor", "middle")
         .attr("transform", d => `translate(${[d.x, d.y]})rotate(${d.rotate})`)
@@ -59,10 +68,12 @@ export function KeywordCloud({ keywords }: KeywordCloudProps) {
   }, [keywords]);
 
   return (
-    <div ref={containerRef} className="w-full h-full flex items-center justify-center overflow-hidden">
-      <svg 
-        ref={svgRef} 
-        style={{ maxWidth: '95%', maxHeight: '95%' }} // 가장자리 잘림 방지를 위해 소폭 축소
+    // [수정 3] 컨테이너의 높이를 내용물에 맞게 유동적으로 변경 (h-full -> h-auto)
+    <div ref={containerRef} className="w-full h-auto flex items-center justify-center overflow-hidden p-4">
+      <svg
+        ref={svgRef}
+        // [수정 4] maxHeight 제한을 해제하여 레이아웃 설정대로 다 보이게 함
+        style={{ width: '100%', height: 'auto' }}
         preserveAspectRatio="xMidYMid meet"
       ></svg>
     </div>

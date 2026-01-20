@@ -226,7 +226,9 @@ export function ApplicantComplaintForm({ onGoHome, onViewComplaints, onPreview }
 
               {/* 지도 영역: flex-1과 min-h-0으로 버튼 영역을 제외한 모든 공간 차지 */}
               <div className="flex-1 rounded-[24px] border border-gray-100 overflow-hidden shadow-inner relative min-h-0">
-                <KakaoMap address={location} onLocationChange={handleLocationChange} />
+                <KakaoMap address={location} onLocationChange={handleLocationChange} onViewDetail={function (id: string): void {
+                  throw new Error('Function not implemented.');
+                } } />
               </div>
 
               {/* 액션 버튼 영역: 하단 고정 */}

@@ -89,7 +89,9 @@ public class SecurityConfig {
                                                                 "/api/applicant/login", "/api/applicant/userinfo",
                                                                 "/api/applicant/newpw",
                                                                 "/api/applicant/complaints/top3",
-                                                                "/api/applicant/heatmap")
+                                                                "/api/applicant/heatmap",
+                                                                "/api/applicant/complaints-stat",
+                                                                "/api/applicant/complaints-keyword")
                                                 .permitAll()
                                                 .requestMatchers("/api/applicant/**").authenticated()
                                                 .anyRequest().authenticated())
