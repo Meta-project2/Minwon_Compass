@@ -21,7 +21,7 @@ base_path = os.path.dirname(os.path.abspath(__file__))
 CSV_FILE = os.path.join(base_path, "강동구_structured_final.csv")
 TABLE_NAME = "complaint_normalizations"
 
-client = OpenAI(api_key='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')
+client = OpenAI(api_key='null')
 
 def get_embedding(text: str):
     try:
