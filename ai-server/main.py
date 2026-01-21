@@ -104,7 +104,7 @@ async def preprocess_complaint(req: ComplaintRequest, request: Request):
         api_key = os.getenv("LANGFLOW_KEY")
         # url = "http://complaint-langflow:7860/api/v1/run/59369f82-0d62-414e-bd20-9bc5f9aa8a50"  # The complete API endpoint URL for this flow
         # 서버 전용 langflow api url
-        url = "http://34.158.210.224:7860/api/v1/run/38dc29fa-ae0b-40dd-a3d2-cac77b1cb5ab"
+        url = "http://complaint-langflow:7860/api/v1/run/f35aeaf3-31a1-4e73-a235-f1ad3d60553f"
 
         for i in req:
             print(i)
@@ -122,10 +122,10 @@ async def preprocess_complaint(req: ComplaintRequest, request: Request):
                 #     "input_value": req.body
                 # }
                 # 서버 전용
-                "TITLE-7NcS7": {
+                "TITLE-n1ba7": {
                     "input_value": req.title
                 },
-                "BODY-JCktr": {
+                "BODY-5L6tb": {
                     "input_value": req.body
                 }
             }

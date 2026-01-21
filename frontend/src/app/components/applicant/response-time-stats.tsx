@@ -95,16 +95,6 @@ export function ResponseTimeStats({ data, overallStats }: ResponseTimeStatsProps
                 </linearGradient>
               ))}
             </defs>
-            <text
-              x={200}         // 전체 너비(400)의 절반
-              y={20}          // 상단 여백
-              fill="#333"     // 글자 색상
-              textAnchor="middle" // 가로 정렬 기준(중앙)
-              dominantBaseline="central" // 세로 정렬 기준
-              style={{ fontSize: '20px', fontWeight: 'bold' }}
-            >
-              분아별 평균 응답 시간
-            </text>
             <Pie
               data={pieData}
               cx="50%"

@@ -155,6 +155,10 @@ public class ApplicantService {
     }
 
     public List<ComplaintDto> getTop3RecentComplaints(String applicantId) {
+        if (applicantId == null || applicantId.isEmpty() || applicantId.equals("anonymousUser")) {
+            // 전체 사용자 중 최신 민원 3개 조회 (인자값으로 null 전달)
+            return complaintRepository.findTop3RecentComplaintByApplicantId(null);
+        }
         Long actualUserId = null;
 
         if (isPureNumeric(applicantId)) {
@@ -167,12 +171,12 @@ public class ApplicantService {
         // 2. PK가 아니거나 검색 실패 시 Querydsl로 소셜 유저 조회
         if (actualUserId == null) {
             User socialUser = userRepository.findByProviderIdLike(applicantId)
-                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + applicantId));
-            actualUserId = socialUser.getId();
+                    .orElse(null); // 에러를 던지지 말고 null 반환
+            if (socialUser != null) {
+                actualUserId = socialUser.getId();
+            }
         }
-
-        Long id = Long.parseLong(applicantId);
-        return complaintRepository.findTop3RecentComplaintByApplicantId(id);
+        return complaintRepository.findTop3RecentComplaintByApplicantId(actualUserId);
     }
 
     public ComplaintDetailDto getComplaintDetails(Long complaintId) {

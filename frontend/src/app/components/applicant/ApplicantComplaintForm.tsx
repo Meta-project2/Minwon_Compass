@@ -68,10 +68,9 @@ export function ApplicantComplaintForm({ onPreview }: NewComplaintFormProps) {
       cancelButtonText: '취소',
       confirmButtonColor: '#1677d3',
       cancelButtonColor: 'rgb(230, 190, 61)',
-    }).then(async (result) => {
+    }).then((result) => {
       if (result.isConfirmed) {
-        // 1. 로딩 시작 (Swal의 로딩 모드 활용)
-        let timerInterval: any;
+        let timerInterval: ReturnType<typeof setInterval> | undefined;
         const messages = [
           "AI가 민원 내용을 정밀 분석 중입니다...",
           "유사한 과거 민원 사례를 검색하고 있습니다...",
@@ -79,51 +78,54 @@ export function ApplicantComplaintForm({ onPreview }: NewComplaintFormProps) {
           "민원 처리 효율을 위해 데이터를 정제하고 있습니다..."
         ];
 
+        // 1. 안내 알림창 띄우기 (로딩 + 확인 버튼 포함)
         Swal.fire({
           title: messages[0],
-          html: "잠시만 기다려 주세요. (예상 소요 시간: 30초~1분)",
-          allowOutsideClick: false,
+          html: `
+        <div style="margin-bottom: 10px;">잠시만 기다려 주세요. (예상 소요 시간: 30초~1분)</div>
+        <div style="font-size: 0.9em; color: #666;">이 창을 닫아도 분석은 백그라운드에서 계속 진행됩니다.</div>
+      `,
+          icon: 'info',
+          allowOutsideClick: true,  // 바깥 클릭 시 닫기 허용
+          showConfirmButton: true,  // 확인 버튼 표시
+          confirmButtonText: '확인 (백그라운드 진행)',
           didOpen: () => {
-            Swal.showLoading();
+            Swal.showLoading(Swal.getConfirmButton()); // 로딩 스피너 표시
             let i = 0;
-            // 2. 5초마다 메시지 교체
             timerInterval = setInterval(() => {
               i = (i + 1) % messages.length;
               Swal.update({ title: messages[i] });
-              showConfirmButton: false;
             }, 5000);
           },
           willClose: () => clearInterval(timerInterval)
         });
 
-        try {
-          // 3. 최소 대기 시간 설정 (예: 30초 = 30000ms)
-          const minWaitTime = new Promise(resolve => setTimeout(resolve, 30000));
-
-          // 4. API 호출과 최소 대기 시간을 동시에 실행 (둘 다 끝나야 진행)
-          const [response] = await Promise.all([
-            api.post('applicant/complaint', submitData, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            }),
-            minWaitTime
-          ]);
-
-          // 5. 성공 알림
-          clearInterval(timerInterval);
-          Swal.fire({
-            title: '접수 완료!',
-            text: 'AI 분석을 거쳐 최적의 부서로 전달되었습니다.',
-            icon: 'success',
-            confirmButtonText: '확인'
-          }).then(() => navigate('/applicant/main'));
-
-        } catch (error) {
-          clearInterval(timerInterval);
-          Swal.fire('오류 발생', '전송 중 에러가 발생했습니다.', 'error');
-        }
+        // 2. API 호출 (await를 사용하지 않고 바로 실행)
+        api.post('applicant/complaint', submitData, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+          .then(() => {
+            // 성공 시: 이미 창이 닫혀있을 수도 있으므로 토스트 알림이나 조용한 알림 권장
+            console.log("백그라운드 접수 완료");
+            // 만약 창이 아직 열려있다면 성공 화면으로 전환 가능
+            if (Swal.isVisible()) {
+              Swal.fire({
+                title: '접수 완료!',
+                text: 'AI 분석을 거쳐 최적의 부서로 전달되었습니다.',
+                icon: 'success',
+                confirmButtonText: '메인으로 이동'
+              }).then(() => navigate('/applicant/main'));
+            }
+          })
+          .catch((error) => {
+            console.error("접수 실패:", error);
+            if (Swal.isVisible()) {
+              Swal.fire('오류 발생', '전송 중 에러가 발생했습니다.', 'error');
+            }
+          });
       }
     });
   };

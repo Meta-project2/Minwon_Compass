@@ -92,9 +92,6 @@ const ApplicantMainPage = () => {
   };
 
   useEffect(() => {
-
-
-
     const fetchRecentComplaints = async () => {
       try {
         // 백엔드 API 호출 - 최근 3개의 민원 불러오기
@@ -127,7 +124,7 @@ const ApplicantMainPage = () => {
     };
     fetchRecentComplaints();
     // 빈 배열: 한 번만 실행, accessToken: 변경 시 재실행
-  }, [isLoggedIn]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#EAF2FF] via-[#F4F7FB] to-white overflow-hidden font-sans text-slate-900">
@@ -138,11 +135,11 @@ const ApplicantMainPage = () => {
         {/* 황금비 레이아웃: 좌(3) : 우(2) */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 h-full max-h-[850px]">
 
-          {/* [좌측 섹션] 민원 TOP3 + 키워드 맵 (60%) */}
-          <div className="lg:col-span-2 flex flex-col gap-8 h-full min-h-0">
+          {/* [좌측 섹션] 민원 TOP3 + 키워드 맵 (50%) */}
+          <div className="lg:col-span-2 flex flex-col gap-6 h-full min-h-0">
             {/* 최근 민원 현황 */}
-            <section className="bg-white rounded-[20px] border border-slate-200/70 shadow-sm ring-1 ring-slate-900/5 p-8 flex flex-col shrink-0 h-[340px] transition-shadow hover:shadow-md">
-              <div className="flex justify-between items-center mb-6">
+            <section className="flex-1 bg-white rounded-[20px] border border-slate-200/70 shadow-sm ring-1 ring-slate-900/5 p-6 flex flex-col min-h-0 overflow-hidden transition-shadow hover:shadow-md">
+              <div className="flex justify-between items-center mb-4 shrink-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">📋</span>
                   <h3 className="text-lg font-bold text-gray-800">최근 민원 현황</h3>
@@ -155,7 +152,7 @@ const ApplicantMainPage = () => {
                 </button>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex-1 flex flex-col gap-2 min-h-0">
                 {isLoading ? (
                   <div className="flex-1 flex justify-center items-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -192,8 +189,9 @@ const ApplicantMainPage = () => {
                       <div
                         key={`empty-${i}`}
                         onClick={handleNewComplaint}
-                        className="h-[64px] border-2 border-dashed border-slate-200/80 rounded-2xl flex items-center justify-center text-slate-400 text-xs hover:bg-slate-50 hover:border-blue-200 cursor-pointer transition-colors shrink-0"                      >
-                        <span className="opacity-60">+ 새 민원 추가</span>
+                        className="h-[58px] border-2 border-dashed border-slate-50 rounded-xl flex items-center justify-center text-slate-300 text-[11px] hover:bg-slate-50 hover:border-blue-100 cursor-pointer transition-colors shrink-0"
+                      >
+                        <span>+ 새 민원 추가</span>
                       </div>
                     ))}
                   </>
@@ -214,14 +212,14 @@ const ApplicantMainPage = () => {
 
 
             {/* 2. 실시간 민원 키워드: flex-1을 사용하여 남는 아래쪽 모든 공간 차지 */}
-            <section className="flex-1 bg-white rounded-[20px] border border-slate-200/70 shadow-sm ring-1 ring-slate-900/5 p-8 transition-shadow hover:shadow-md flex flex-col overflow-hidden min-h-0">
-              <div className="flex items-center gap-2 mb-4 shrink-0">
+            <section className="flex-1 bg-white rounded-[20px] border border-slate-200/70 shadow-sm ring-1 ring-slate-900/5 p-6 flex flex-col min-h-0 overflow-hidden transition-shadow hover:shadow-md">
+              <div className="flex items-center gap-2 mb-3 shrink-0">
                 <span className="text-lg">🔍</span>
                 <h3 className="text-lg font-bold text-gray-800">실시간 민원 키워드</h3>
               </div>
-              <div className="flex-1 min-h-0 bg-gray-50 rounded-[24px] overflow-hidden">
+              <div className="flex-1 min-h-0 bg-slate-50/50 rounded-[20px] relative overflow-hidden">
                 {isLoading ? (
-                  <div className="h-full flex items-center justify-center">로딩 중...</div>
+                  <div className="h-full flex items-center justify-center text-xs text-gray-400">데이터 로드 중...</div>
                 ) : (
                   <KeywordCloud keywords={keywords.length > 0 ? keywords : []} />
                 )}
@@ -232,17 +230,18 @@ const ApplicantMainPage = () => {
           {/* [우측 섹션] 통계 분석 (40%) */}
           <section className="lg:col-span-2 bg-white rounded-[20px] border border-slate-200/70 shadow-sm ring-1 ring-slate-900/5 transition-shadow hover:shadow-md flex flex-col h-full overflow-hidden">
             <div className="p-10 flex flex-col h-full">
-              <div className="flex flex-col gap-1 mb-10 shrink-0">
+              {/* 헤더 섹션: 중앙 정렬하여 가독성 확보 */}
+              <div className="flex flex-col items-center gap-1 mb-6 shrink-0 text-center">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">📊</span>
-                  <h3 className="text-lg font-bold text-gray-800 tracking-tight">지역 민원 처리 현황</h3>
+                  <span className="text-2xl">📊</span>
+                  <h3 className="text-xl font-bold text-gray-800 tracking-tight">분야별 평균 응답 시간 현황</h3>
                 </div>
-                <p className="text-xs text-gray-400 font-medium">분야별 행정 효율성 및 데이터 분석</p>
+                <p className="text-sm text-gray-400 font-medium">실시간 분야별 행정 효율성</p>
               </div>
 
-              {/* 수정된 ResponseTimeStats 모듈 호출 */}
-              <div className="flex-1 min-h-0">
-                {overallStats && ( // 데이터가 있을 때만 렌더링
+              {/* 차트 영역 */}
+              <div className="flex-1 min-h-0 relative">
+                {overallStats && (
                   <ResponseTimeStats
                     data={responseTimeData}
                     overallStats={overallStats}
@@ -251,7 +250,6 @@ const ApplicantMainPage = () => {
               </div>
             </div>
           </section>
-
         </div >
       </main >
     </div >

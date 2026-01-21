@@ -15,11 +15,12 @@ export function KeywordCloud({ keywords }: KeywordCloudProps) {
 
   useEffect(() => {
     if (!svgRef.current || !containerRef.current || !keywords || keywords.length === 0) return;
+    const { width: containerWidth, height: containerHeight } = containerRef.current.getBoundingClientRect();
 
     d3.select(svgRef.current).selectAll('*').remove();
 
-    const width = 800;
-    const height = 250;
+    const width = containerWidth || 600;
+    const height = containerHeight || 300;
 
     // 1. 데이터의 최소/최대값 추출
     const minVal = d3.min(keywords, d => d.value) || 0;
@@ -28,17 +29,17 @@ export function KeywordCloud({ keywords }: KeywordCloudProps) {
     // 2. 폰트 사이즈 스케일 생성 (20px에서 80px 사이로 자동 조절)
     const fontSizeScale = d3.scaleLinear()
       .domain([minVal, maxVal])
-      .range([20, 70]); // 기존 [25, 85]에서 조정
+      .range([Math.min(height/10, 16), Math.min(height/3, 60)]);
 
     const layout = cloud()
-      .size([width, height]) // 변경된 크기 적용
+      .size([width - 40, height - 40]) // 패딩 부여
       .words(keywords.map(d => ({
         text: d.text,
         size: fontSizeScale(d.value)
       })))
-      .padding(10)
+      .padding(5)
       .rotate(() => 0)
-      .font("Impact")
+      .font("Pretendard, sans-serif") // 폰트를 더 깔끔하게 변경 가능
       .fontSize(d => d.size || 10)
       .on("end", draw);
 
@@ -68,8 +69,7 @@ export function KeywordCloud({ keywords }: KeywordCloudProps) {
   }, [keywords]);
 
   return (
-    // [수정 3] 컨테이너의 높이를 내용물에 맞게 유동적으로 변경 (h-full -> h-auto)
-    <div ref={containerRef} className="w-full h-auto flex items-center justify-center overflow-hidden p-4">
+    <div ref={containerRef} className="w-full h-full flex items-center justify-center overflow-hidden">
       <svg
         ref={svgRef}
         // [수정 4] maxHeight 제한을 해제하여 레이아웃 설정대로 다 보이게 함
