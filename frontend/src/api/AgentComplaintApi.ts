@@ -175,7 +175,7 @@ getReroutes: async (params?: any) => {
   // 9. AI 답변 초안 생성
   generateAiDraft: async (id: number, content: string) => {
     // 1. springApi 대신 fetch 사용 (주소 주의: 8000 포트)
-    const response = await fetch(`http://localhost:8000/api/complaints/${id}/generate-draft`, {
+    const response = await fetch(`/api/v2/complaints/${id}/generate-draft`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -196,7 +196,7 @@ getReroutes: async (params?: any) => {
 
   // 10. 채팅 기록 가져오기
   getChatHistory: async (id: number) => {
-    const response = await fetch(`http://localhost:8000/api/complaints/${id}/chat-history`);
+    const response = await fetch(`/api/v2/complaints/${id}/chat-history`);
     if (!response.ok) throw new Error("Failed to fetch chat history");
     return await response.json();
   },

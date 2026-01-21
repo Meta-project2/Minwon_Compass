@@ -66,7 +66,7 @@ class ChatRequest(BaseModel):
 
 
 # --- AI 초안 작성 엔드포인트 ---
-@app.post("/api/complaints/{complaint_id}/generate-draft")
+@app.post("/api/v2/complaints/{complaint_id}/generate-draft")
 async def generate_draft_endpoint(complaint_id: int, request: ChatRequest):
     """
     [AI 초안 작성]
@@ -86,7 +86,7 @@ async def generate_draft_endpoint(complaint_id: int, request: ChatRequest):
         return {"status": "error", "message": str(e)}
 
 # --- 통합 AI 채팅 엔드포인트 ---
-@app.post("/api/complaints/{complaint_id}/ai-chat")
+@app.post("/api/v2/complaints/{complaint_id}/ai-chat")
 async def chat_with_ai(complaint_id: int, request: ChatRequest):
     try:
         # (1) 사용자 질문 저장 (버튼 클릭 등 query가 있을 때만)
@@ -111,7 +111,7 @@ async def chat_with_ai(complaint_id: int, request: ChatRequest):
 
 
 # 2. [신규] 대화 기록 조회 엔드포인트 추가 (파일 맨 아래쪽 등에 추가)
-@app.get("/api/complaints/{complaint_id}/chat-history")
+@app.get("/api/v2/complaints/{complaint_id}/chat-history")
 async def get_chat_history(complaint_id: int):
     """민원별 과거 채팅 기록 조회"""
     try:

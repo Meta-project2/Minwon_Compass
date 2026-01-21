@@ -279,7 +279,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
       }
 
       // 2. Python AI 서버 호출
-      const response = await fetch(`http://localhost:8000/api/complaints/${numericId}/ai-chat`, {
+      const response = await fetch(`/api/v2/complaints/${numericId}/ai-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -512,7 +512,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                                             <span className="text-slate-500"></span>
                                           )}
                                         </div></div>
-                                      <div><span className="text-muted-foreground block mb-1">위치</span> <div><span className="text-sm text-muted-foreground b">{h.locationHint}</span></div></div>
+                                      <div><span className="text-muted-foreground block mb-1">위치</span> <div><span className="text-sm text-muted-foreground b">{complaint.address}</span></div></div>
                                     </div>
                                   </div>
                                 )}
