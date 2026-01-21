@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request
 from openai import OpenAI
 from pydantic import BaseModel
-from app.services import llm_service
 from app import database
 from app.services.llm_service import LLMService
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,6 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+my_ai_bot = LLMService()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def get_embedding(text: str):
@@ -64,23 +64,60 @@ class ChatRequest(BaseModel):
     query: str = None
     action: str = "chat"
 
+
+# --- AI 초안 작성 엔드포인트 ---
+@app.post("/api/complaints/{complaint_id}/generate-draft")
+async def generate_draft_endpoint(complaint_id: int, request: ChatRequest):
+    """
+    [AI 초안 작성]
+    request.query에는 현재 민원 본문(body)이 들어옵니다.
+    """
+    try:
+        # request.query가 비어있으면 DB에서 직접 조회하는 로직을 추가해도 됨
+        # 여기서는 프론트가 보내준다고 가정
+        user_complaint_body = request.query
+
+        result_text = await my_ai_bot.generate_draft(complaint_id, user_complaint_body)
+
+        return {"status": "success", "data": result_text}
+
+    except Exception as e:
+        print(f"Error generating draft: {e}")
+        return {"status": "error", "message": str(e)}
+
 # --- 통합 AI 채팅 엔드포인트 ---
 @app.post("/api/complaints/{complaint_id}/ai-chat")
 async def chat_with_ai(complaint_id: int, request: ChatRequest):
-    """
-    [통합 AI 처리]
-    1. '관련 규정 찾아줘' 버튼 클릭 -> action='search_law', query=null
-    2. 채팅창 입력 -> action='chat', query='사용자 입력값'
-    """
     try:
-        result = await llm_service.generate_response(
+        # (1) 사용자 질문 저장 (버튼 클릭 등 query가 있을 때만)
+        if request.query:
+            database.save_chat_log(complaint_id, "user", request.query)
+
+        # (2) AI 응답 생성
+        result = await my_ai_bot.generate_response(
             complaint_id=complaint_id,
             user_query=request.query,
             action=request.action
         )
+
+        # (3) AI 답변 저장
+        if result and "answer" in result:
+            database.save_chat_log(complaint_id, "assistant", result["answer"])
+
         return {"status": "success", "data": result}
     except Exception as e:
         print(f"Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+# 2. [신규] 대화 기록 조회 엔드포인트 추가 (파일 맨 아래쪽 등에 추가)
+@app.get("/api/complaints/{complaint_id}/chat-history")
+async def get_chat_history(complaint_id: int):
+    """민원별 과거 채팅 기록 조회"""
+    try:
+        logs = database.get_chat_logs(complaint_id)
+        return {"status": "success", "data": logs}
+    except Exception as e:
         return {"status": "error", "message": str(e)}
     
 # --- 요청 데이터 모델 ---

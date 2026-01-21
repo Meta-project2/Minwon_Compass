@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Search, X, User, UserCheck, Eye, Loader2, Sparkles,
   ChevronLeft, ChevronRight, AlertCircle, FileText
@@ -44,21 +44,47 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
   const [loading, setLoading] = useState(true);
 
   // 페이징 상태
-  const [currentPage, setCurrentPage] = useState(1);
+  // const [currentPage, setCurrentPage] = useState(1);
+  // 세션 스토리지에 저장된 값이 있으면 그 값을 쓰고, 없으면 1 사용
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = sessionStorage.getItem('complaint_page_num');
+    return savedPage ? Number(savedPage) : 1;
+  });
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const pageSize = 10;
 
   // 필터 상태
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [includeIncidents, setIncludeIncidents] = useState(false);
-  const [tagsOnly, setTagsOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(() => {
+    return sessionStorage.getItem('complaint_search') || '';
+  });
 
+  // (2) 상태 필터
+  const [selectedStatus, setSelectedStatus] = useState<string>(() => {
+    return sessionStorage.getItem('complaint_status') || 'all';
+  });
+
+  // (3) 체크박스들
+  const [includeIncidents, setIncludeIncidents] = useState(() => {
+    return sessionStorage.getItem('complaint_incidents') === 'true';
+  });
+  const [tagsOnly, setTagsOnly] = useState(() => {
+    return sessionStorage.getItem('complaint_tags') === 'true';
+  });
   // 선택된 민원 (우측 미리보기용)
   const [selectedComplaintId, setSelectedComplaintId] = useState<number | null>(null);
 
+  const isFirstRender = useRef(true);
+
+  // 2. 필터 변경 감지 (페이지 1로 리셋)
   useEffect(() => {
+    // 첫 로딩 시에는 이 로직을 건너뜁니다 (세션 스토리지 값 유지 위해)
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    // 사용자가 진짜 필터를 바꿨을 때만 실행
     setCurrentPage(1);
     fetchData(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,6 +93,29 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
   useEffect(() => {
     fetchData(currentPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  // 검색어 저장
+  useEffect(() => {
+    sessionStorage.setItem('complaint_search', searchQuery);
+  }, [searchQuery]);
+
+  // 상태 필터 저장
+  useEffect(() => {
+    sessionStorage.setItem('complaint_status', selectedStatus);
+  }, [selectedStatus]);
+
+  // 체크박스 저장
+  useEffect(() => {
+    sessionStorage.setItem('complaint_incidents', String(includeIncidents));
+  }, [includeIncidents]);
+
+  useEffect(() => {
+    sessionStorage.setItem('complaint_tags', String(tagsOnly));
+  }, [tagsOnly]);
+
+  useEffect(() => {
+  sessionStorage.setItem('complaint_page_num', String(currentPage));
   }, [currentPage]);
 
   const fetchData = async (page: number, forceKeyword?: string) => {
@@ -91,7 +140,7 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
       console.log("받아온 데이터 타입:", typeof data);
       console.log("받아온 데이터 구조:", data);
       console.log("content는 배열인가?:", Array.isArray(data?.content));
-      
+
       if (data && Array.isArray(data.content)) {
         setComplaints(data.content);
         setTotalPages(data.totalPages);
@@ -214,7 +263,7 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                 <SelectContent>
                   <SelectItem value="all">전체 상태</SelectItem>
                   <SelectItem value="RECEIVED">접수</SelectItem>
-                  <SelectItem value="NORMALIZED">정규화</SelectItem>
+                  <SelectItem value="NORMALIZED">이관 요청</SelectItem>
                   <SelectItem value="IN_PROGRESS">처리중</SelectItem>
                   <SelectItem value="CLOSED">종결</SelectItem>
                 </SelectContent>
@@ -263,7 +312,7 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                 <TableHeader className="sticky top-0 bg-slate-300 border-b-2 z-10">
                   <TableRow>
                     <TableHead className="w-[120px] text-center font-bold text-slate-900 border-r border-slate-400">민원번호</TableHead>
-                    <TableHead className="text-center font-bold text-slate-900 border-r border-slate-400">제목</TableHead>
+                    <TableHead className="w-[547px] text-center font-bold text-slate-900 border-r border-slate-400">제목</TableHead>
                     <TableHead className="w-[160px] text-center font-bold text-slate-900 border-r border-slate-400">접수일시</TableHead>
                     <TableHead className="w-[100px] text-center font-bold text-slate-900 border-r border-slate-400">상태</TableHead>
                     <TableHead className="w-[120px] text-center font-bold text-slate-900 border-r border-slate-400">사건</TableHead>

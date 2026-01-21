@@ -101,6 +101,13 @@ export interface ComplaintRerouteResponse {
   category: string;
 }
 
+export interface DepartmentDto {
+  id: number;
+  name: string;
+  category: string;
+  parentId?: number | null; 
+}
+
 export const AgentComplaintApi = {
 
   // 0. 내 정보 가져오기
@@ -164,4 +171,39 @@ getReroutes: async (params?: any) => {
     await springApi.post("/api/agent/logout");
   },
 
+
+  // 9. AI 답변 초안 생성
+  generateAiDraft: async (id: number, content: string) => {
+    // 1. springApi 대신 fetch 사용 (주소 주의: 8000 포트)
+    const response = await fetch(`http://localhost:8000/api/complaints/${id}/generate-draft`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: content, // 민원 본문
+        action: "draft",
+      }),
+    });
+
+    // 2. 응답 JSON 변환
+    if (!response.ok) {
+      throw new Error(`AI Server Error: ${response.statusText}`);
+    }
+    
+    return await response.json(); // { status: "success", data: "..." } 반환
+  },
+
+  // 10. 채팅 기록 가져오기
+  getChatHistory: async (id: number) => {
+    const response = await fetch(`http://localhost:8000/api/complaints/${id}/chat-history`);
+    if (!response.ok) throw new Error("Failed to fetch chat history");
+    return await response.json();
+  },
+
+  // 11. 모든 부서 가져오기
+  getDepartments: async () => {
+    const response = await springApi.get<DepartmentDto[]>("/api/agent/departments");
+    return response.data;
+  },
 };
