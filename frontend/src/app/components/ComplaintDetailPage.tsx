@@ -469,7 +469,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
             </div>
 
             <div className="flex-1 overflow-hidden bg-gray-50/30">
-              <TabsContent value="normalization" className="m-0 h-full p-6 space-y-4">
+              <TabsContent value="normalization" className="m-0 h-full p-6 space-y-4 overflow-y-auto">
                 {complaint.history.map((h) => {
                   const isSelected = selectedHistoryId === h.id;
                   const isParent = h.parent;
@@ -746,8 +746,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
           onExpand={() => setIsPanelOpen(true)}
           className="bg-background border-l flex flex-col" // flex flex-col 스타일 직접 추가
         >
-          <div className="flex flex-col h-full">
-
+          <div className="flex flex-col h-full overflow-hidden">
             {/* Header */}
             <div className="h-14 px-4 border-b flex items-center justify-between bg-card flex-none">
               <span className="font-semibold text-sm">답변 및 처리</span>
@@ -797,7 +796,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                 disabled={!isEditable}
               />
             </div> */}
-            <div className="flex-1 p-4 min-h-0 flex flex-col">
+            <div className="flex-1 p-4 min-h-0 flex flex-col overflow-y-auto">
               <div className="flex items-center justify-between mb-2 flex-none">
                 <label className="text-sm font-medium text-muted-foreground">내용</label>
 
@@ -821,7 +820,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
               </div>
 
               {/* [수정] Textarea를 div.relative로 감싸서 로딩 오버레이 추가 */}
-              <div className="relative flex-1 flex flex-col">
+              <div className="relative flex-1 flex flex-col min-h-[300px]">
                 <Textarea
                   placeholder={isEditable ? "답변을 입력하세요." : "작성 권한이 없습니다."}
                   className="flex-1 resize-none p-4 text-sm focus-visible:ring-1"
