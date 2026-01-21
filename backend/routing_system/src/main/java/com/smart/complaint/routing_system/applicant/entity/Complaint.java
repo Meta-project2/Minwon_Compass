@@ -17,6 +17,7 @@ import java.util.List;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "complaints") // [중요] DB 테이블 이름과 정확히 일치해야 함
 @AllArgsConstructor

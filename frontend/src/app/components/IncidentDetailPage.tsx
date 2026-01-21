@@ -2,9 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { 
   ArrowLeft, Calendar, Users, Clock, Eye, AlertCircle, 
-  Search, ChevronLeft, ChevronRight, Loader2, RotateCcw,
-  Pencil, Check, X, MoveRight, FolderPlus,
-  Reply, AlertTriangle
+  Search, ChevronLeft, ChevronRight, Loader2,
+  Pencil, Check, X, FolderPlus, Reply, AlertTriangle
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -27,29 +26,28 @@ interface IncidentDetailPageProps {
   onBack: () => void;
 }
 
-const ITEMS_PER_PAGE = 8; // 6개 고정
+const ITEMS_PER_PAGE = 8; 
 
 const cleanTitle = (title: string) => title?.replace(/\[.*?\]/g, '').trim() || "";
 
 const statusMap: Record<string, { label: string; color: string }> = {
-  OPEN: { label: '발생', color: 'bg-blue-100 text-blue-700' },
-  IN_PROGRESS: { label: '대응중', color: 'bg-yellow-100 text-yellow-800' },
-  RESOLVED: { label: '해결', color: 'bg-green-100 text-green-800' },
-  CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-700' },
+  OPEN: { label: '대응중', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+  CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-300' },
 };
 
+// [수정] 민원함과 동일한 스타일 적용
 const complaintStatusMap: Record<string, { label: string; color: string }> = {
-  RECEIVED: { label: '접수', color: 'bg-blue-50 text-blue-700 border-blue-100' },
-  PROCESSING: { label: '처리중', color: 'bg-yellow-50 text-yellow-700 border-yellow-100' },
-  DONE: { label: '완료', color: 'bg-green-50 text-green-700 border-green-100' },
-  CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-200' },
+  RECEIVED: { label: '접수', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+  RECOMMENDED: { label: '이관 요청', color: 'bg-purple-100 text-purple-700 border-purple-300' },
+  IN_PROGRESS: { label: '처리중', color: 'bg-amber-100 text-amber-700 border-amber-300' },
+  RESOLVED: { label: '답변완료', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+  CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-300' },
 };
 
 export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPageProps) {
   const [incidentData, setIncidentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // --- 필터 및 페이지네이션 상태 ---
   const [complaintPage, setComplaintPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
@@ -57,12 +55,10 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
 
   const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(null);
 
-  // --- [상태 관리] 제목 편집 및 민원 선택 ---
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // --- [민원 이동 모달 상태] ---
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [targetSearchQuery, setTargetSearchQuery] = useState("");
   const [targetCandidates, setTargetCandidates] = useState<any[]>([]);
@@ -70,7 +66,6 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
   const [modalPage, setModalPage] = useState(1);
   const [modalTotalPages, setModalTotalPages] = useState(1);
 
-  // --- 커스텀 Alert/Confirm 대화상자 상태 ---
   const [dialogConfig, setDialogConfig] = useState<{
     isOpen: boolean;
     type: 'alert' | 'confirm';
@@ -79,7 +74,6 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
     onConfirm?: () => void;
   }>({ isOpen: false, type: 'alert', title: '', message: '' });
 
-  // [수정] 데이터 조회 함수
   const fetchDetail = useCallback(async () => {
     try {
       if (!incidentData) setLoading(true); 
@@ -89,9 +83,22 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
       if (!isEditingTitle) {
         setTempTitle(cleanTitle(response.data.title));
       }
-    };
-    if (incidentId) fetchDetail();
-  }, [incidentId]);
+      return response.data; 
+    } catch (error) {
+      console.error("데이터 조회 실패");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [incidentId, incidentData, isEditingTitle]);
+
+  useEffect(() => {
+    fetchDetail();
+  }, [fetchDetail]);
+
+  const showDialog = (type: 'alert' | 'confirm', title: string, message: string, onConfirm?: () => void) => {
+    setDialogConfig({ isOpen: true, type, title, message, onConfirm });
+  };
 
   const handleSaveTitle = async () => {
     try {
@@ -103,7 +110,6 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
     }
   };
 
-  // 모달 열기 (검색어 초기화 및 전체 조회)
   const openMoveModal = () => {
     setIsMoveModalOpen(true);
     setTargetSearchQuery(""); 
@@ -111,9 +117,8 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
     searchTargetIncidents("", 1); 
   };
 
-  // [수정 26-01-20] 모달 검색 실행 (버그 수정: 페이지 1로 리셋)
   const handleModalSearch = () => {
-    setModalPage(1); // 1페이지로 강제 초기화 (이게 핵심!)
+    setModalPage(1);
     searchTargetIncidents(targetSearchQuery, 1);
   };
 
@@ -174,7 +179,6 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
 
         setIsMoveModalOpen(false);
         setSelectedIds([]);
-        
         const updatedData = await fetchDetail(); 
         checkEmptyAndExit(updatedData);
 
@@ -198,7 +202,6 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
         });
 
         setSelectedIds([]);
-        
         const updatedData = await fetchDetail();
         
         if (updatedData && updatedData.complaintCount === 0) {
@@ -298,9 +301,15 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
               <Pencil className="h-3.5 w-3.5 text-slate-300 opacity-0 group-hover:opacity-100" />
             </div>
           )}
-          <div className="flex items-center gap-1.5 h-4 mt-0.5">
-            <span className="font-mono font-bold text-[10px] text-slate-500 bg-slate-100 px-1.5 rounded border border-slate-200">{incidentData.id}</span>
-            <Badge className={`${statusMap[incidentData.status]?.color} text-[9px] px-1 py-0 border-none h-3.5`}>{statusMap[incidentData.status]?.label}</Badge>
+          
+          {/* [수정] 헤더 라벨: Badge 적용 */}
+          <div className="flex items-center gap-1.5 mt-1">
+            <Badge variant="secondary" className="font-mono text-xs px-2 py-0.5">
+              {incidentData.id}
+            </Badge>
+            <Badge className={`${statusMap[incidentData.status]?.color} text-[10px] px-2 py-0.5 border`}>
+              {statusMap[incidentData.status]?.label}
+            </Badge>
           </div>
         </div>
       </div>
@@ -337,7 +346,7 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
           </div>
 
           {/* 테이블 */}
-          <Card className="flex flex-col border-none shadow-sm bg-white rounded-md overflow-hidden">
+          <Card className="flex-1 flex flex-col border-none shadow-sm bg-white rounded-md overflow-hidden">
             <Table>
               <TableHeader className="bg-slate-300 border-b-2 sticky top-0 z-10">
                 <TableRow>
@@ -355,9 +364,27 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
                     <TableCell className="text-center py-0"><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => setSelectedIds(prev => prev.includes(c.id) ? prev.filter(i => i !== c.id) : [...prev, c.id])} /></TableCell>
                     <TableCell className="text-xs font-mono text-center text-slate-500">{c.id.slice(0,8)}</TableCell>
                     <TableCell className="font-medium text-slate-700 truncate max-w-[400px] text-left pl-6" title={c.title}>{c.title}</TableCell>
-                    <TableCell className="text-center p-1"><Badge variant="secondary" className={`text-[10px] px-2 py-0.5 border ${complaintStatusMap[c.status]?.color}`}>{complaintStatusMap[c.status]?.label || c.status}</Badge></TableCell>
+                    
+                    {/* [수정] 상태 배지: 민원함과 동일한 스타일 적용 (크기/색상 통일) */}
+                    <TableCell className="text-center p-1">
+                      <div className="flex justify-center items-center">
+                        <Badge className={`${complaintStatusMap[c.status]?.color || 'bg-gray-100'} border px-2.5 py-0.5 text-xs font-medium`}>
+                          {complaintStatusMap[c.status]?.label || c.status}
+                        </Badge>
+                      </div>
+                    </TableCell>
+
+                    {/* [수정] 접수일시: 날짜 표시 복구 */}
                     <TableCell className="text-center text-xs text-slate-500">{c.receivedAt}</TableCell>
-                    <TableCell className="text-center"><Button size="sm" variant="ghost" className="h-7 text-xs border bg-white" onClick={() => setSelectedComplaintId(c.id)}><Eye className="h-3 w-3 mr-1" /> 보기</Button></TableCell>
+                    
+                    {/* [수정] 관리 버튼: 보기 버튼 복구 */}
+                    <TableCell className="text-center">
+                      <div className="flex justify-center">
+                        <Button size="sm" variant="ghost" className="h-7 text-xs border bg-white" onClick={() => setSelectedComplaintId(c.id)}>
+                          <Eye className="h-3 w-3 mr-1" /> 보기
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 )) : <TableRow><TableCell colSpan={6} className="h-40 text-center text-slate-400">데이터가 없습니다.</TableCell></TableRow>}
                 {Array.from({ length: Math.max(0, ITEMS_PER_PAGE - visibleComplaints.length) }).map((_, i) => (<TableRow key={`empty-${i}`} className="h-[50px] border-b border-slate-50"><TableCell colSpan={6} /></TableRow>))}
@@ -399,9 +426,9 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
                   placeholder="이동할 사건 그룹의 제목을 입력하세요..." 
                   value={targetSearchQuery}
                   onChange={(e) => setTargetSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleModalSearch()} // [수정 26-01-20] 검색 실행 시 페이지 리셋
+                  onKeyDown={(e) => e.key === 'Enter' && handleModalSearch()}
                 />
-                <Button onClick={handleModalSearch} disabled={isSearchingTarget}> {/* [수정 26-01-20] 검색 실행 시 페이지 리셋 */}
+                <Button onClick={handleModalSearch} disabled={isSearchingTarget}>
                   {isSearchingTarget ? <Loader2 className="animate-spin h-4 w-4" /> : "검색"}
                 </Button>
               </div>
@@ -464,7 +491,6 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
                   취소
                 </Button>
               )}
-              
               <Button 
                 onClick={() => {
                   setDialogConfig({ ...dialogConfig, isOpen: false });

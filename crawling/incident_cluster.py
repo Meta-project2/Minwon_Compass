@@ -13,7 +13,7 @@ from datetime import datetime
 # ==========================================
 DB_CONFIG = {
     "host": "localhost",
-    "dbname": "complaint_db",
+    "dbname": "postgres",
     "user": "postgres",
     "password": "0000", 
     "port": "5432"

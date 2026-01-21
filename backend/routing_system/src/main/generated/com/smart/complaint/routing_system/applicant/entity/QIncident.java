@@ -7,6 +7,7 @@ import com.querydsl.core.types.dsl.*;
 import com.querydsl.core.types.PathMetadata;
 import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
+import com.querydsl.core.types.dsl.PathInits;
 
 
 /**
@@ -26,6 +27,8 @@ public class QIncident extends EntityPathBase<Incident> {
     public final DateTimePath<java.time.LocalDateTime> closedAt = createDateTime("closedAt", java.time.LocalDateTime.class);
 
     public final NumberPath<Integer> complaintCount = createNumber("complaintCount", Integer.class);
+
+    public final ListPath<Complaint, QComplaint> complaints = this.<Complaint, QComplaint>createList("complaints", Complaint.class, QComplaint.class, PathInits.DIRECT2);
 
     public final NumberPath<Integer> districtId = createNumber("districtId", Integer.class);
 

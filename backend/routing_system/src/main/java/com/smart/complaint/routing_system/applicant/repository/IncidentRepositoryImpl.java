@@ -40,7 +40,7 @@ public class IncidentRepositoryImpl implements IncidentRepositoryCustom {
                         eqStatus(status)
                 )
                 .groupBy(incident.id)
-                .having(complaint.count().goe(2)) // [수정] 5개 이상인 군집만 필터링
+                .having(complaint.count().goe(3)) // [수정] n개 이상인 군집만 필터링
                 .orderBy(complaint.receivedAt.max().desc()) // 최신 사건 순 정렬
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -58,7 +58,7 @@ public class IncidentRepositoryImpl implements IncidentRepositoryCustom {
                                 JPAExpressions.select(complaint.incident.id)
                                         .from(complaint)
                                         .groupBy(complaint.incident.id)
-                                        .having(complaint.count().goe(2))
+                                        .having(complaint.count().goe(3))
                         )
                 )
                 .fetchOne();

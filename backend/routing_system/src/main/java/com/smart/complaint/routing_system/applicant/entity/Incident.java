@@ -8,10 +8,12 @@ import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "incidents")
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
@@ -37,6 +39,10 @@ public class Incident {
     @Column(columnDefinition = "incident_status")
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private IncidentStatus status;
+
+    // [핵심 해결] 이 부분이 있어야 incident.getComplaints()를 쓸 수 있습니다.
+    @OneToMany(mappedBy = "incident")
+    private List<Complaint> complaints;
 
     @Column(name = "district_id")
     private Integer districtId;
@@ -65,6 +71,11 @@ public class Incident {
         this.title = title;
     }
 
+    // [수정] 이 편의 메서드가 없어서 에러가 났습니다. 추가해주세요.
+    public void updateStatus(IncidentStatus newStatus) {
+        this.status = newStatus;
+    }
+    
     // [수정] 민원 숫자를 갱신하는 기능 (이동 시 자동 호출됨)
     public void updateComplaintCount(int count) {
         this.complaintCount = count;

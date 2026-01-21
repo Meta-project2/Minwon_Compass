@@ -344,7 +344,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                 .fetch();
         }
 
-        @Override
         public List<ComplaintHeatMap> getAllComplaintsWithLatLon(Long id) {
                 return List.of();
         }
