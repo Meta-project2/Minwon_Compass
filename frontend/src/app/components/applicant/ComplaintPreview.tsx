@@ -93,7 +93,7 @@ export function ComplaintPreview({ data, onClose }: ComplaintPreviewProps) {
                 <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{data.location}</p>
               </div>
               <div>
-                <KakaoMap address={data.location} />
+                <KakaoMap address={data.location} onViewDetail={() => {}} />
               </div>
             </div>
           </div>

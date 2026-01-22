@@ -13,7 +13,6 @@ import json
 import uuid
 import requests
 import textwrap
-from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
 from sqlalchemy import Integer, create_engine, Column, BigInteger, String, Text, DateTime
@@ -141,7 +140,7 @@ async def preprocess_complaint(req: ComplaintRequest, request: Request):
         api_key = os.getenv("LANGFLOW_KEY")
         # url = "http://complaint-langflow:7860/api/v1/run/59369f82-0d62-414e-bd20-9bc5f9aa8a50"  # The complete API endpoint URL for this flow
         # 서버 전용 langflow api url
-        url = "http://complaint-langflow:7860/api/v1/run/f35aeaf3-31a1-4e73-a235-f1ad3d60553f"
+        url = "http://complaint-langflow:7860/api/v1/run/86111065-2582-4a9f-a41c-ce2d8800d198"
 
         for i in req:
             print(i)
@@ -159,10 +158,10 @@ async def preprocess_complaint(req: ComplaintRequest, request: Request):
                 #     "input_value": req.body
                 # }
                 # 서버 전용
-                "TITLE-n1ba7": {
+                "TITLE-srPg5": {
                     "input_value": req.title
                 },
-                "BODY-5L6tb": {
+                "BODY-hfM2I": {
                     "input_value": req.body
                 }
             }

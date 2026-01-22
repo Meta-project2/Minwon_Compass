@@ -6,7 +6,7 @@ import re
 from tqdm import tqdm
 
 # ================= 설정 섹션 =================
-API_KEY = "AIzaSyC2q8-D8EPeJJCHKFQq7Qs-L3Q5mKjx1uE"
+API_KEY = "api_key"
 genai.configure(api_key=API_KEY)
 # JSON 모드 활성화로 안정적인 파싱 보장
 model = genai.GenerativeModel('gemini-2.0-flash', generation_config={"response_mime_type": "application/json"})

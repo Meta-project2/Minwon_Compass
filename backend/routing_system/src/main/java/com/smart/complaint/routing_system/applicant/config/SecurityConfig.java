@@ -20,7 +20,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.smart.complaint.routing_system.applicant.service.CustomOAuth2UserService;
 import com.smart.complaint.routing_system.applicant.service.jwt.JwtAuthenticationFilter;
 import com.smart.complaint.routing_system.applicant.service.jwt.JwtTokenProvider;
-import com.smart.complaint.routing_system.applicant.service.jwt.OAuth2Service;
 import com.smart.complaint.routing_system.applicant.service.jwt.OAuth2SuccessHandler;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -51,20 +50,19 @@ public class SecurityConfig {
                                                 "/favicon.ico");
         }
 
-        // [1] 공무원 전용 (세션 방식)
+        // 공무원 페이지용
         @Bean
         @Order(1)
         public SecurityFilterChain agentFilterChain(HttpSecurity http) throws Exception {
                 http
                                 .securityMatcher("/api/agent/**", "/api/admin/**")
                                 .csrf(csrf -> csrf.disable())
-                                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ★ 통일
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers("/api/agent/login").permitAll()
                                                 .anyRequest().hasAnyRole("AGENT", "ADMIN"))
-                                // ★ 중요: 인증 실패 시 리다이렉트 대신 401 응답 (로그에 /login 찍히는 현상 방지)
                                 .exceptionHandling(ex -> ex
                                                 .authenticationEntryPoint((request, response, authException) -> response
                                                                 .sendError(HttpServletResponse.SC_UNAUTHORIZED,
@@ -73,7 +71,7 @@ public class SecurityConfig {
                 return http.build();
         }
 
-        // [2] 시민/공용 (JWT 방식)
+        // 시민용
         @Bean
         @Order(2)
         public SecurityFilterChain publicFilterChain(HttpSecurity http) throws Exception {
@@ -116,7 +114,7 @@ public class SecurityConfig {
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
                 configuration.addAllowedOrigin("http://localhost:5173");
-                configuration.addAllowedOrigin("http://127.0.0.1:5173"); // ★ 127.0.0.1 도 추가 권장
+                configuration.addAllowedOrigin("http://127.0.0.1:5173");
                 configuration.addAllowedMethod("*");
                 configuration.addAllowedHeader("*");
                 configuration.setAllowCredentials(true);

@@ -495,7 +495,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{h.body}</p>
                               </div>
                               <div className="border-l pl-6">
-                                <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center"><Sparkles className="w-3 h-3 mr-1" /> AI 정규화 분석</div>
+                                <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center"><Sparkles className="w-3 h-3 mr-1" /> AI 요약</div>
                                 {!h.neutralSummary ? (
                                   <div className="text-sm text-muted-foreground">분석 데이터 없음</div>
                                 ) : (

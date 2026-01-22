@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ReactNode } from 'react';
 import Swal from 'sweetalert2';
 import { useAuthGuard } from './useAuthCheck';
-import logoImg from '@/lib/minwon.png';
+import logoImg from '@/lib/image.png';
 
 interface ToolbarProps {          // 로그인 상태 추가
   subTitle?: string;
@@ -106,20 +106,23 @@ export function Toolbar({ subTitle }: ToolbarProps) {
     <nav className="shrink-0 bg-gradient-to-r from-blue-800 via-blue-700 to-blue-800 py-4 shadow-sm z-50">
       <div className="max-w-[1700px] mx-auto px-10">
         <div className="flex items-center justify-between">
-
-          <img src={logoImg} alt="파일" className="h-10 w-10" />
-
           {/* 좌측: 로고 및 동적 부제목 (1/4 영역) */}
-          <div className="w-1/4">
-            <h1
-              className="text-xl font-extrabold text-white tracking-tight cursor-pointer select-none"
-              onClick={() => navigate('/applicant/main')}
-            >
-              정부 민원 포털
-            </h1>
-            <p className="mt-1 text-[11px] text-blue-100/90 font-medium">
-              {subTitle || '빠르고 투명한 민원 처리 안내'}
-            </p>
+          <div className="w-1/4 flex items-center gap-3">
+            {/* 로고 이미지 */}
+            <img src={logoImg} alt="로고" className="h-10 w-10 shrink-0" />
+
+            {/* 텍스트 묶음: 제목과 부제목을 위아래로 배치 */}
+            <div className="flex flex-col justify-center">
+              <h1
+                className="text-xl font-extrabold text-white tracking-tight cursor-pointer select-none leading-tight"
+                onClick={() => navigate('/applicant/main')}
+              >
+                정부 민원 포털
+              </h1>
+              <p className="text-[11px] text-blue-100/90 font-medium leading-normal">
+                {subTitle || '빠르고 투명한 민원 처리 안내'}
+              </p>
+            </div>
           </div>
 
           {/* 중앙: 주요 서비스 버튼 (1/2 영역으로 중앙 정렬 강제) */}

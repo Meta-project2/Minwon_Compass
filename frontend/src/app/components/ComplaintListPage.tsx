@@ -487,7 +487,9 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                 </div>
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-slate-500 shrink-0">위치</span>
-                  <span className="text-sm text-muted-foreground">{selectedComplaintData.addressText || '위치 정보 없음'}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {(selectedComplaintData as any).address ?? selectedComplaintData.addressText ?? '위치 정보 없음'}
+                  </span>
                 </div>
               </CardContent>
             </Card>

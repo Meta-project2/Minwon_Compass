@@ -34,7 +34,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String token = tokenProvider.createJwtToken(name, id);
 
         // 프론트엔드(8000포트)로 토큰을 쿼리 스트링에 담아 리다이렉트
-        String targetUrl = UriComponentsBuilder.fromUriString("http://34.158.210.224/applicant/login-success")
+        String targetUrl = UriComponentsBuilder.fromUriString("http://34.50.48.38/applicant/login-success")
                 .queryParam("token", token)
                 .build().toUriString();
 
