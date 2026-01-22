@@ -2,7 +2,6 @@ package com.smart.complaint.routing_system.applicant.entity;
 
 import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
 
-import com.smart.complaint.routing_system.applicant.domain.Tag;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

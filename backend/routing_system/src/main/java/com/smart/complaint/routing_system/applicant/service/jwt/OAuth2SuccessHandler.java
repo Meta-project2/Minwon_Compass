@@ -30,7 +30,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String name = oAuth2User.getAttribute("name");
         String token = tokenProvider.createJwtToken(name, id);
 
-        String targetUrl = UriComponentsBuilder.fromUriString("http://34.50.48.38/applicant/login-success")
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl) // .env의 FRONTEND_URL 값
+                .path("/applicant/login-success") // 경로 추가 (자동으로 / 처리)
                 .queryParam("token", token)
                 .build().toUriString();
 
