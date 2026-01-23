@@ -6,7 +6,6 @@ import seaborn as sns
 import json
 from sklearn.manifold import TSNE
 
-# DB 설정
 DB_CONFIG = { "host": "localhost", "dbname": "postgres", "user": "postgres", "password": "0000", "port": "5432" }
 
 import platform
@@ -44,15 +43,12 @@ def plot_final_polished():
     
     print("🎨 t-SNE 좌표 계산 중... (n_iter 옵션 제거)")
     matrix = np.vstack(df['vec'].values)
-    
-    # [수정] n_iter=1000 삭제
     tsne = TSNE(n_components=2, random_state=42, perplexity=40)
     visual_data = tsne.fit_transform(matrix)
     
     df['x'] = visual_data[:, 0]
     df['y'] = visual_data[:, 1]
-    
-    # 상위 20개 군집 강조 전략
+
     top_n = 20
     top_clusters = df['incident_id'].value_counts().nlargest(top_n).index
     
@@ -65,12 +61,8 @@ def plot_final_polished():
     df = df.sort_values('Label', ascending=(df['Label'].iloc[0] == '기타 (소규모 군집)'))
 
     plt.figure(figsize=(12, 10))
-    
-    # 기타(회색) 그리기
     others = df[df['Label'] == "기타 (소규모 군집)"]
     plt.scatter(others['x'], others['y'], c='#e0e0e0', s=30, label='기타 (소규모)', alpha=0.5)
-    
-    # 메인 군집(컬러) 그리기
     main = df[df['Label'] != "기타 (소규모 군집)"]
     sns.scatterplot(
         data=main, x='x', y='y', 

@@ -36,6 +36,7 @@ const statusMap: Record<string, { label: string; color: string }> = {
   IN_PROGRESS: { label: '처리중', color: 'bg-amber-100 text-amber-700 border-amber-200' },
   RESOLVED: { label: '답변완료', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-300' },
+  CANCELED: { label: '취하', color: 'bg-red-100 text-pink-600 border-red-300' }
 };
 
 export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
@@ -340,12 +341,16 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
 
                         <TableCell className="text-center">
                           {c.managerName ? (
-                            <div className="flex items-center justify-center gap-1.5">
+                            <div className={`flex items-center justify-center gap-1.5 ${c.status === "CANCELED" ? "opacity-50" : ""}`}>
                               <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center border">
                                 <User className="h-3 w-3 text-slate-500" />
                               </div>
-                              <span className="text-sm font-medium text-slate-700">{c.managerName}</span>
+                              <span className={`text-sm font-medium ${c.status === "CANCELED" ? "text-slate-400 line-through" : "text-slate-700"}`}>
+                                {c.managerName}
+                              </span>
                             </div>
+                          ) : c.status === "CANCELED" ? (
+                            <span className="text-muted-foreground text-xs">-</span>
                           ) : (
                             <Button
                               size="sm"

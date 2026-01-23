@@ -18,7 +18,6 @@ EMBED_MODEL = "mxbai-embed-large"
 INPUT_CSV = "강동구_structured.csv" 
 
 def get_embedding(text):
-    """Ollama를 통한 벡터 생성 (search_text 기준)"""
     if not text or pd.isna(text):
         return None
     try:

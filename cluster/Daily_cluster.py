@@ -22,14 +22,16 @@ warnings.filterwarnings("ignore")
 # ==========================================
 
 DB_CONFIG = {
-    "host": "localhost",
+    "host": "0.0.0.0",
     "dbname": "postgres",
     "user": "postgres",
     "password": "0000",
     "port": "5432"
 }
 
-CHECK_INTERVAL = 10  # 실행 주기 (초)
+# [설정] 실행 주기 및 임계값
+CHECK_INTERVAL = 30         # 실행 주기 (초)
+HYBRID_THRESHOLD = 0.65     # 하이브리드 검색 합격 점수 (0~1 사이, 높을수록 엄격)
 
 # 로깅 설정
 logging.basicConfig(
@@ -57,7 +59,7 @@ def clean_text_for_title(text):
     return ' '.join(text.split())
 
 # ==========================================
-# 2. 거리 계산 로직
+# 2. 거리 계산 로직 (신규 군집 생성용)
 # ==========================================
 
 def calculate_hybrid_distance(embeddings, keywords_list, alpha=0.6):
@@ -79,103 +81,129 @@ def calculate_hybrid_distance(embeddings, keywords_list, alpha=0.6):
     dist[dist < 0] = 0
     return dist
 
-def calculate_text_distance(texts):
-    n = len(texts)
-    dist_matrix = np.zeros((n, n))
-    for i in range(n):
-        for j in range(i, n):
-            if i == j: dist_matrix[i][j] = 0.0; continue
-            sim = SequenceMatcher(None, texts[i], texts[j]).ratio()
-            dist_matrix[i][j] = dist_matrix[j][i] = 1.0 - sim
-    return dist_matrix
-
 # ==========================================
-# 3. 핵심 로직: 병합 & 신규 생성
+# 3. 핵심 로직: 하이브리드 검색 병합 (팀원 코드 적용)
 # ==========================================
 
-def try_merge_to_existing_incidents(conn, new_df):
-    """기존 사건과 유사하면 병합 (CLOSED된 사건이라도 유사하면 병합 후 OPEN으로 부활 가능)"""
+def try_merge_to_existing_incidents_hybrid(conn, new_df):
+    """
+    팀원분의 SQL 아이디어를 적용한 하이브리드 검색 함수.
+    Python 반복문 대신 DB 쿼리로 최적의 사건을 찾습니다.
+    """
     cursor = conn.cursor()
     merged_ids = []
     
-    # 최근 30일 이내의 활성 사건 조회
-    sql_active = """
-        SELECT i.id as incident_id, i.district_id,
-               n.embedding, n.keywords_jsonb
+    logging.info(f"🔍 [하이브리드 검색] 신규 민원 {len(new_df)}건을 DB 엔진으로 정밀 대조합니다.")
+
+    # ------------------------------------------------------------------
+    # [SQL 설명] 
+    # 1. v_score: pgvector의 코사인 거리 (1 - 거리 = 유사도)
+    # 2. k_score: JSONB 키워드가 얼마나 겹치는지 확인 (교집합 개수)
+    # 3. bonus: 지역구가 같으면 가산점 (+0.2)
+    # ------------------------------------------------------------------
+    hybrid_search_sql = """
+    WITH existing_incidents AS (
+        SELECT 
+            i.id AS incident_id,
+            i.title,
+            n.embedding,
+            n.keywords_jsonb,
+            n.district_id
         FROM incidents i
         JOIN complaints c ON c.incident_id = i.id
         JOIN complaint_normalizations n ON n.complaint_id = c.id
-        WHERE i.opened_at > NOW() - INTERVAL '30 days'
-        -- 종결된 사건(CLOSED)도 병합 대상에 포함할지 여부는 정책에 따름.
-        -- 여기서는 '유사하면 병합'을 우선하여 CLOSED도 포함해서 검색 후, 병합 시 상태를 OPEN으로 바꿈
-        ORDER BY i.id, c.created_at ASC
+        WHERE i.status = 'OPEN' 
+          AND i.opened_at > NOW() - INTERVAL '5 years'
+          AND n.embedding IS NOT NULL
+    ),
+    scores AS (
+        SELECT 
+            incident_id,
+            title,
+            -- [1] 벡터 유사도 (비중 0.6)
+            (1 - (embedding <=> %s::vector)) AS v_score,
+            
+            -- [2] 키워드 유사도 (비중 0.2)
+            (SELECT COUNT(*) 
+             FROM jsonb_array_elements_text(keywords_jsonb) k 
+             WHERE k = ANY(%s::text[])) * 0.1 AS k_score,
+             
+            -- [3] 보너스 (비중 0.2)
+            CASE WHEN district_id = %s THEN 0.2 ELSE 0 END AS bonus
+        FROM existing_incidents
+    )
+    SELECT 
+        incident_id, 
+        title, 
+        (v_score * 0.6 + k_score + bonus) AS final_score,
+        v_score, k_score, bonus
+    FROM scores
+    WHERE (v_score * 0.6 + k_score + bonus) > %s
+    ORDER BY final_score DESC
+    LIMIT 1;
     """
-    
-    try:
-        full_active_df = pd.read_sql(sql_active, engine)
-    except Exception as e:
-        logging.error(f"기존 사건 조회 중 에러: {e}")
-        return new_df
-
-    if full_active_df.empty:
-        return new_df
-
-    active_incidents = full_active_df.drop_duplicates(subset=['incident_id']).reset_index(drop=True)
-    logging.info(f"🔍 [비교] 기존 사건 {len(active_incidents)}개와 유사도 분석 중...")
 
     for idx, row in new_df.iterrows():
-        my_emb = parse_embedding(row['embedding']).reshape(1, -1)
-        my_k = set(row['keywords_jsonb']) if row['keywords_jsonb'] else set()
-        my_dist_id = row['district_id']
-
-        candidates = active_incidents[active_incidents['district_id'] == my_dist_id]
-        if candidates.empty: continue
-
-        cand_embs = np.array([parse_embedding(e) for e in candidates['embedding']])
-        if len(cand_embs) == 0: continue
-
-        sim_scores = cosine_similarity(my_emb, cand_embs)[0]
+        # 파라미터 준비
+        # 1. 벡터: 리스트를 문자열로 변환 (PostgreSQL vector 형식)
+        emb_val = row['embedding']
+        if isinstance(emb_val, str): emb_val = json.loads(emb_val)
+        emb_str = str(emb_val).replace(' ', '') # 공백 제거 등 포맷팅
         
-        best_score = -1
-        best_inc_id = None
+        # 2. 키워드: 리스트 (PostgreSQL 배열로 변환)
+        my_keywords = row['keywords_jsonb'] if row['keywords_jsonb'] else []
+        
+        # 3. 지역구 ID
+        my_dist_id = int(row['district_id']) if row['district_id'] > 0 else 0
 
-        for i, score in enumerate(sim_scores):
-            if score < 0.85: continue
-            
-            cand_k = set(candidates.iloc[i]['keywords_jsonb']) if candidates.iloc[i]['keywords_jsonb'] else set()
-            if len(my_k.intersection(cand_k)) == 0: continue 
+        # 로그용 ID
+        my_id = row['id']
 
-            if score > best_score:
-                best_score = score
-                best_inc_id = candidates.iloc[i]['incident_id']
+        try:
+            # SQL 실행 (Threshold 값 전달)
+            cursor.execute(hybrid_search_sql, (emb_str, my_keywords, my_dist_id, HYBRID_THRESHOLD))
+            result = cursor.fetchone()
 
-        if best_inc_id and best_score >= 0.85:
-            try:
-                # 1. 민원 업데이트
+            if result:
+                best_inc_id, best_title, final_score, v, k, b = result
+                
+                print(f"   👉 [매칭 성공] 사건 #{best_inc_id} ('{best_title[:15]}...')")
+                print(f"      - 최종 점수: {final_score:.4f} (기준: {HYBRID_THRESHOLD})")
+                print(f"      - 상세: 벡터({v:.2f}) + 키워드({k:.2f}) + 보너스({b:.2f})")
+
+                # DB 업데이트 (병합)
                 cursor.execute("""
                     UPDATE complaints 
                     SET incident_id = %s, incident_linked_at = NOW(), incident_link_score = %s 
                     WHERE id = %s
-                """, (int(best_inc_id), float(best_score), int(row['id'])))
+                """, (best_inc_id, float(final_score), int(my_id)))
                 
-                # 2. 사건 업데이트 (민원 수 증가)
-                # [중요] 신규 민원이 추가되면, 혹시 종결(CLOSED)되었던 사건도 다시 대응중(OPEN)으로 바뀌어야 함
+                # 사건 상태 갱신 (OPEN 유지/전환)
                 cursor.execute("""
                     UPDATE incidents 
-                    SET complaint_count = complaint_count + 1,
-                        status = 'OPEN' 
+                    SET complaint_count = complaint_count + 1, status = 'OPEN' 
                     WHERE id = %s
-                """, (int(best_inc_id),))
+                """, (best_inc_id,))
                 
-                logging.info(f"  🔗 [병합 성공] 민원 #{row['id']} -> 사건 #{best_inc_id} (점수: {best_score:.2f})")
-                merged_ids.append(row['id'])
-            except Exception as e:
-                logging.error(f"  ❌ 병합 실패: {e}")
+                logging.info(f"   🎉 [병합 완료] 민원 #{my_id} -> 사건 #{best_inc_id}")
+                merged_ids.append(my_id)
+
+        except Exception as e:
+            # 벡터 형식이 잘못되었거나 pgvector가 없으면 에러 발생 가능
+            logging.error(f"   ❌ SQL 실행 에러: {e}")
+            conn.rollback() 
+        
+        time.sleep(0.1)
 
     conn.commit()
     cursor.close()
     
+    # 병합되지 않은 나머지 데이터프레임 반환
     return new_df[~new_df['id'].isin(merged_ids)]
+
+# ==========================================
+# 4. 신규 군집 생성 (남은 것들끼리 뭉치기)
+# ==========================================
 
 def cluster_remaining_complaints(conn, df):
     if df.empty: return
@@ -187,17 +215,17 @@ def cluster_remaining_complaints(conn, df):
     grouped = df.groupby('district_id')
 
     for dist_id, group in grouped:
-        if len(group) == 0: continue
-        
-        if len(group) == 1:
+        if len(group) < 2:
+            # 단독 민원 (Noise)
             save_incident(cursor, group, is_noise=True)
             continue
 
         embeddings = np.array([parse_embedding(e) for e in group['embedding']])
         keywords_list = [k if k else [] for k in group['keywords_jsonb'].tolist()]
         
+        # 여기서는 여전히 DBSCAN 사용 (우리끼리 뭉칠 때는 이게 최고)
         l1_dist = calculate_hybrid_distance(embeddings, keywords_list, alpha=0.6)
-        l1_labels = DBSCAN(eps=0.15, min_samples=2, metric='precomputed').fit_predict(l1_dist)
+        l1_labels = DBSCAN(eps=0.2, min_samples=2, metric='precomputed').fit_predict(l1_dist)
 
         for l1_lab in set(l1_labels):
             l1_indices = np.where(l1_labels == l1_lab)[0]
@@ -245,39 +273,36 @@ def save_incident(cursor, df, is_noise=False):
         d_id = int(row_item['district_id']) if row_item['district_id'] > 0 else None
         
         try:
-            # [변경] 초기 상태는 무조건 'OPEN' (대응중)
-            cursor.execute("""
-                INSERT INTO incidents (title, status, complaint_count, keywords, district_id, opened_at)
-                VALUES (%s, 'OPEN', %s, %s, %s, NOW())
-                RETURNING id
-            """, (title, count, keywords_str, d_id))
-            inc_id = cursor.fetchone()[0]
+            if is_noise:
+                # 노이즈는 저장 안 함 (필요 시 주석 해제)
+                pass
+            else:
+                cursor.execute("""
+                    INSERT INTO incidents (title, status, complaint_count, keywords, district_id, opened_at)
+                    VALUES (%s, 'OPEN', %s, %s, %s, NOW())
+                    RETURNING id
+                """, (title, count, keywords_str, d_id))
+                inc_id = cursor.fetchone()[0]
 
-            ids = tuple(target_df['id'].tolist())
-            cursor.execute(f"""
-                UPDATE complaints 
-                SET incident_id = %s, incident_linked_at = NOW(), incident_link_score = 0.95 
-                WHERE id IN %s
-            """, (inc_id, ids))
-            
-            logging.info(f"  🆕 [사건 생성] #{inc_id} : {title} ({count}건)")
+                ids = tuple(target_df['id'].tolist())
+                cursor.execute(f"""
+                    UPDATE complaints 
+                    SET incident_id = %s, incident_linked_at = NOW(), incident_link_score = 0.95 
+                    WHERE id IN %s
+                """, (inc_id, ids))
+                
+                logging.info(f"   🆕 [새 사건 생성] #{inc_id} : {title} ({count}건)")
         except Exception as e:
-            logging.error(f"  ❌ 사건 저장 실패: {e}")
+            logging.error(f"   ❌ 사건 저장 실패: {e}")
 
 # ==========================================
-# 5. [수정됨] 상태 동기화 함수 (2단계 로직)
+# 5. 상태 동기화
 # ==========================================
+
 def sync_incident_status(conn):
-    """
-    민원 상태에 따른 사건 상태 동기화 (단순화된 로직)
-    
-    1. CLOSED (종결): 모든 민원이 'CLOSED' 또는 'CANCELED'인 경우
-    2. OPEN (대응중): 하나라도 끝나지 않은 민원('RECEIVED', 'IN_PROGRESS' 등)이 있는 경우
-    """
     cursor = conn.cursor()
     try:
-        # 1. [종결 처리] (OPEN -> CLOSED)
-        # 조건: 현재 OPEN인데, 소속된 모든 민원이 (CLOSED or CANCELED) 상태일 때
+        # OPEN -> CLOSED (모든 민원이 종료되면)
         cursor.execute("""
             UPDATE incidents i
             SET status = 'CLOSED', closed_at = NOW()
@@ -290,37 +315,23 @@ def sync_incident_status(conn):
             AND EXISTS (SELECT 1 FROM complaints c WHERE c.incident_id = i.id)
         """)
         if cursor.rowcount > 0:
-            logging.info(f"  🏁 [상태 동기화] {cursor.rowcount}개 사건 -> '종결(CLOSED)'로 변경")
-
-        # 2. [대응중 복구] (CLOSED -> OPEN)
-        # 조건: 현재 CLOSED인데, 끝나지 않은 민원이 하나라도 생겼을 때 (재접수, 신규병합 등)
-        cursor.execute("""
-            UPDATE incidents i
-            SET status = 'OPEN', closed_at = NULL
-            WHERE i.status = 'CLOSED'
-            AND EXISTS (
-                SELECT 1 FROM complaints c 
-                WHERE c.incident_id = i.id 
-                AND c.status NOT IN ('CLOSED', 'CANCELED')
-            )
-        """)
-        if cursor.rowcount > 0:
-            logging.info(f"  🔄 [상태 동기화] {cursor.rowcount}개 사건 -> '대응중(OPEN)'으로 복구")
+            logging.info(f"   🏁 [상태 동기화] {cursor.rowcount}개 사건 자동 종결")
 
         conn.commit()
     except Exception as e:
-        logging.error(f"상태 동기화 중 에러: {e}")
+        logging.error(f"상태 동기화 에러: {e}")
         conn.rollback()
     finally:
         cursor.close()
 
 # ==========================================
-# 6. 실행 루프
+# 6. 메인 실행 루프
 # ==========================================
 
 def run_daily_job():
     conn = get_db_connection()
     try:
+        # 1. 신규 민원 조회 (아직 사건 번호 없는 것)
         sql = """
             SELECT n.complaint_id as id, n.core_request, n.embedding,
                    n.keywords_jsonb, n.district_id, n.target_object, 
@@ -329,25 +340,29 @@ def run_daily_job():
             JOIN complaints c ON n.complaint_id = c.id
             LEFT JOIN districts d ON n.district_id = d.id
             WHERE c.incident_id IS NULL 
+            LIMIT 100        
         """
         
         try:
             new_df = pd.read_sql(sql, engine)
+            # 추가: district_id가 NULL인 경우 0으로 미리 채우기
+            new_df['district_id'] = new_df['district_id'].fillna(0) 
         except Exception as e:
             logging.error(f"데이터 조회 실패: {e}")
             return
 
         if not new_df.empty:
-            logging.info(f"⚡ 신규 민원 {len(new_df)}건 감지! 분석 시작...")
+            logging.info(f"⚡ 신규 민원 {len(new_df)}건 감지!")
             
-            remaining_df = try_merge_to_existing_incidents(conn, new_df)
+            # [Step 1] 하이브리드 검색으로 기존 사건에 병합 (SQL 엔진 사용)
+            remaining_df = try_merge_to_existing_incidents_hybrid(conn, new_df)
             
+            # [Step 2] 남은 민원끼리 뭉쳐서 새 사건 만들기 (DBSCAN 사용)
             if not remaining_df.empty:
                 cluster_remaining_complaints(conn, remaining_df)
                 
-            logging.info("✅ 분석 및 처리 완료.")
+            logging.info("✅ 이번 주기 처리 완료.")
         
-        # 데이터 유무와 상관없이 항상 상태 동기화 수행
         sync_incident_status(conn)
 
     except Exception as e:
@@ -367,11 +382,11 @@ def print_progress_bar(duration):
     sys.stdout.write("\r" + " " * 80 + "\r") 
 
 if __name__ == "__main__":
-    print("\n" + "="*50)
-    print("🤖 [Daily Cluster] 실시간 민원 군집화 가동")
-    print("   - 모드: 2단계 상태 관리 (OPEN / CLOSED)")
-    print(f"   - 주기: {CHECK_INTERVAL}초")
-    print("="*50 + "\n")
+    print("\n" + "="*60)
+    print("🤖 [Hybrid Cluster] 실시간 민원 군집화 (SQL 가속 버전)")
+    print(f"   - 확인 주기: {CHECK_INTERVAL}초")
+    print(f"   - 하이브리드 점수 기준: {HYBRID_THRESHOLD}점")
+    print("="*60 + "\n")
 
     while True:
         run_daily_job()

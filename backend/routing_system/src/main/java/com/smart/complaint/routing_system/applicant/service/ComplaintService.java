@@ -82,6 +82,7 @@ public class ComplaintService {
                 latestChild.updateAnswerDraft(request.getAnswer());
             } else {
                 latestChild.completeAnswer(request.getAnswer(), complaint.getAnsweredBy());
+                complaint.updateStatustoComplete();
             }
         } else {
             if (request.isTemporary()) {

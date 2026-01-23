@@ -10,7 +10,7 @@ from datetime import datetime
 # CSV 데이터를 DB로 이관하는 코드
 
 DB_CONFIG = {
-    "host": "34.50.48.38",
+    "host": "0.0.0.0",
     "database": "postgres",
     "user": "postgres",
     "password": "0000",

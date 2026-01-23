@@ -30,6 +30,7 @@ const statusMap: Record<string, { label: string; color: string }> = {
   IN_PROGRESS: { label: '처리중', color: 'bg-amber-100 text-amber-700 border-amber-200' },
   RESOLVED: { label: '답변완료', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-300' },
+  CANCELED: { label: '취하', color: 'bg-red-100 text-pink-600 border-red-300' }
 };
 
 const incidentstatusMap: Record<string, { label: string; color: string }> = {
@@ -323,12 +324,13 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
           </div>
 
           <div className="flex gap-2">
-            {isUnassigned && !isSelectedClosed && (
+            {isUnassigned && !isSelectedClosed && complaint.status !== 'CANCELED' && complaint.status !== 'CLOSED' && (
               <Button onClick={handleAssign} className="bg-gray-600 hover:bg-gray-700">
                 <UserCheck className="w-4 h-4 mr-2" /> 담당하기
               </Button>
             )}
-            {isMine && !isSelectedClosed && complaint.status !== 'RECOMMENDED' && (
+
+            {isMine && !isSelectedClosed && complaint.status !== 'RECOMMENDED' && complaint.status !== 'CANCELED' && complaint.status !== 'CLOSED' && (
               <>
                 <Button variant="outline" onClick={() => setShowRerouteDialog(true)}>
                   <RefreshCw className="w-4 h-4 mr-2" /> 이관 요청
@@ -623,32 +625,70 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                         <div className="space-y-3 pb-4">
                           {documents.map((doc, idx) => {
                             const isExpanded = expandedDocIndex === idx;
+
+                            // ★ 데이터 타입 식별 (answer가 있으면 '유사 사례', 없으면 '법령')
+                            const isCase = doc.hasOwnProperty('answer');
+
+                            // 1. 배지 라벨 및 스타일 설정
+                            const badgeLabel = isCase ? "유사 사례" : "법령/규정";
+                            const badgeStyle = isCase
+                              ? "bg-amber-50 text-amber-600 border-amber-200"
+                              : "bg-white text-slate-500 border-slate-200";
+
+                            // 2. 제목 설정
+                            const titleText = isCase
+                              ? `유사 민원 #${doc.id} (유사도 ${doc.similarity}%)`
+                              : `${doc.title || '문서명 없음'} ${doc.article_no || doc.section || ''}`;
+
+                            // 3. 본문 설정 (유사 사례는 질문+답변 형태)
+                            const contentElement = isCase ? (
+                              <div className="space-y-2">
+                                <div>
+                                  <span className="text-[10px] font-bold text-slate-500 block mb-1">Q. 민원 내용</span>
+                                  <p className="text-slate-700">{doc.body}</p>
+                                </div>
+                                <div className="border-t border-slate-200 pt-2 mt-2">
+                                  <span className="text-[10px] font-bold text-blue-600 block mb-1">A. 처리 결과</span>
+                                  <p className="text-slate-700">{doc.answer}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <p>{doc.chunk_text || doc.content || '내용 없음'}</p>
+                            );
+
                             return (
                               <Card
                                 key={idx}
-                                className={`transition-all duration-200 hover:shadow-md cursor-pointer border-l-4 ${isExpanded ? 'border-l-blue-500 ring-1 ring-blue-200' : 'border-l-transparent hover:border-l-blue-300'
+                                className={`transition-all duration-200 hover:shadow-md cursor-pointer border-l-4 ${isExpanded
+                                  ? (isCase ? 'border-l-amber-500 ring-1 ring-amber-200' : 'border-l-blue-500 ring-1 ring-blue-200')
+                                  : 'border-l-transparent hover:border-l-slate-300'
                                   }`}
                                 onClick={() => setExpandedDocIndex(isExpanded ? null : idx)}
                               >
                                 <CardContent className="p-3 text-xs space-y-2">
                                   <div className="flex justify-between items-start">
-                                    <Badge variant="outline" className="bg-white text-slate-500 border-slate-200 font-normal">
-                                      법령/규정
+                                    <Badge variant="outline" className={`font-normal ${badgeStyle}`}>
+                                      {badgeLabel}
                                     </Badge>
+                                    {/* 펼침/접힘 아이콘 */}
                                     {isExpanded ? <ChevronDown className="w-3 h-3 text-gray-400" /> : <ChevronRight className="w-3 h-3 text-gray-400" />}
                                   </div>
 
                                   <div className="font-bold text-slate-800 text-sm">
-                                    {doc.title || '문서명 없음'} {doc.article_no || doc.section || ''}
+                                    {titleText}
                                   </div>
+
+                                  {/* 내용 부분 */}
                                   <div className={`text-slate-600 bg-slate-50 p-2 rounded leading-relaxed ${isExpanded ? '' : 'line-clamp-3'
                                     }`}>
-                                    {doc.chunk_text || doc.content || '내용 없음'}
+                                    {contentElement}
                                   </div>
-                                  {isExpanded && (
+
+                                  {/* 유사도 표시 (법령일 때도 표시) */}
+                                  {isExpanded && doc.similarity && (
                                     <div className="pt-1 flex justify-end">
-                                      <span className="text-[10px] text-blue-600 font-medium">
-                                        유사도: {doc.similarity}%
+                                      <span className={`text-[10px] font-medium ${isCase ? 'text-amber-600' : 'text-blue-600'}`}>
+                                        정확도: {doc.similarity}%
                                       </span>
                                     </div>
                                   )}

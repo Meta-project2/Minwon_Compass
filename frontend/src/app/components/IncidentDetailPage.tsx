@@ -40,6 +40,7 @@ const complaintStatusMap: Record<string, { label: string; color: string }> = {
   IN_PROGRESS: { label: '처리중', color: 'bg-amber-100 text-amber-700 border-amber-300' },
   RESOLVED: { label: '답변완료', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
   CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-300' },
+  CANCELED: { label: '취하', color: 'bg-red-100 text-pink-600 border-red-300' }
 };
 
 export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPageProps) {

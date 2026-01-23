@@ -5,18 +5,14 @@ import time
 import re
 from tqdm import tqdm
 
-# ================= 설정 섹션 =================
 API_KEY = "api_key"
 genai.configure(api_key=API_KEY)
-# JSON 모드 활성화로 안정적인 파싱 보장
 model = genai.GenerativeModel('gemini-2.0-flash', generation_config={"response_mime_type": "application/json"})
 
 INPUT_PATH = "./강동구.csv"
 COMPARISON_OUTPUT_PATH = "./강동구_strategy_comparison.csv"
-# =============================================
 
 def mask_complaint(text, requester_name=None):
-    """민원 내용용: 지명(숫자) 보존, 작성자 실명 및 연락처만 제거"""
     if not isinstance(text, str) or text.strip() == "": return ""
     # 1. 작성자 실명 제거
     if requester_name and len(requester_name) >= 2:
@@ -27,7 +23,6 @@ def mask_complaint(text, requester_name=None):
     return text
 
 def mask_response(text):
-    """공무원 답변용: 부서 정보 유지, 담당자 개인정보 완전 마스킹"""
     if not isinstance(text, str) or text.strip() == "": return ""
     # 1. 부서/담당자 패턴 통합 마스킹
     staff_pattern = r'(\w+(?:과|소|동|부|팀|센터|공사|구청|주민센터|보건소))\s?\((?:담당\s?)?[가-힣0-9*○Xx]{2,4}.*?(?:\d{2,3}-\d{3,4}-\d{4}|\[PHONE_MASKED\])\)'
@@ -39,8 +34,6 @@ def mask_response(text):
 
 def get_comparison_data(row):
     user_name = row.get('req_p', None)
-    
-    # 전략적 이원화 마스킹 적용
     masked_title = mask_complaint(row['req_title'], requester_name=user_name)
     masked_content = mask_complaint(row['req_content'], requester_name=user_name)
     masked_resp = mask_response(row['resp_content'])
@@ -65,8 +58,6 @@ def get_comparison_data(row):
     try:
         response = model.generate_content(prompt)
         p = json.loads(response.text)
-        
-        # 리스트 반환 대응 로직
         if isinstance(p, list):
             p = p[0] if len(p) > 0 else {}
         
@@ -74,14 +65,8 @@ def get_comparison_data(row):
         keys = ", ".join(p.get('keywords', []))
         actual = p.get('legal_actual', '해당 없음')
         admin = p.get('admin_category', '')
-
-        # 전략 A: 현상 중심 (주제 + 키워드)
         p['search_text_A'] = f"{topic} {keys}"
-        
-        # 전략 B: 행정 중심 (주제 + 키워드 + 카테고리) - 법령 번호 노이즈 제거 버전
         p['search_text_B'] = f"{topic} {keys} {admin}"
-        
-        # 실제 법령 정보는 별도 보관
         p['legal_info'] = actual
         
         return p
@@ -89,7 +74,6 @@ def get_comparison_data(row):
         print(f"Error: {e}")
         return None
 
-# --- 실행 로직 ---
 df_sample = pd.read_csv(INPUT_PATH).head(5)
 results = []
 
@@ -98,9 +82,8 @@ for idx in tqdm(df_sample.index, desc="이원화 마스킹 기반 분석 중"):
     if res:
         res['original_title'] = df_sample.loc[idx, 'req_title']
         results.append(res)
-    time.sleep(4) # RPM 제한 준수
+    time.sleep(4)
 
-# 결과 정리 및 출력
 df_res = pd.DataFrame(results)
 print("\n" + "="*50)
 print("이원화 마스킹 결과 및 전략 비교")

@@ -28,25 +28,17 @@ export function ApplicantComplaintForm({ onPreview }: NewComplaintFormProps) {
 
   const navigate = useNavigate();
   const token = localStorage.getItem('accessToken');
-
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [location, setLocation] = useState('서울특별시 강동구 성내로 25');
   const [incidentDate, setIncidentDate] = useState<Date>(new Date());
-  // 위치 정보를 저장하기 위한 상태
   const [geoData, setGeoData] = useState({ lat: 0, lon: 0, roadAddress: '' });
-
-  // 지도의 위치가 바뀔 때 실행될 함수
   const handleLocationChange = (lat: number, lon: number, roadAddress: string) => {
-    // 위도, 경도, 도로명 주소를 객체에 저장 (전송용)
     setGeoData({ lat, lon, roadAddress });
-
-    // 상단 Input 창에 표시되는 주소 텍스트를 마커 위치의 주소로 자동 업데이트
     setLocation(roadAddress);
   };
 
   const handleSubmit = async () => {
-    // 백엔드로 보낼 데이터
     const submitData = {
       title,
       body,
@@ -67,15 +59,15 @@ export function ApplicantComplaintForm({ onPreview }: NewComplaintFormProps) {
       reverseButtons: true
     }).then((result) => {
       if (result.isConfirmed) {
-        let timerInterval: ReturnType<typeof setInterval> | undefined;
+        let timerInterval: any;
+        let isProcessing = true;
         const messages = [
           "AI가 민원 내용을 정밀 분석 중입니다...",
-          "유사한 과거 민원 사례를 검색하고 있습니다...",
+          "과거 민원 사례를 검색하고 있습니다...",
           "최적의 처리 부서를 매칭하는 중입니다...",
-          "민원 처리 효율을 위해 데이터를 정제하고 있습니다..."
+          "데이터를 정제하고 있습니다..."
         ];
 
-        // 1. 안내 알림창 띄우기 (로딩 + 확인 버튼 포함)
         Swal.fire({
           title: messages[0],
           html: `
@@ -83,18 +75,22 @@ export function ApplicantComplaintForm({ onPreview }: NewComplaintFormProps) {
         <div style="font-size: 0.9em; color: #666;">이 창을 닫아도 분석은 백그라운드에서 계속 진행됩니다.</div>
       `,
           icon: 'info',
-          allowOutsideClick: true,  // 바깥 클릭 시 닫기 허용
-          showConfirmButton: true,  // 확인 버튼 표시
+          allowOutsideClick: true,
+          showConfirmButton: true,
           confirmButtonText: '확인 (백그라운드 진행)',
           didOpen: () => {
-            Swal.showLoading(Swal.getConfirmButton()); // 로딩 스피너 표시
+            Swal.showLoading(Swal.getConfirmButton());
             let i = 0;
             timerInterval = setInterval(() => {
               i = (i + 1) % messages.length;
-              Swal.update({ title: messages[i] });
+              if (isProcessing && Swal.isVisible()) {
+                Swal.update({ title: messages[i] });
+              }
             }, 5000);
           },
-          willClose: () => clearInterval(timerInterval)
+          willClose: () => {
+            if (timerInterval) clearInterval(timerInterval);
+          }
         });
 
         api.post('applicant/complaint', submitData, {
@@ -104,21 +100,22 @@ export function ApplicantComplaintForm({ onPreview }: NewComplaintFormProps) {
           }
         })
           .then(() => {
+            isProcessing = false;
+            if (timerInterval) clearInterval(timerInterval);
             console.log("백그라운드 접수 완료");
-            if (Swal.isVisible()) {
-              Swal.fire({
-                title: '접수 완료!',
-                text: 'AI 분석을 거쳐 최적의 부서로 전달되었습니다.',
-                icon: 'success',
-                confirmButtonText: '메인으로 이동'
-              }).then(() => navigate('/applicant/main'));
-            }
+            Swal.fire({
+              title: '접수 완료!',
+              text: 'AI 분석을 거쳐 최적의 부서로 전달되었습니다.',
+              icon: 'success',
+              confirmButtonText: '메인으로 이동'
+            }).then(() => navigate('/applicant/main'));
           })
           .catch((error) => {
+            isProcessing = false;
+            if (timerInterval) clearInterval(timerInterval);
+
             console.error("접수 실패:", error);
-            if (Swal.isVisible()) {
-              Swal.fire('오류 발생', '전송 중 에러가 발생했습니다.', 'error');
-            }
+            Swal.fire('오류 발생', '전송 중 에러가 발생했습니다.', 'error');
           });
       }
     });

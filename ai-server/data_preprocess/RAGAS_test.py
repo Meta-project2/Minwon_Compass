@@ -14,7 +14,7 @@ from datasets import Dataset
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 DB_CONFIG = {
-    "host": "34.50.48.38",
+    "host": "0.0.0.0",
     "database": "postgres",
     "user": "postgres",
     "password": "0000",

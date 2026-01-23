@@ -1,6 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+
+const statusMap: Record<string, { label: string; color: string }> = {
+  RECEIVED: { label: '접수', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  RECOMMENDED: { label: '이관 요청', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+  IN_PROGRESS: { label: '처리중', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  RESOLVED: { label: '답변완료', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-300' },
+  CANCELED: { label: '취하', color: 'bg-red-100 text-pink-600 border-red-300' }
+};
+
 interface KakaoMapProps {
   // 민원 제출 페이지용
   address?: string;
@@ -122,22 +132,26 @@ const KakaoMap = ({ address, onLocationChange, complaints, mapView, showSurgeOnl
         clickable: true
       });
 
+      const currentStatus = statusMap[item.status] || { label: item.status, color: 'bg-gray-100 text-gray-700' };
+
       kakao.maps.event.addListener(marker, 'mouseover', () => {
         infowindow.setContent(`
-            <div style="padding:10px; font-size:12px; min-width:200px; border-radius:8px; line-height:1.5;">
-                <div style="font-weight:bold; margin-bottom:5px; color:#1a1a1a; word-break:break-all;">
-                    ${item.title}
-                </div>
-                <div style="color:#666; display:flex; justify-content:space-between;">
-                    <span>상태:</span>
-                    <span style="font-weight:600; color:#2563eb;">${item.status}</span>
-                </div>
-                <div style="color:#666; display:flex; justify-content:space-between; margin-top:2px;">
-                    <span>접수일자:</span>
-                    <span style="white-space:nowrap;">${new Date(item.createdAt).toLocaleDateString()}</span>
-                </div>
+        <div style="padding:15px; font-size:13px; min-width:220px; border-radius:12px; line-height:1.6; border:none; background:white;">
+            <div style="font-weight:bold; margin-bottom:8px; color:#1a1a1a; font-size:14px;">
+                ${item.title}
             </div>
-        `);
+            <div style="color:#666; display:flex; justify-content:space-between; align-items:center;">
+                <span>상태</span>
+                <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold border ${currentStatus.color}">
+                    ${currentStatus.label}
+                </span>
+            </div>
+            <div style="color:#666; display:flex; justify-content:space-between; margin-top:4px;">
+                <span>접수일자</span>
+                <span style="color:#333;">${new Date(item.createdAt).toLocaleDateString()}</span>
+            </div>
+        </div>
+    `);
         infowindow.open(map, marker);
       });
 

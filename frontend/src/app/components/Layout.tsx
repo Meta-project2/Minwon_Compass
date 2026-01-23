@@ -57,8 +57,18 @@ export function Layout({ children, currentPage, onNavigate, userRole, userName, 
       >
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
           {!sidebarCollapsed && (
-            <div className="flex items-center gap-2">
-              <img src={minwonIcon} alt="파일" className="h-10 w-10" />
+            <div className="flex items-center gap-2 overflow-hidden">
+              <img src={minwonIcon} alt="로고" className="h-8 w-8 shrink-0" />
+                <span className="
+                  text-slate-900 
+                  font-extrabold 
+                  text-base 
+                  tracking-tighter 
+                  whitespace-nowrap 
+                  overflow-hidden
+                ">
+                민원 나침반
+              </span>
             </div>
           )}
           <Button
@@ -85,8 +95,8 @@ export function Layout({ children, currentPage, onNavigate, userRole, userName, 
                 key={item.id}
                 onClick={() => isCivilService ? handleMoveToCivilService() : onNavigate(item.id)}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded transition-colors ${isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
                   }`}
               >
                 <Icon className="h-5 w-5 shrink-0" />
