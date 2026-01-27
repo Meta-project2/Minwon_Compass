@@ -7,10 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-// [수정] 메인 클래스의 어노테이션(@Data, @Builder 등) 제거 -> 생성자 충돌 해결
 public class AdminDashboardStatsDto {
 
-    // --- [1] 공통 위젯용 DTO (API 반환용) ---
     @Data
     @Builder
     @NoArgsConstructor
@@ -21,12 +19,10 @@ public class AdminDashboardStatsDto {
         private List<RecurringIncidentDto> recurringIncidents;
     }
 
-    // --- Inner DTOs (데이터 담는 그릇) ---
-
     @Data
     @AllArgsConstructor
     public static class DailyCountDto {
-        private String date; // "MM/DD"
+        private String date;
         private Long count;
     }
 
@@ -48,7 +44,7 @@ public class AdminDashboardStatsDto {
     @Data
     @AllArgsConstructor
     public static class TimeRangeDto {
-        private String range; // "3일 이내", "7일 이내"...
+        private String range;
         private Long count;
     }
 

@@ -40,21 +40,17 @@ public class ComplaintNormalization {
     @Column(length = 120)
     private String targetObject;
 
-    // Hibernate 6 이상에서는 JSONB를 아래와 같이 간단히 매핑 가능합니다.
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "keywords_jsonb", columnDefinition = "jsonb")
-    private Object keywordsJsonb; // Map<String, Object> 또는 특정 DTO로 변경 가능
+    private Object keywordsJsonb;
 
     @Column(length = 255)
     private String locationHint;
 
-    // AI 라우팅 추천 결과 (JSON)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "routing_rank", columnDefinition = "jsonb")
     private Object routingRank;
 
-    // pgvector (1024차원) 매핑
-    // Java는 String으로 관리, DB는 vector로 관리
     @Column(name = "embedding", columnDefinition = "vector(1024)")
     @JdbcTypeCode(SqlTypes.VARCHAR)
     private float[] embedding;

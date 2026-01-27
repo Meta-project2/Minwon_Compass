@@ -16,20 +16,15 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
   const [isSearching, setIsSearching] = useState(false);
   const [foundUserId, setFoundUserId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-
-  // Email regex validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const isValidEmail = emailRegex.test(email);
   const navigate = useNavigate();
 
-  // Mock function to search for user ID by email
   const searchUserId = async () => {
 
-    // Reset states
     setErrorMessage('');
     setFoundUserId(null);
 
-    // Validate email format
     if (!email.trim()) {
       setErrorMessage('이메일 주소를 입력해주세요.');
       return;
@@ -44,12 +39,11 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
 
     try {
       const response = await axios.post('/api/applicant/userinfo',
-        { email: email }, // 1. POST는 두 번째 인자가 Body 데이터입니다.
+        { email: email },
       );
 
       setFoundUserId(response.data.userId);
     } catch (error: any) {
-      // 4. 에러 처리 (사용자를 찾지 못하거나 서버 오류 시)
       if (axios.isAxiosError(error) && error.response?.status === 404) {
         setErrorMessage('입력하신 이메일로 가입된 계정을 찾을 수 없습니다.');
       } else if (error.response?.status === 403) {
@@ -75,7 +69,6 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-2xl bg-white rounded-lg shadow-md p-8">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">아이디 찾기</h1>
           <p className="text-lg text-gray-600">
@@ -84,7 +77,6 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
         </div>
 
         {!foundUserId ? (
-          // Email Input Form
           <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-lg">이메일 주소 *</Label>
@@ -96,7 +88,7 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
-                    setErrorMessage(''); // Clear error when typing
+                    setErrorMessage('');
                   }}
                   placeholder="example@email.com"
                   className="text-lg h-14 pl-12"
@@ -108,7 +100,6 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
                 />
               </div>
 
-              {/* Real-time email format validation */}
               {email && !isValidEmail && (
                 <p className="text-orange-600 text-base flex items-center gap-2">
                   <AlertCircle className="w-5 h-5" />
@@ -124,7 +115,6 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
               )}
             </div>
 
-            {/* Error Message */}
             {errorMessage && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
                 <div className="flex items-start gap-3">
@@ -134,7 +124,6 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
               </div>
             )}
 
-            {/* Search Button */}
             <div className="pt-4 space-y-3">
               <Button
                 onClick={searchUserId}
@@ -154,7 +143,6 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
             </div>
           </div>
         ) : (
-          // Result Display - Masked User ID
           <div className="space-y-6">
             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
               <div className="flex items-start gap-4">
@@ -178,7 +166,6 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="space-y-3">
               {onGoToResetPassword && (
                 <Button
@@ -211,7 +198,6 @@ export default function ApplicantFindIdPage({ onGoBack, onGoToResetPassword }: F
           </div>
         )}
 
-        {/* Helper Text */}
         <div className="mt-8 pt-6 border-t border-gray-200">
           <p className="text-center text-gray-600 text-base">
             가입하신 이메일 주소가 기억나지 않으시나요?

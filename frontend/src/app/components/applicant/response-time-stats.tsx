@@ -53,10 +53,7 @@ export function ResponseTimeStats({ data, overallStats }: ResponseTimeStatsProps
   }));
 
   return (
-    // 부모 섹션의 흰색 배경과 겹치지 않도록 투명 배경 처리 및 패딩 조정
     <div className="w-full h-full flex flex-col">
-
-      {/* [수정] 지표 카드 영역: gap과 px를 늘려 틀에서 띄움 */}
       <div className="grid grid-cols-3 gap-5 mb-12 px-2 shrink-0">
         <div className="p-5 bg-blue-50/50 rounded-3xl text-center border border-blue-100/50 shadow-sm transition-transform hover:scale-[1.02]">
           <div className="flex flex-col items-center gap-1.5 mb-2">
@@ -82,8 +79,6 @@ export function ResponseTimeStats({ data, overallStats }: ResponseTimeStatsProps
           <p className="text-2xl font-black text-purple-900">+{overallStats.improvementRate}%</p>
         </div>
       </div>
-
-      {/* [수정] 파이 차트 영역: 라벨 가독성 및 높이 확보 */}
       <div className="flex-1 min-h-[300px] relative">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -95,22 +90,12 @@ export function ResponseTimeStats({ data, overallStats }: ResponseTimeStatsProps
                 </linearGradient>
               ))}
             </defs>
-            <text
-              x={200}         // 전체 너비(400)의 절반
-              y={20}          // 상단 여백
-              fill="#333"     // 글자 색상
-              textAnchor="middle" // 가로 정렬 기준(중앙)
-              dominantBaseline="central" // 세로 정렬 기준
-              style={{ fontSize: '20px', fontWeight: 'bold' }}
-            >
-              분아별 평균 응답 시간
-            </text>
             <Pie
               data={pieData}
               cx="50%"
               cy="50%"
               labelLine={{ stroke: '#9CA3AF', strokeWidth: 1 }}
-              label={renderCustomizedLabel} // 커스텀 라벨 적용
+              label={renderCustomizedLabel}
               outerRadius={95}
               stroke="none"
               dataKey="value"
@@ -118,7 +103,7 @@ export function ResponseTimeStats({ data, overallStats }: ResponseTimeStatsProps
               {pieData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={`url(#grad${(index % GRADIENTS.length) + 1})`} // 그라데이션 ID 연결
+                  fill={`url(#grad${(index % GRADIENTS.length) + 1})`}
                 />
               ))}
             </Pie>

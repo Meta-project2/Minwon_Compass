@@ -115,7 +115,6 @@ export function KnowledgeBaseDetailPage({ docId, onBack }: KnowledgeBaseDetailPa
 
   return (
     <div className="h-full flex flex-col">
-      {/* Breadcrumb */}
       <div className="border-b border-border bg-card px-6 py-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <button onClick={onBack} className="hover:text-foreground">
@@ -126,7 +125,6 @@ export function KnowledgeBaseDetailPage({ docId, onBack }: KnowledgeBaseDetailPa
         </div>
       </div>
 
-      {/* Header */}
       <div className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -159,7 +157,6 @@ export function KnowledgeBaseDetailPage({ docId, onBack }: KnowledgeBaseDetailPa
           </div>
         </div>
 
-        {/* Summary Card */}
         <Card>
           <CardContent className="p-4">
             <div className="grid grid-cols-5 gap-4 text-sm">
@@ -188,7 +185,6 @@ export function KnowledgeBaseDetailPage({ docId, onBack }: KnowledgeBaseDetailPa
         </Card>
       </div>
 
-      {/* Tabs */}
       <div className="flex-1 overflow-hidden">
         <Tabs defaultValue="info" className="h-full flex flex-col">
           <div className="border-b border-border px-6 bg-card">
@@ -200,7 +196,6 @@ export function KnowledgeBaseDetailPage({ docId, onBack }: KnowledgeBaseDetailPa
           </div>
 
           <div className="flex-1 overflow-auto">
-            {/* Tab 1: 문서 정보 */}
             <TabsContent value="info" className="m-0 h-full p-6">
               <Card>
                 <CardHeader>
@@ -309,7 +304,6 @@ export function KnowledgeBaseDetailPage({ docId, onBack }: KnowledgeBaseDetailPa
               </Card>
             </TabsContent>
 
-            {/* Tab 2: 청크 목록 */}
             <TabsContent value="chunks" className="m-0 h-full p-6">
               <Card>
                 <CardHeader>
@@ -375,8 +369,6 @@ export function KnowledgeBaseDetailPage({ docId, onBack }: KnowledgeBaseDetailPa
                 </CardContent>
               </Card>
             </TabsContent>
-
-            {/* Tab 3: 인덱싱 로그 */}
             <TabsContent value="logs" className="m-0 h-full p-6">
               <Card>
                 <CardHeader>
@@ -388,15 +380,14 @@ export function KnowledgeBaseDetailPage({ docId, onBack }: KnowledgeBaseDetailPa
                       <div key={index} className="flex gap-4">
                         <div className="flex flex-col items-center">
                           <div
-                            className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                              log.type === 'success'
+                            className={`h-8 w-8 rounded-full flex items-center justify-center ${log.type === 'success'
                                 ? 'bg-green-100'
                                 : log.type === 'processing'
-                                ? 'bg-yellow-100'
-                                : log.type === 'error'
-                                ? 'bg-red-100'
-                                : 'bg-blue-100'
-                            }`}
+                                  ? 'bg-yellow-100'
+                                  : log.type === 'error'
+                                    ? 'bg-red-100'
+                                    : 'bg-blue-100'
+                              }`}
                           >
                             {log.type === 'success' ? (
                               <CheckCircle className="h-4 w-4 text-green-700" />
@@ -427,8 +418,6 @@ export function KnowledgeBaseDetailPage({ docId, onBack }: KnowledgeBaseDetailPa
           </div>
         </Tabs>
       </div>
-
-      {/* Chunk Detail Drawer */}
       <Sheet open={!!selectedChunk} onOpenChange={() => setSelectedChunk(null)}>
         <SheetContent className="w-[600px]">
           <SheetHeader>

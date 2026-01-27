@@ -10,8 +10,8 @@ import lombok.Getter;
 public class ErrorResponse {
 
     private final LocalDateTime timestamp = LocalDateTime.now();
-    private final int status; // HTTP 상태 코드 (예: 400)
-    private final String errorCode; // 우리만의 에러 구분 코드 (예: USER_DUPLICATE)
-    private final String message; // 에러 메시지
+    private final int status;
+    private final String errorCode;
+    private final String message;
 
 }

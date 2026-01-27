@@ -9,10 +9,6 @@ import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.PathInits;
 
-
-/**
- * QChildComplaint is a Querydsl query type for ChildComplaint
- */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QChildComplaint extends EntityPathBase<ChildComplaint> {
 
@@ -28,19 +24,23 @@ public class QChildComplaint extends EntityPathBase<ChildComplaint> {
 
     public final StringPath body = createString("body");
 
-    public final DateTimePath<java.time.LocalDateTime> closedAt = createDateTime("closedAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> closedAt = createDateTime("closedAt",
+            java.time.LocalDateTime.class);
 
-    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt",
+            java.time.LocalDateTime.class);
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
     public final QComplaint parentComplaint;
 
-    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.ComplaintStatus> status = createEnum("status", com.smart.complaint.routing_system.applicant.domain.ComplaintStatus.class);
+    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.ComplaintStatus> status = createEnum(
+            "status", com.smart.complaint.routing_system.applicant.domain.ComplaintStatus.class);
 
     public final StringPath title = createString("title");
 
-    public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt",
+            java.time.LocalDateTime.class);
 
     public QChildComplaint(String variable) {
         this(ChildComplaint.class, forVariable(variable), INITS);
@@ -60,8 +60,9 @@ public class QChildComplaint extends EntityPathBase<ChildComplaint> {
 
     public QChildComplaint(Class<? extends ChildComplaint> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.parentComplaint = inits.isInitialized("parentComplaint") ? new QComplaint(forProperty("parentComplaint"), inits.get("parentComplaint")) : null;
+        this.parentComplaint = inits.isInitialized("parentComplaint")
+                ? new QComplaint(forProperty("parentComplaint"), inits.get("parentComplaint"))
+                : null;
     }
 
 }
-

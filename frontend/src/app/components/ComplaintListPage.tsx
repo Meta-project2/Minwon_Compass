@@ -36,16 +36,13 @@ const statusMap: Record<string, { label: string; color: string }> = {
   IN_PROGRESS: { label: '처리중', color: 'bg-amber-100 text-amber-700 border-amber-200' },
   RESOLVED: { label: '답변완료', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-300' },
+  CANCELED: { label: '취하', color: 'bg-red-100 text-pink-600 border-red-300' }
 };
 
 export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
-  // 데이터 상태
+
   const [complaints, setComplaints] = useState<ComplaintDto[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // 페이징 상태
-  // const [currentPage, setCurrentPage] = useState(1);
-  // 세션 스토리지에 저장된 값이 있으면 그 값을 쓰고, 없으면 1 사용
   const [currentPage, setCurrentPage] = useState(() => {
     const savedPage = sessionStorage.getItem('complaint_page_num');
     return savedPage ? Number(savedPage) : 1;
@@ -54,58 +51,45 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
   const [totalElements, setTotalElements] = useState(0);
   const pageSize = 10;
 
-  // 필터 상태
   const [searchQuery, setSearchQuery] = useState(() => {
     return sessionStorage.getItem('complaint_search') || '';
   });
 
-  // (2) 상태 필터
   const [selectedStatus, setSelectedStatus] = useState<string>(() => {
     return sessionStorage.getItem('complaint_status') || 'all';
   });
 
-  // (3) 체크박스들
   const [includeIncidents, setIncludeIncidents] = useState(() => {
     return sessionStorage.getItem('complaint_incidents') === 'true';
   });
   const [tagsOnly, setTagsOnly] = useState(() => {
     return sessionStorage.getItem('complaint_tags') === 'true';
   });
-  // 선택된 민원 (우측 미리보기용)
-  const [selectedComplaintId, setSelectedComplaintId] = useState<number | null>(null);
 
+  const [selectedComplaintId, setSelectedComplaintId] = useState<number | null>(null);
   const isFirstRender = useRef(true);
 
-  // 2. 필터 변경 감지 (페이지 1로 리셋)
   useEffect(() => {
-    // 첫 로딩 시에는 이 로직을 건너뜁니다 (세션 스토리지 값 유지 위해)
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
-
-    // 사용자가 진짜 필터를 바꿨을 때만 실행
     setCurrentPage(1);
     fetchData(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStatus, includeIncidents, tagsOnly]);
 
   useEffect(() => {
     fetchData(currentPage);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
-  // 검색어 저장
   useEffect(() => {
     sessionStorage.setItem('complaint_search', searchQuery);
   }, [searchQuery]);
 
-  // 상태 필터 저장
   useEffect(() => {
     sessionStorage.setItem('complaint_status', selectedStatus);
   }, [selectedStatus]);
 
-  // 체크박스 저장
   useEffect(() => {
     sessionStorage.setItem('complaint_incidents', String(includeIncidents));
   }, [includeIncidents]);
@@ -115,7 +99,7 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
   }, [tagsOnly]);
 
   useEffect(() => {
-  sessionStorage.setItem('complaint_page_num', String(currentPage));
+    sessionStorage.setItem('complaint_page_num', String(currentPage));
   }, [currentPage]);
 
   const fetchData = async (page: number, forceKeyword?: string) => {
@@ -186,8 +170,6 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
   };
 
   const selectedComplaintData = complaints.find((c) => c.id === selectedComplaintId);
-
-  // --- 페이징 UI 계산 로직 ---a
   const pageGroupSize = 10;
   const currentGroup = Math.ceil(currentPage / pageGroupSize);
   const startPage = (currentGroup - 1) * pageGroupSize + 1;
@@ -200,7 +182,6 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
     if (p >= 1 && p <= totalPages) setCurrentPage(p);
   };
 
-  // ★ [추가] 토글 로직: 이미 선택된 것을 누르면 닫기
   const handleRowClick = (id: number) => {
     if (selectedComplaintId === id) {
       setSelectedComplaintId(null);
@@ -219,19 +200,12 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
 
   return (
     <div className="flex h-full">
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
-
-        {/* 상단 헤더 */}
         <div className="h-16 border-b border-border bg-card px-6 shadow-sm flex items-center gap-3 shrink-0">
           <h1 className="text-2.5xl font-bold text-slate-900">민원함</h1>
           <p className="text-sm text-slate-400 font-medium pt-1">내 부서 배정 민원</p>
         </div>
-
-        {/* 테이블 및 필터 영역 */}
         <div className="flex-1 overflow-auto px-6 pt-0 pb-6 bg-slate-100/50 flex flex-col">
-
-          {/* 필터 바 */}
           <div className="py-3 flex items-center gap-4 justify-left shrink-0">
             <div className="flex gap-2">
               <div className="flex-1 relative">
@@ -305,7 +279,6 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
             </div>
           </div>
 
-          {/* 테이블 카드 */}
           <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-md bg-white rounded-md mb-4">
             <div className="flex-1 overflow-auto">
               <Table className="table-fixed w-full">
@@ -332,7 +305,6 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                       <TableRow
                         key={c.id}
                         className={`cursor-pointer hover:bg-slate-100 ${selectedComplaintId === c.id ? 'bg-blue-50/80' : 'border-b border-slate-200'}`}
-                        // ★ [수정] 토글 함수 적용
                         onClick={() => handleRowClick(c.id)}
                       >
                         <TableCell className="text-sm text-muted-foreground text-center font-mono">
@@ -369,12 +341,16 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
 
                         <TableCell className="text-center">
                           {c.managerName ? (
-                            <div className="flex items-center justify-center gap-1.5">
+                            <div className={`flex items-center justify-center gap-1.5 ${c.status === "CANCELED" ? "opacity-50" : ""}`}>
                               <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center border">
                                 <User className="h-3 w-3 text-slate-500" />
                               </div>
-                              <span className="text-sm font-medium text-slate-700">{c.managerName}</span>
+                              <span className={`text-sm font-medium ${c.status === "CANCELED" ? "text-slate-400 line-through" : "text-slate-700"}`}>
+                                {c.managerName}
+                              </span>
                             </div>
+                          ) : c.status === "CANCELED" ? (
+                            <span className="text-muted-foreground text-xs">-</span>
                           ) : (
                             <Button
                               size="sm"
@@ -406,7 +382,6 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
             </div>
           </Card>
 
-          {/* 하단 페이지네이션 */}
           {totalPages > 0 && (
             <div className="flex flex-col items-center justify-center gap-2 pb-0 shrink-0">
               <div className="flex items-center gap-2">
@@ -448,11 +423,8 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
         </div>
       </div>
 
-      {/* ★ [수정] 우측 미리보기 패널 (Reroute 스타일 적용) */}
       {selectedComplaintId && selectedComplaintData && (
         <div className="fixed right-0 top-0 h-screen w-80 bg-white border-l border-slate-200 shadow-2xl z-50 overflow-y-auto animate-in slide-in-from-right duration-300">
-
-          {/* 패널 헤더 */}
           <div className="px-5 h-16 border-b border-border flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur z-10">
             <h3 className="text-base font-bold text-slate-800">민원 미리보기</h3>
             <Button
@@ -466,8 +438,6 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
           </div>
 
           <div className="p-5 space-y-4">
-
-            {/* 1. 민원 정보 카드 (컴팩트 디자인) */}
             <Card className="shadow-sm border-slate-200 overflow-hidden gap-3">
               <CardHeader className="py-2 px-4 !pb-0 bg-slate-50 border-b border-slate-100">
                 <CardTitle className="text-sm font-bold text-slate-700">기본 정보</CardTitle>
@@ -487,12 +457,12 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                 </div>
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-slate-500 shrink-0">위치</span>
-                  <span className="text-sm text-muted-foreground">{selectedComplaintData.addressText || '위치 정보 없음'}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {(selectedComplaintData as any).address ?? selectedComplaintData.addressText ?? '위치 정보 없음'}
+                  </span>
                 </div>
               </CardContent>
             </Card>
-
-            {/* 2. AI 요약 카드 (파란색 헤더 스타일 적용) */}
             <Card className="bg-blue-50/40 border-blue-100 shadow-none gap-3">
               <CardHeader className="py-1.5 px-4 !pb-0 border-b border-blue-100/50 bg-blue-50/60 !pb-1.5">
                 <CardTitle className="text-sm flex items-center gap-2 text-blue-800">
@@ -508,16 +478,6 @@ export function ComplaintListPage({ onViewDetail }: ComplaintListPageProps) {
                 )}
               </CardContent>
             </Card>
-
-            {/* 3. 위치 정보 (일반 텍스트) */}
-            {/* <div className="px-1">
-              <div className="text-xs text-slate-500 font-bold mb-1.5 uppercase tracking-wider">민원 발생 위치</div>
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-700 flex items-start gap-2">
-                <div className="flex-1 break-keep">{selectedComplaintData.addressText || '위치 정보 없음'}</div>
-              </div>
-            </div> */}
-
-            {/* 하단 버튼 */}
             <div className="pt-2">
               <Button className="w-full h-10 shadow-sm" onClick={() => onViewDetail(String(selectedComplaintData.id))}>
                 <Eye className="w-4 h-4 mr-2" /> 상세 페이지로 이동

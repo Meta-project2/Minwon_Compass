@@ -33,31 +33,22 @@ public interface ComplaintRepositoryCustom {
 
     ComplaintDetailDto findComplaintDetailById(Long id);
 
-    // 대시보드용 메서드
-    // 1. 민원 접수 추이
     List<DailyCountDto> getDailyTrends(LocalDateTime start, LocalDateTime end, Long deptId);
 
-    // 2. 처리 소요 시간
     List<TimeRangeDto> getProcessingTimeStats(LocalDateTime start, LocalDateTime end, Long deptId);
 
-    // 3. 부서별 현황
     List<DeptStatusDto> getDeptStatusStats(LocalDateTime start, LocalDateTime end, Long deptId);
 
-    // 4. AI 배정 정확도
     Double getAiAccuracy(LocalDateTime start, LocalDateTime end);
 
-    // 5. 민원 유형 분포
     List<CategoryStatDto> getCategoryStats(LocalDateTime start, LocalDateTime end);
 
-    // 6. 반복 민원 Top 3
     List<RecurringIncidentDto> getTopRecurringIncidents(LocalDateTime start, LocalDateTime end, LocalDateTime prevStart,
             LocalDateTime prevEnd);
 
     List<ChildComplaintDto> findChildComplaintsByParentId(Long id);
 
-    // 7. 민원 분석
     ComplaintStatDto geComplaintStatus();
 
-    // 8. 키워드 분석
     List<KeywordsDto> calculateKeywords();
 }

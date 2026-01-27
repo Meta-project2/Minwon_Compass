@@ -9,10 +9,6 @@ import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.PathInits;
 
-
-/**
- * QComplaint is a Querydsl query type for Complaint
- */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QComplaint extends EntityPathBase<Complaint> {
 
@@ -34,11 +30,15 @@ public class QComplaint extends EntityPathBase<Complaint> {
 
     public final StringPath body = createString("body");
 
-    public final ListPath<ChildComplaint, QChildComplaint> childComplaints = this.<ChildComplaint, QChildComplaint>createList("childComplaints", ChildComplaint.class, QChildComplaint.class, PathInits.DIRECT2);
+    public final ListPath<ChildComplaint, QChildComplaint> childComplaints = this
+            .<ChildComplaint, QChildComplaint>createList("childComplaints", ChildComplaint.class, QChildComplaint.class,
+                    PathInits.DIRECT2);
 
-    public final DateTimePath<java.time.LocalDateTime> closedAt = createDateTime("closedAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> closedAt = createDateTime("closedAt",
+            java.time.LocalDateTime.class);
 
-    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt",
+            java.time.LocalDateTime.class);
 
     public final NumberPath<Long> currentDepartmentId = createNumber("currentDepartmentId", Long.class);
 
@@ -48,21 +48,26 @@ public class QComplaint extends EntityPathBase<Complaint> {
 
     public final QIncident incident;
 
-    public final DateTimePath<java.time.LocalDateTime> incidentLinkedAt = createDateTime("incidentLinkedAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> incidentLinkedAt = createDateTime("incidentLinkedAt",
+            java.time.LocalDateTime.class);
 
-    public final NumberPath<java.math.BigDecimal> incidentLinkScore = createNumber("incidentLinkScore", java.math.BigDecimal.class);
+    public final NumberPath<java.math.BigDecimal> incidentLinkScore = createNumber("incidentLinkScore",
+            java.math.BigDecimal.class);
 
     public final NumberPath<java.math.BigDecimal> lat = createNumber("lat", java.math.BigDecimal.class);
 
     public final NumberPath<java.math.BigDecimal> lon = createNumber("lon", java.math.BigDecimal.class);
 
-    public final DateTimePath<java.time.LocalDateTime> receivedAt = createDateTime("receivedAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> receivedAt = createDateTime("receivedAt",
+            java.time.LocalDateTime.class);
 
-    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.ComplaintStatus> status = createEnum("status", com.smart.complaint.routing_system.applicant.domain.ComplaintStatus.class);
+    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.ComplaintStatus> status = createEnum(
+            "status", com.smart.complaint.routing_system.applicant.domain.ComplaintStatus.class);
 
     public final StringPath title = createString("title");
 
-    public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> updatedAt = createDateTime("updatedAt",
+            java.time.LocalDateTime.class);
 
     public QComplaint(String variable) {
         this(Complaint.class, forVariable(variable), INITS);
@@ -87,4 +92,3 @@ public class QComplaint extends EntityPathBase<Complaint> {
     }
 
 }
-

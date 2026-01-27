@@ -18,16 +18,15 @@ public class SocialAuth {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 여러 소셜 계정이 한 유저에게 연결될 수 있는 다대일(N:1) 관계
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Column(nullable = false, length = 10)
-    private String provider; // kakao, naver
+    private String provider;
 
     @Column(name = "provider_id", nullable = false)
-    private String providerId; // 소셜 서버에서 주는 고유 ID
+    private String providerId;
 
     @Column(name = "connected_at", updatable = false)
     private LocalDateTime connectedAt;

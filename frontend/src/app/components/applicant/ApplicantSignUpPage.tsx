@@ -28,7 +28,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
   const [isIdChecking, setIsIdChecking] = useState(false);
   const [isIdAvailable, setIsIdAvailable] = useState<boolean | null>(null);
 
-  // Check if password matches
   const passwordsMatch = password && passwordConfirm && password === passwordConfirm;
   const passwordsNoMatch = passwordConfirm && password !== passwordConfirm;
   const isAllInputFilled =
@@ -41,9 +40,7 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
     passwordsMatch &&
     isIdAvailable === true;
 
-  // Mock function to check if ID is available
   const checkIdAvailability = async () => {
-    // 아이디 형식 검증
     const idRegex = /^[a-z0-9]{5,15}$/;
     if (!userId.trim()) {
       Swal.fire({ icon: 'warning', text: '아이디를 입력해주세요.' });
@@ -55,7 +52,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
     }
     setIsIdChecking(true);
 
-    // 아이디 중복 확인 API 호출
     try {
       await api.post(`/applicant/check-id`, { checkString: userId, type: "id" });
       setIsIdAvailable(true);
@@ -63,7 +59,7 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
     } catch (error) {
       setIsIdAvailable(false);
 
-      let displayMsg = '이미 사용 중인 아이디입니다.'; // 기본 메시지
+      let displayMsg = '이미 사용 중인 아이디입니다.';
 
       if (axios.isAxiosError(error) && error.response?.status === 500) {
         displayMsg = '서버 통신 중 오류가 발생했습니다.';
@@ -84,7 +80,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
     const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // 이메일 형식 추가
 
-    // --- Validation (생략 없이 꼼꼼하게) ---
     if (!userId || !password || !passwordConfirm || !firstName || !lastName || !email) {
       Swal.fire({ icon: 'warning', title: '입력 누락', text: '모든 필수 항목을 입력해주세요.' });
       return;
@@ -114,7 +109,7 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
 
     } catch (error) {
       Swal.fire({ icon: 'warning', title: '형식 오류', text: '중복된 이메일 주소입니다!' });
-      return; // 여기서 함수 중단 (아무것도 반환하지 않거나 특정 값 반환)
+      return;
     }
 
     Swal.fire({
@@ -123,29 +118,26 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
     });
 
     try {
-      // 실제 백엔드 API 연동
       await api.post(`/applicant/signup`, {
         userId: userId,
         password: password,
         displayName: lastName + firstName,
         email: email,
       },
-        { // 3번째 인자: Config
+        {
           headers: { 'CROSS-KEY': 'my-secret-key-123' }
         });
 
       Swal.close();
 
-      // 성공 알림 후 페이지 이동
       await Swal.fire({
         icon: 'success',
         title: '회원가입 성공',
         text: '가입이 완료되었습니다. 로그인 페이지로 이동합니다.'
       });
 
-      // 4. 리다이렉트 실행
-      onSignupSuccess?.(); // 부모 컴포넌트에서 정의한 로직이 있다면 실행
-      navigate('/applicant/login');  // 로그인 페이지 경로로 이동 (경로가 다르면 수정하세요)
+      onSignupSuccess?.();
+      navigate('/applicant/login');
 
     } catch (error) {
       Swal.close();
@@ -164,7 +156,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-2xl bg-white rounded-lg shadow-md p-8">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">회원가입</h1>
           <p className="text-lg text-gray-600">
@@ -173,7 +164,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* User ID with Duplicate Check */}
           <div className="space-y-2">
             <Label htmlFor="userId" className="text-lg">아이디 *</Label>
             <div className="flex gap-2">
@@ -183,7 +173,7 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
                 value={userId}
                 onChange={(e) => {
                   setUserId(e.target.value);
-                  setIsIdAvailable(null); // Reset check when user types
+                  setIsIdAvailable(null);
                 }}
                 placeholder="아이디는 5~15자의 영문 소문자와 숫자로 입력해주세요."
                 className="flex-1 text-lg h-12"
@@ -199,7 +189,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
                 {isIdChecking ? '확인중...' : '중복확인'}
               </Button>
             </div>
-            {/* ID Availability Feedback */}
             {isIdAvailable === true && (
               <p className="text-green-600 text-base flex items-center gap-2">
                 <Check className="w-5 h-5" />
@@ -213,8 +202,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
               </p>
             )}
           </div>
-
-          {/* Password */}
           <div className="space-y-2">
             <Label htmlFor="password" className="text-lg">비밀번호 *</Label>
             <div className="relative">
@@ -241,7 +228,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
             </div>
           </div>
 
-          {/* Password Confirm with Live Matching */}
           <div className="space-y-2">
             <Label htmlFor="passwordConfirm" className="text-lg">비밀번호 확인 *</Label>
             <div className="relative">
@@ -271,7 +257,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
                 )}
               </button>
             </div>
-            {/* Password Match Feedback */}
             {passwordsMatch && (
               <p className="text-green-600 text-base flex items-center gap-2 font-medium">
                 <Check className="w-5 h-5" />
@@ -286,7 +271,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
             )}
           </div>
 
-          {/* Name Fields - Side by Side */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="lastName" className="text-lg">성 *</Label>
@@ -314,7 +298,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
             </div>
           </div>
 
-          {/* Email */}
           <div className="space-y-2">
             <Label htmlFor="email" className="text-lg">이메일 *</Label>
             <Input
@@ -328,7 +311,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
             />
           </div>
 
-          {/* Submit Button */}
           <div className="pt-4 space-y-3">
             <Button
               type="submit"
@@ -347,7 +329,6 @@ export default function ApplicantSignUpPage({ onSignupSuccess }: SignupPageProps
             </Button>
           </div>
 
-          {/* Helper Text */}
           <p className="text-center text-gray-500 text-base mt-4">
             * 모든 항목은 필수 입력 항목입니다.
           </p>

@@ -9,10 +9,6 @@ import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.PathInits;
 
-
-/**
- * QIncident is a Querydsl query type for Incident
- */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QIncident extends EntityPathBase<Incident> {
 
@@ -24,11 +20,13 @@ public class QIncident extends EntityPathBase<Incident> {
 
     public final NumberPath<java.math.BigDecimal> centroidLon = createNumber("centroidLon", java.math.BigDecimal.class);
 
-    public final DateTimePath<java.time.LocalDateTime> closedAt = createDateTime("closedAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> closedAt = createDateTime("closedAt",
+            java.time.LocalDateTime.class);
 
     public final NumberPath<Integer> complaintCount = createNumber("complaintCount", Integer.class);
 
-    public final ListPath<Complaint, QComplaint> complaints = this.<Complaint, QComplaint>createList("complaints", Complaint.class, QComplaint.class, PathInits.DIRECT2);
+    public final ListPath<Complaint, QComplaint> complaints = this.<Complaint, QComplaint>createList("complaints",
+            Complaint.class, QComplaint.class, PathInits.DIRECT2);
 
     public final NumberPath<Integer> districtId = createNumber("districtId", Integer.class);
 
@@ -36,9 +34,11 @@ public class QIncident extends EntityPathBase<Incident> {
 
     public final StringPath keywords = createString("keywords");
 
-    public final DateTimePath<java.time.LocalDateTime> openedAt = createDateTime("openedAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> openedAt = createDateTime("openedAt",
+            java.time.LocalDateTime.class);
 
-    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.IncidentStatus> status = createEnum("status", com.smart.complaint.routing_system.applicant.domain.IncidentStatus.class);
+    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.IncidentStatus> status = createEnum(
+            "status", com.smart.complaint.routing_system.applicant.domain.IncidentStatus.class);
 
     public final StringPath title = createString("title");
 
@@ -55,4 +55,3 @@ public class QIncident extends EntityPathBase<Incident> {
     }
 
 }
-

@@ -39,22 +39,18 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String userNameAttributeName = userRequest.getClientRegistration().getProviderDetails()
                 .getUserInfoEndpoint().getUserNameAttributeName();
 
-        // 기존 OAuth2Service에 있던 표준화 로직 활용
         OAuth2Attributes attributes = OAuth2Attributes.of(registrationId, userNameAttributeName,
                 oAuth2User.getAttributes());
 
-        // DB 저장 가로채기
         User user = socialAuthRepository.findByProviderAndProviderId(registrationId, attributes.id())
                 .map(SocialAuth::getUser)
                 .orElseGet(
                         () -> registerNewUser(registrationId, attributes.id(), attributes.email(), attributes.name()));
 
-        // 최종 반환 (DB의 권한 반영)
         return new DefaultOAuth2User(
                 Collections.singleton(new SimpleGrantedAuthority(user.getRole().name())),
                 oAuth2User.getAttributes(),
-                "naver".equals(registrationId) ? "response" : userNameAttributeName
-        );
+                "naver".equals(registrationId) ? "response" : userNameAttributeName);
     }
 
     private User registerNewUser(String provider, String providerId, String email, String name) {
@@ -86,7 +82,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             Map<String, Object> response = (Map<String, Object>) oAuth2User.getAttributes().get("response");
             return (String) response.get("id");
         }
-        // 카카오는 id가 최상위에 Long 타입으로 오는 경우가 많음
         return oAuth2User.getAttributes().get("id").toString();
     }
 

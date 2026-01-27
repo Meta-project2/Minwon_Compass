@@ -30,16 +30,15 @@ public class ComplaintReroute {
     @Column(name = "request_reason", columnDefinition = "TEXT")
     private String requestReason;
 
-    // "PENDING", "APPROVED", "REJECTED"
     @Column(length = 20)
     @Builder.Default
     private String status = "PENDING";
 
     @Column(name = "requester_id")
-    private Long requesterId; // 요청자
+    private Long requesterId;
 
     @Column(name = "reviewer_id")
-    private Long reviewerId; // 승인자
+    private Long reviewerId;
 
     @CreationTimestamp
     @Column(name = "created_at")

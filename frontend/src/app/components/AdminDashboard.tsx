@@ -14,7 +14,6 @@ import {
 } from '../../api/AdminDashboardApi';
 import { format, subDays } from 'date-fns';
 
-// --- [복구] 디자인 헬퍼 함수 (원본 유지) ---
 const RADIAN = Math.PI / 180;
 function clamp01(n: number) { return Math.min(1, Math.max(0, n)); }
 function hexToRgb(hex: string) {
@@ -35,7 +34,6 @@ function lightenHex(hex: string, amount = 0.55) {
   return rgbToHex(r, g, b);
 }
 
-// 라벨 렌더러
 const makePieLabelRenderer = (getColor: any) => (props: any) => {
   const { cx, cy, midAngle, outerRadius, percent } = props;
   if (percent < 0.05) return null;
@@ -49,7 +47,6 @@ const makePieLabelRenderer = (getColor: any) => (props: any) => {
   );
 };
 
-// --- 색상 정의 ---
 const COLORS = {
   blue: '#3b82f6', green: '#10b981', yellow: '#f59e0b',
   purple: '#8b5cf6', red: '#ef4444', orange: '#fb923c',
@@ -58,7 +55,6 @@ const COLORS = {
 const CATEGORY_PALETTE = [COLORS.blue, COLORS.green, COLORS.yellow, COLORS.purple, COLORS.orange];
 
 export function AdminDashboard() {
-  // --- 상태 관리 ---
   const [departments, setDepartments] = useState<DepartmentFilterDto[]>([]); // 부서 목록
   const [period, setPeriod] = useState('7d');
   const [dateRange, setDateRange] = useState({
@@ -66,7 +62,6 @@ export function AdminDashboard() {
     end: format(new Date(), 'yyyy-MM-dd')
   });
 
-  // 위젯별 데이터 & 필터
   const [trendData, setTrendData] = useState<DailyCountDto[]>([]);
   const [trendFilter, setTrendFilter] = useState('all');
 
@@ -78,15 +73,12 @@ export function AdminDashboard() {
 
   const [generalData, setGeneralData] = useState<GeneralStatsResponse | null>(null);
 
-  // --- 데이터 로드 ---
-  // 1. 초기 로드: 부서 목록
   useEffect(() => {
     AdminDashboardApi.getDepartments()
       .then(setDepartments)
       .catch(err => console.error("부서 목록 로드 실패:", err));
   }, []);
 
-  // 2. 위젯 데이터 로드
   useEffect(() => { loadTrend(); }, [dateRange, trendFilter]);
   useEffect(() => { loadTime(); }, [dateRange, timeFilter]);
   useEffect(() => { loadDeptStatus(); }, [dateRange, deptStatusFilter]);
@@ -108,8 +100,6 @@ export function AdminDashboard() {
     setDateRange({ start: format(start, 'yyyy-MM-dd'), end: format(today, 'yyyy-MM-dd') });
   };
 
-  // --- 데이터 가공 ---
-  // 1. 민원 유형 (Pie)
   const pieChartData = useMemo(() => {
     if (!generalData) return [];
     const sorted = [...generalData.categoryStats].sort((a, b) => b.count - a.count);
@@ -119,7 +109,6 @@ export function AdminDashboard() {
     return top5;
   }, [generalData]);
 
-  // 2. 처리 시간 (Pie + Gradient)
   const procTimeChartData = useMemo(() => {
     const colorMap: Record<string, string> = { "3일 이내": COLORS.green, "7일 이내": COLORS.blue, "14일 이내": COLORS.yellow, "14일 이상": COLORS.red };
     return timeData.map(item => ({
@@ -127,14 +116,12 @@ export function AdminDashboard() {
     }));
   }, [timeData]);
 
-  // [수정] 동적 부서 필터 컴포넌트
   const DeptFilterSelect = ({ value, onChange }: any) => (
     <div className="ml-auto w-32">
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="h-8 text-xs bg-slate-50 border-slate-200"><SelectValue placeholder="전체" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">전체 부서</SelectItem>
-          {/* DB에서 가져온 departments 매핑 */}
           {departments.map((dept) => (
             <SelectItem key={dept.id} value={dept.id.toString()}>
               {dept.name}
@@ -149,7 +136,6 @@ export function AdminDashboard() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
       <div className="h-16 border-b border-border bg-card px-6 shadow-sm flex items-center gap-3 shrink-0">
         <h1 className="text-2.5xl font-bold text-slate-900">민원 처리 현황</h1>
         <div className="flex flex-wrap gap-2 items-center ml-auto">
@@ -172,8 +158,6 @@ export function AdminDashboard() {
 
       <div className="flex-1 overflow-auto p-6 bg-slate-100/50">
         <div className="grid grid-cols-3 gap-4">
-
-          {/* 1. 접수 추이 */}
           <Card className="col-span-1 shadow-sm">
             <CardHeader className="flex flex-row items-center">
               <div className="h-4 w-1 bg-blue-600 rounded-full mr-2" />
@@ -199,7 +183,6 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* 2. 처리 시간 (그라데이션 & 꽉찬 파이 복구) */}
           <Card className="col-span-1 shadow-sm">
             <CardHeader className="flex flex-row items-center">
               <div className="h-4 w-1 bg-green-600 rounded-full mr-2" />
@@ -211,7 +194,6 @@ export function AdminDashboard() {
                 <div className="w-[60%] h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      {/* [복구] 그라데이션 defs 동적 생성 */}
                       <defs>
                         {procTimeChartData.map((entry, idx) => (
                           <linearGradient key={idx} id={`proc-${idx}`} x1="0" y1="0" x2="1" y2="1">
@@ -224,7 +206,6 @@ export function AdminDashboard() {
                         data={procTimeChartData}
                         cx="50%" cy="50%"
                         outerRadius={75}
-                        // innerRadius={0} // 꽉찬 원
                         dataKey="value"
                         labelLine={false}
                         label={makePieLabelRenderer(null)}
@@ -237,7 +218,6 @@ export function AdminDashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                {/* 범례 */}
                 <div className="w-[40%] pl-2 space-y-2">
                   {procTimeChartData.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2 text-sm text-slate-700">
@@ -250,7 +230,6 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* 3. AI 정확도 */}
           <Card className="col-span-1 shadow-sm">
             <CardHeader className="flex flex-row items-center">
               <div className="h-4 w-1 bg-purple-600 rounded-full mr-2" />
@@ -266,7 +245,6 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* 4. 부서별 현황 (막대 그라데이션) */}
           <Card className="col-span-1 shadow-sm">
             <CardHeader className="flex flex-row items-center">
               <div className="h-4 w-1 bg-blue-600 rounded-full mr-2" />
@@ -281,16 +259,16 @@ export function AdminDashboard() {
                     <linearGradient id="barRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f87171" /><stop offset="100%" stopColor="#ef4444" /></linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis 
-  dataKey="deptName" 
-  tick={{ fontSize: 10, fill: '#64748b' }} // 글씨 크기를 약간 줄임
-  axisLine={false} 
-  tickLine={false}
-  interval={0}        // 모든 과 이름을 강제로 표시
-  angle={-35}         // 대각선으로 기울임
-  textAnchor="end"    // 기울어진 글씨의 끝을 축에 맞춤
-  height={60}         // 라벨이 기울어지면서 아래쪽 공간이 더 필요하므로 높이 조절
-/>
+                  <XAxis
+                    dataKey="deptName"
+                    tick={{ fontSize: 10, fill: '#64748b' }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                    angle={-35}
+                    textAnchor="end"
+                    height={60}
+                  />
                   <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
                   <Tooltip cursor={{ fill: '#f1f5f9' }} />
                   <Bar dataKey="received" name="접수" fill="url(#barBlue)" radius={[4, 4, 0, 0]} />
@@ -300,7 +278,6 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* 5. 민원 유형 (Pie + Gradient) */}
           <Card className="col-span-1 shadow-sm">
             <CardHeader className="flex flex-row items-center">
               <div className="h-4 w-1 bg-yellow-500 rounded-full mr-2" />
@@ -311,7 +288,6 @@ export function AdminDashboard() {
                 <div className="w-[60%] h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      {/* [복구] 그라데이션 defs */}
                       <defs>
                         {pieChartData.map((entry, idx) => (
                           <linearGradient key={idx} id={`cat-${idx}`} x1="0" y1="0" x2="1" y2="1">
@@ -346,7 +322,7 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* 6. 반복 민원 (수직 정렬 Fix) */}
+
           <Card className="col-span-1 shadow-sm">
             <CardHeader className="flex flex-row items-center">
               <div className="h-4 w-1 bg-red-600 rounded-full mr-2" />
@@ -358,7 +334,6 @@ export function AdminDashboard() {
                   <div key={inc.incidentId} className="flex items-center justify-between p-3 border border-slate-100 bg-white rounded-lg shadow-sm hover:bg-slate-50 transition-colors">
                     <div className="flex-1 min-w-0 mr-3">
                       <div className="text-sm font-semibold truncate" title={inc.title}>{inc.title}</div>
-                      {/* <div className="text-xs text-slate-500 font-mono">{inc.incidentId} | {inc.count}건</div> */}
                       <div className="text-xs text-slate-500 font-mono">
                         <Badge variant="secondary" className="px-2 py-0.5 h-auto">
                           {inc.incidentId}

@@ -8,10 +8,6 @@ import com.querydsl.core.types.PathMetadata;
 import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
 
-
-/**
- * QDistrict is a Querydsl query type for District
- */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QDistrict extends EntityPathBase<District> {
 
@@ -40,4 +36,3 @@ public class QDistrict extends EntityPathBase<District> {
     }
 
 }
-

@@ -9,10 +9,6 @@ import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.PathInits;
 
-
-/**
- * QComplaintNormalization is a Querydsl query type for ComplaintNormalization
- */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QComplaintNormalization extends EntityPathBase<ComplaintNormalization> {
 
@@ -20,7 +16,8 @@ public class QComplaintNormalization extends EntityPathBase<ComplaintNormalizati
 
     private static final PathInits INITS = PathInits.DIRECT2;
 
-    public static final QComplaintNormalization complaintNormalization = new QComplaintNormalization("complaintNormalization");
+    public static final QComplaintNormalization complaintNormalization = new QComplaintNormalization(
+            "complaintNormalization");
 
     public final QComplaint complaint;
 
@@ -28,7 +25,8 @@ public class QComplaintNormalization extends EntityPathBase<ComplaintNormalizati
 
     public final StringPath coreRequest = createString("coreRequest");
 
-    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt",
+            java.time.LocalDateTime.class);
 
     public final NumberPath<Integer> districtId = createNumber("districtId", Integer.class);
 
@@ -66,10 +64,12 @@ public class QComplaintNormalization extends EntityPathBase<ComplaintNormalizati
         this(ComplaintNormalization.class, metadata, inits);
     }
 
-    public QComplaintNormalization(Class<? extends ComplaintNormalization> type, PathMetadata metadata, PathInits inits) {
+    public QComplaintNormalization(Class<? extends ComplaintNormalization> type, PathMetadata metadata,
+            PathInits inits) {
         super(type, metadata, inits);
-        this.complaint = inits.isInitialized("complaint") ? new QComplaint(forProperty("complaint"), inits.get("complaint")) : null;
+        this.complaint = inits.isInitialized("complaint")
+                ? new QComplaint(forProperty("complaint"), inits.get("complaint"))
+                : null;
     }
 
 }
-

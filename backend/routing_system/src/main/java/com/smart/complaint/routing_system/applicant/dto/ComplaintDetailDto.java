@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
-import com.smart.complaint.routing_system.applicant.entity.Complaint;
 
 public record ComplaintDetailDto(
         Long id,

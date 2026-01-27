@@ -29,18 +29,11 @@ public class Incident {
     @Column(name = "complaint_count")
     private Integer complaintCount;
 
-//    @Enumerated(EnumType.STRING)
-//    @Column(columnDefinition = "incident_status")
-//    @Builder.Default
-//    private IncidentStatus status = IncidentStatus.OPEN;
-
-    // 수정 : 제목 수정 관련
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "incident_status")
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private IncidentStatus status;
 
-    // [핵심 해결] 이 부분이 있어야 incident.getComplaints()를 쓸 수 있습니다.
     @OneToMany(mappedBy = "incident")
     private List<Complaint> complaints;
 
@@ -61,22 +54,18 @@ public class Incident {
 
     private String keywords;
 
-    // [추가] 최근 발생일 갱신
     public void updateClosedAt(LocalDateTime lastOccurred) {
         this.closedAt = lastOccurred;
     }
 
-    // [수정] 제목을 바꿀 수 있게 해주는 기능
     public void updateTitle(String title) {
         this.title = title;
     }
 
-    // [수정] 이 편의 메서드가 없어서 에러가 났습니다. 추가해주세요.
     public void updateStatus(IncidentStatus newStatus) {
         this.status = newStatus;
     }
-    
-    // [수정] 민원 숫자를 갱신하는 기능 (이동 시 자동 호출됨)
+
     public void updateComplaintCount(int count) {
         this.complaintCount = count;
     }

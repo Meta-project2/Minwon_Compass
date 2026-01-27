@@ -2,10 +2,9 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 
 const api = axios.create({
-    baseURL: '/api', // 백엔드 주소
+    baseURL: '/api',
 });
 
-// 요청 인터셉터 (토큰 주입)
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
@@ -14,7 +13,6 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// 응답 인터셉터 (401 에러 감시)
 api.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -28,4 +26,4 @@ api.interceptors.response.use(
     }
 );
 
-export default api; // 핵심: 외부에서 쓸 수 있게 내보냅니다.
+export default api;

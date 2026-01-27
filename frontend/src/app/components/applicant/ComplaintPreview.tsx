@@ -1,4 +1,4 @@
-import { X, Calendar, MapPin, User, FileText } from 'lucide-react';
+import { X, MapPin, User, FileText } from 'lucide-react';
 import { Button } from './ui/button';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -32,11 +32,8 @@ export function ComplaintPreview({ data, onClose }: ComplaintPreviewProps) {
             <X className="w-5 h-5" />
           </Button>
         </div>
-
-        {/* Preview Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-6">
-            {/* Complaint Info Header */}
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">민원 번호</span>
@@ -53,8 +50,6 @@ export function ComplaintPreview({ data, onClose }: ComplaintPreviewProps) {
                 </span>
               </div>
             </div>
-
-            {/* Applicant Info (Mock) */}
             <div className="space-y-2 border-t pt-4">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-gray-500" />
@@ -66,24 +61,18 @@ export function ComplaintPreview({ data, onClose }: ComplaintPreviewProps) {
                 </div>
               </div>
             </div>
-
-            {/* Title */}
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-gray-500">제목</h3>
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{data.title}</p>
               </div>
             </div>
-
-            {/* Body */}
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-gray-500">민원 내용</h3>
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{data.body}</p>
               </div>
             </div>
-
-            {/* Location */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-gray-500" />
@@ -93,13 +82,11 @@ export function ComplaintPreview({ data, onClose }: ComplaintPreviewProps) {
                 <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{data.location}</p>
               </div>
               <div>
-                <KakaoMap address={data.location} />
+                <KakaoMap address={data.location} onViewDetail={() => { }} />
               </div>
             </div>
           </div>
         </div>
-
-        {/* Footer */}
         <div className="border-t px-6 py-4 bg-gray-50">
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-600">

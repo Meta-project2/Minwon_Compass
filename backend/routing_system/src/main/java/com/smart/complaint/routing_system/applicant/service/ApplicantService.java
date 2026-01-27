@@ -24,7 +24,6 @@ import com.smart.complaint.routing_system.applicant.dto.ComplaintListDto;
 import com.smart.complaint.routing_system.applicant.dto.UserLoginRequest;
 import com.smart.complaint.routing_system.applicant.dto.UserNewPasswordDto;
 import com.smart.complaint.routing_system.applicant.dto.UserSignUpDto;
-import com.smart.complaint.routing_system.applicant.entity.Complaint;
 import com.smart.complaint.routing_system.applicant.entity.User;
 import com.smart.complaint.routing_system.applicant.domain.ErrorMessage;
 
@@ -113,16 +112,12 @@ public class ApplicantService {
         final String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
         SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder();
-
-        // 10자리 생성
         for (int i = 0; i < 10; i++) {
             int index = random.nextInt(chars.length());
             sb.append(chars.charAt(index));
         }
 
         String password = sb.toString();
-
-        // 검증 로직: 규칙에 맞지 않으면 다시 생성(재귀)하거나 보완 로직 추가
         if (!password.matches("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*])[A-Za-z\\d!@#$%^&*]{8,}$")) {
             return generateTemporaryPassword();
         }
@@ -134,19 +129,12 @@ public class ApplicantService {
     public Boolean updatePassword(UserNewPasswordDto userNewPasswordDto) {
 
         String newRandomPw = generateTemporaryPassword();
-        // 2. 사용자 엔티티 조회
         User user = userRepository.findByUsernameAndEmail(userNewPasswordDto.id(), userNewPasswordDto.email())
                 .orElseThrow(() -> new BusinessException(ErrorMessage.USER_NOT_FOUND));
-
-        // 3. 비밀번호 암호화 후 엔티티 수정
-        // (Spring Security의 PasswordEncoder를 주입받아 사용해야 로그인 시 인증 가능)
         String encodedPassword = encoder.encode(newRandomPw);
         user.changePassword(encodedPassword);
-        // save 없어도 transactional 어노테이션으로 자동 적용
 
-        // 4. 이메일 발송
         emailService.sendTemporaryPassword(user.getEmail(), newRandomPw);
-
         return true;
     }
 
@@ -155,24 +143,26 @@ public class ApplicantService {
     }
 
     public List<ComplaintDto> getTop3RecentComplaints(String applicantId) {
+        if (applicantId == null || applicantId.isEmpty() || applicantId.equals("anonymousUser")) {
+
+            return complaintRepository.findTop3RecentComplaintByApplicantId(null);
+        }
         Long actualUserId = null;
 
         if (isPureNumeric(applicantId)) {
-            // 숫자라면 PK일 가능성이 높으므로 먼저 exists 체크
             if (userRepository.existsById(Long.parseLong(applicantId))) {
                 actualUserId = Long.parseLong(applicantId);
             }
         }
 
-        // 2. PK가 아니거나 검색 실패 시 Querydsl로 소셜 유저 조회
         if (actualUserId == null) {
             User socialUser = userRepository.findByProviderIdLike(applicantId)
-                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + applicantId));
-            actualUserId = socialUser.getId();
+                    .orElse(null);
+            if (socialUser != null) {
+                actualUserId = socialUser.getId();
+            }
         }
-
-        Long id = Long.parseLong(applicantId);
-        return complaintRepository.findTop3RecentComplaintByApplicantId(id);
+        return complaintRepository.findTop3RecentComplaintByApplicantId(actualUserId);
     }
 
     public ComplaintDetailDto getComplaintDetails(Long complaintId) {
@@ -190,13 +180,10 @@ public class ApplicantService {
         Long actualUserId = null;
 
         if (isPureNumeric(applicantId)) {
-            // 숫자라면 PK일 가능성이 높으므로 먼저 exists 체크
             if (userRepository.existsById(Long.parseLong(applicantId))) {
                 actualUserId = Long.parseLong(applicantId);
             }
         }
-
-        // 2. PK가 아니거나 검색 실패 시 Querydsl로 소셜 유저 조회
         if (actualUserId == null) {
             User socialUser = userRepository.findByProviderIdLike(applicantId)
                     .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + applicantId));

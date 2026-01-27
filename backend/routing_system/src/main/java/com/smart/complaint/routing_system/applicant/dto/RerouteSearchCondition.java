@@ -4,11 +4,11 @@ import lombok.Data;
 
 @Data
 public class RerouteSearchCondition {
-    private String status;       // PENDING, APPROVED, REJECTED
-    private String keyword;      // 제목, 요청자명, 민원번호
+    private String status;
+    private String keyword;
 
-    private Long originDeptId;   //  현재 부서 필터
-    private Long targetDeptId;   //  희망 부서 필터
+    private Long originDeptId;
+    private Long targetDeptId;
 
     private Integer page = 1;
     private Integer size = 10;

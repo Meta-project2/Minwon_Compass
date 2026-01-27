@@ -30,7 +30,7 @@ interface IncidentResponse {
   lastOccurred?: string;
 }
 
-const ITEMS_PER_PAGE = 10; 
+const ITEMS_PER_PAGE = 10;
 
 const statusMap: Record<string, { label: string; color: string }> = {
   OPEN: { label: '대응중', color: 'bg-blue-100 text-blue-700 border-blue-300' },
@@ -52,7 +52,7 @@ export function IncidentListPage({ onViewDetail, savedPage = 1, onSavePage }: In
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  
+
   const [page, setPage] = useState(savedPage);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
@@ -109,7 +109,7 @@ export function IncidentListPage({ onViewDetail, savedPage = 1, onSavePage }: In
     const maxVisiblePages = 10;
     let startPage = Math.max(1, page - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    
+
     if (endPage - startPage + 1 < maxVisiblePages) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
@@ -156,8 +156,8 @@ export function IncidentListPage({ onViewDetail, savedPage = 1, onSavePage }: In
               </Select>
               <Button variant="ghost" size="sm" className="ml-auto" onClick={resetFilters}><X className="h-4 w-4 mr-1" /> 필터 초기화</Button>
             </div>
-            <div className="flex items-center h-10 ml-2"> 
-              <div className="h-4 w-px bg-slate-300 mr-4"></div> 
+            <div className="flex items-center h-10 ml-2">
+              <div className="h-4 w-px bg-slate-300 mr-4"></div>
               <span className="text-sm font-medium text-slate-600 whitespace-nowrap pt-0.5">총 <span className="text-blue-600 font-bold">{totalElements}</span>건</span>
             </div>
           </div>
@@ -188,8 +188,6 @@ export function IncidentListPage({ onViewDetail, savedPage = 1, onSavePage }: In
                             <span className="font-medium truncate max-w-[400px] text-slate-800">{cleanTitle(incident.title)}</span>
                           </div>
                         </TableCell>
-                        
-                        {/* [수정] 민원수 라벨: '종결' 라벨과 같은 회색(Slate) 톤 적용 */}
                         <TableCell className="text-center">
                           <div className="flex justify-center">
                             <Badge className="bg-slate-100 text-slate-600 border-slate-300 border px-2.5 py-0.5 font-medium shadow-sm">
@@ -197,7 +195,7 @@ export function IncidentListPage({ onViewDetail, savedPage = 1, onSavePage }: In
                             </Badge>
                           </div>
                         </TableCell>
-                        
+
                         <TableCell className="text-center">
                           <div className="flex justify-center">
                             <Badge className={`${statusMap[incident.status]?.color} border px-2.5 py-0.5 text-xs font-medium`}>

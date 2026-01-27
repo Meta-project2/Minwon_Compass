@@ -11,23 +11,23 @@ import jakarta.transaction.Transactional;
 
 public interface ComplaintNormalizationRepository extends JpaRepository<ComplaintNormalization, Long> {
 
-    @Modifying
-    @Transactional
-    @Query(value = "INSERT INTO complaint_normalizations " +
-            "(complaint_id, resp_dept, neutral_summary, core_request, target_object, " +
-            "keywords_jsonb, routing_rank, embedding, is_current, created_at) " +
-            "VALUES (:complaintId, :respDept, :neutralSummary, :coreRequest, :targetObject, " +
-            "CAST(:keywords AS jsonb), CAST(:routingRank AS jsonb), CAST(:embedding AS vector), " +
-            ":isCurrent, CURRENT_TIMESTAMP)", nativeQuery = true)
-    void insertNormalization(
-            @Param("complaintId") Long complaintId,
-            @Param("respDept") String respDept,
-            @Param("neutralSummary") String neutralSummary,
-            @Param("coreRequest") String coreRequest,
-            @Param("targetObject") String targetObject,
-            @Param("keywords") String keywords, // JSON 문자열
-            @Param("routingRank") String routingRank, // JSON 문자열
-            @Param("embedding") float[] embedding, // float 배열
-            @Param("isCurrent") boolean isCurrent);
+        @Modifying
+        @Transactional
+        @Query(value = "INSERT INTO complaint_normalizations " +
+                        "(complaint_id, resp_dept, neutral_summary, core_request, target_object, " +
+                        "keywords_jsonb, routing_rank, embedding, is_current, created_at) " +
+                        "VALUES (:complaintId, :respDept, :neutralSummary, :coreRequest, :targetObject, " +
+                        "CAST(:keywords AS jsonb), CAST(:routingRank AS jsonb), CAST(:embedding AS vector), " +
+                        ":isCurrent, CURRENT_TIMESTAMP)", nativeQuery = true)
+        void insertNormalization(
+                        @Param("complaintId") Long complaintId,
+                        @Param("respDept") String respDept,
+                        @Param("neutralSummary") String neutralSummary,
+                        @Param("coreRequest") String coreRequest,
+                        @Param("targetObject") String targetObject,
+                        @Param("keywords") String keywords,
+                        @Param("routingRank") String routingRank,
+                        @Param("embedding") float[] embedding,
+                        @Param("isCurrent") boolean isCurrent);
 
 }

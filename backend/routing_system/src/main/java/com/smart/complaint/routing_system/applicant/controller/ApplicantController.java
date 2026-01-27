@@ -24,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -61,10 +60,8 @@ public class ApplicantController {
     @PostMapping("api/applicant/login")
     public ResponseEntity<Map<String, String>> applicantLogin(@RequestBody UserLoginRequest loginRequest) {
 
-        // 서비스에서 토큰을 직접 받아옵니다.
         String token = applicantService.applicantLogin(loginRequest);
 
-        // 프론트엔드에서 response.data.accessToken으로 받기로 했으므로 Map으로 감싸서 보냅니다.
         return ResponseEntity.ok(Map.of("accessToken", token));
     }
 
@@ -98,7 +95,6 @@ public class ApplicantController {
     @Operation(summary = "토큰 유효성 검사 엔드포인트", description = "사용자의 토큰이 유효한지 확인한다.")
     @GetMapping("/api/auth/validate")
     public ResponseEntity<?> validateToken(@AuthenticationPrincipal String providerId) {
-        // JwtAuthenticationFilter를 거쳐 여기까지 왔다면 토큰은 유효
         if (providerId == null) {
             System.out.println("컨트롤러: 인증된 유저 정보가 없습니다.");
             return ResponseEntity.status(401).build();
@@ -115,7 +111,6 @@ public class ApplicantController {
                 id = principal.toString();
             } catch (NumberFormatException e) {
                 log.error("사용자 ID 파싱 에러: {}", principal);
-                // 에러 시 id는 그대로 null 유지
             }
         }
         List<ComplaintDto> myComplaints = applicantService.getTop3RecentComplaints(id);
@@ -152,7 +147,7 @@ public class ApplicantController {
         return ResponseEntity.ok(complaints);
     }
 
-    // 새로운 민원 생성
+    @Operation(summary = "민원 접수 + llm 분석 및 정규화", description = "제출된 민원을 분석하고 정규화하여 저장")
     @PostMapping("/api/applicant/complaint")
     public ResponseEntity<String> submitComplaint(@AuthenticationPrincipal String applicantId,
             @RequestBody ComplaintSubmitDto complaintSubmitDto) {
@@ -163,7 +158,7 @@ public class ApplicantController {
         return ResponseEntity.ok("전송이 완료되었습니다.");
     }
 
-    // 추가 민원 생성
+    @Operation(summary = "추가 민원을 접수", description = "챗 형식으로 민원에 대해 답변이 온 경우 추가로 민원을 제출 가능")
     @PostMapping("/api/applicant/complaints/{id}/comments")
     public ResponseEntity<String> postMethodName(@PathVariable Long id, @RequestBody ComplaintInquiryDto inquiryDto) {
 
@@ -172,7 +167,7 @@ public class ApplicantController {
         return ResponseEntity.ok("");
     }
 
-    // 민원 통계 데이터
+    @Operation(summary = "메인 페이지에 보여질 통계 데이터", description = "기간 별 민원의 처리율 등을 조회 및 분석하여 반환")
     @Cacheable(value = "complaintStats", key = "'mainStat'")
     @GetMapping("/api/applicant/complaints-stat")
     public ResponseEntity<ComplaintStatDto> calculateStat() {
@@ -182,6 +177,7 @@ public class ApplicantController {
         return ResponseEntity.ok(statDtos);
     }
 
+    @Operation(summary = "메인 페이지에 보여질 통계 데이터2", description = "기간 동안 가장 많았던 키워드 10가지를 분석 후 반환")
     @Cacheable(value = "complaintKeywords", key = "'mainKeywords'")
     @GetMapping("/api/applicant/complaints-keyword")
     public ResponseEntity<List<KeywordsDto>> getKeywords() {
@@ -191,6 +187,7 @@ public class ApplicantController {
         return ResponseEntity.ok(keywordsDto);
     }
 
+    @Operation(summary = "민원 취하", description = "현재 보고 있는 민원을 취하")
     @PutMapping("/api/applicant/complaints/{id}")
     public ResponseEntity<String> cancelComplaint(@PathVariable Long id) {
 
@@ -199,6 +196,7 @@ public class ApplicantController {
         return ResponseEntity.ok(null);
     }
 
+    @Operation(summary = "민원 종결", description = "현재 보고 있는 민원을 종결")
     @PatchMapping("/api/applicant/complaints/{id}/close")
     public ResponseEntity<String> closeComplaint(@PathVariable Long id) {
 
@@ -206,28 +204,4 @@ public class ApplicantController {
 
         return ResponseEntity.ok(null);
     }
-
-    /*
-     * @PostMapping("/api/applicant/complaints")
-     * public ResponseEntity<NormalizationResponse>
-     * sendComplaints(@AuthenticationPrincipal String applicantId,
-     * 
-     * @RequestBody ComplaintDto request) {
-     * 
-     * NormalizationResponse aiData = aiService.getNormalization(request);
-     * 
-     * // 2. 서비스 호출 (분석 데이터 전달)
-     * // aiData 안에 들어있는 embedding(double[])을 서비스로 넘깁니다.
-     * List<ComplaintSearchResult> similarComplaints =
-     * aiService.getSimilarityScore(aiData.embedding());
-     * 
-     * // 3. 결과 확인 (콘솔 출력 및 반환)
-     * similarComplaints.forEach(result -> {
-     * System.out.println("유사 민원 발견 - [" + result.simScore() + "] " +
-     * result.title());
-     * });
-     * 
-     * return ResponseEntity.ok(null);
-     * }
-     */
 }

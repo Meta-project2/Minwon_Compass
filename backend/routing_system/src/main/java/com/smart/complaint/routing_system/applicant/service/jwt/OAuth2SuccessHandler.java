@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -25,16 +26,32 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException {
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+        Map<String, Object> attributes = oAuth2User.getAttributes();
 
-        // OAuth2Service에서 설정한 속성들 추출
+        String name = "";
+
+        // 1. 네이버인지 확인 (CustomOAuth2UserService에서 response로 넘겼기 때문)
+        if (attributes.containsKey("response")) {
+            Map<String, Object> responseMap = (Map<String, Object>) attributes.get("response");
+            name = (String) responseMap.get("name");
+        }
+        // 2. 카카오인 경우 (일반적으로 name 또는 properties 내부에 존재)
+        else if (attributes.containsKey("properties")) {
+            Map<String, Object> properties = (Map<String, Object>) attributes.get("properties");
+            name = (String) properties.get("nickname");
+        }
+        // 3. 구글 등 기타
+        else {
+            name = oAuth2User.getAttribute("name");
+        }
+
+        if (name == null)
+            name = "사용자"; // 방어 코드
+
         String id = authentication.getName();
-        String name = oAuth2User.getAttribute("name");
-
-        // JWT 생성
         String token = tokenProvider.createJwtToken(name, id);
-
-        // 프론트엔드(8000포트)로 토큰을 쿼리 스트링에 담아 리다이렉트
-        String targetUrl = UriComponentsBuilder.fromUriString("http://34.158.210.224/applicant/login-success")
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl) // .env의 FRONTEND_URL 값
+                .path("/applicant/login-success") // 경로 추가 (자동으로 / 처리)
                 .queryParam("token", token)
                 .build().toUriString();
 

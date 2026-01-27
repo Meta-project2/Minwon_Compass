@@ -19,7 +19,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
         return Optional.ofNullable(
                 queryFactory
                         .selectFrom(user)
-                        .where(user.username.endsWith(providerId)) // LIKE %providerId 생성
+                        .where(user.username.endsWith(providerId))
                         .fetchOne());
     }
 }

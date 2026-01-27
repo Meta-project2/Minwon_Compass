@@ -2,7 +2,6 @@ package com.smart.complaint.routing_system.applicant.entity;
 
 import com.smart.complaint.routing_system.applicant.domain.ComplaintStatus;
 
-import com.smart.complaint.routing_system.applicant.domain.Tag;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -128,6 +127,9 @@ public class Complaint {
         this.closedAt = LocalDateTime.now();
     }
 
+    public void updateStatustoComplete(){
+        this.status = ComplaintStatus.RESOLVED;
+    }
     // 재이관 요청 시 상태 변경
     public void statusToReroute() {
         this.status = ComplaintStatus.RECOMMENDED; // 재이관 대기중 상태로 변경

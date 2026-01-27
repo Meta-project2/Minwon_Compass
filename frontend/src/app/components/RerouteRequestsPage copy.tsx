@@ -30,7 +30,6 @@ import {
 } from './ui/dialog';
 import { toast } from 'sonner';
 
-// Mock Data (기존 유지)
 const mockRequests = [
   {
     id: 'RR-2026-001',
@@ -119,7 +118,6 @@ export function RerouteRequestsPage() {
     toast('반려 처리되었습니다');
   };
 
-  // 필터 초기화
   const resetFilters = () => {
     setSearchQuery('');
     setSelectedStatus('all');
@@ -127,18 +125,13 @@ export function RerouteRequestsPage() {
 
   return (
     <div className="flex h-full">
-      {/* Main Content */}
       <div className={`flex-1 flex flex-col`}>
-        {/* 상단 헤더 (ComplaintListPage 스타일 통일) */}
         <div className="h-16 border-b border-border bg-card px-6 shadow-sm flex items-center gap-3">
           <h1 className="text-2.5xl font-bold text-slate-900">이관 요청함</h1>
           <p className="text-sm text-slate-400 font-medium pt-1">부서 간 민원 이관 승인/반려 관리</p>
         </div>
 
-        {/* 메인 영역 (배경색 및 패딩 통일) */}
         <div className="flex-1 overflow-auto px-6 pt-0 pb-6 bg-slate-100/50">
-          
-          {/* 필터 영역 (ComplaintListPage 스타일 통일) */}
           <div className="py-3 flex items-center gap-4 justify-left">
             <div className="flex gap-2">
               <div className="flex-1 relative">
@@ -175,8 +168,6 @@ export function RerouteRequestsPage() {
                   <SelectItem value="rejected">반려</SelectItem>
                 </SelectContent>
               </Select>
-
-              {/* 추가 필터들 */}
               <Select defaultValue="all">
                 <SelectTrigger className="w-32 bg-input-background">
                   <SelectValue placeholder="현재부서" />
@@ -205,12 +196,9 @@ export function RerouteRequestsPage() {
               </Button>
             </div>
           </div>
-
-          {/* 테이블 영역 (Card 감싸기 및 스타일 통일) */}
           <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-md bg-white rounded-md">
             <div className="flex-1 overflow-auto">
               <Table>
-                {/* 헤더 스타일: bg-slate-300, 굵은 글씨, 구분선 */}
                 <TableHeader className="sticky top-0 bg-slate-300 border-b-2 z-10">
                   <TableRow>
                     <TableHead className="w-[140px] text-center font-bold text-slate-900 border-r border-slate-300">요청일시</TableHead>
@@ -229,9 +217,8 @@ export function RerouteRequestsPage() {
                     .map((request) => (
                       <TableRow
                         key={request.id}
-                        className={`cursor-pointer hover:bg-slate-100 border-b border-slate-200 ${
-                          selectedRequest === request.id ? 'bg-blue-50/80' : ''
-                        }`}
+                        className={`cursor-pointer hover:bg-slate-100 border-b border-slate-200 ${selectedRequest === request.id ? 'bg-blue-50/80' : ''
+                          }`}
                         onClick={() => setSelectedRequest(request.id)}
                       >
                         <TableCell className="text-sm text-muted-foreground text-center">
@@ -241,7 +228,7 @@ export function RerouteRequestsPage() {
                           {request.complaintId}
                         </TableCell>
                         <TableCell className="">
-                           <span className="font-medium">{request.complaintTitle}</span>
+                          <span className="font-medium">{request.complaintTitle}</span>
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="outline" className="bg-slate-50">{request.currentDept}</Badge>
@@ -260,18 +247,18 @@ export function RerouteRequestsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                           <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 text-xs px-3 border border-slate-200"
-                            >
-                              <ArrowRightLeft className="h-3 w-3 mr-1.5" /> 검토
-                            </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-xs px-3 border border-slate-200"
+                          >
+                            <ArrowRightLeft className="h-3 w-3 mr-1.5" /> 검토
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                   {mockRequests.length === 0 && (
-                     <TableRow>
+                    <TableRow>
                       <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                         요청 내역이 없습니다.
                       </TableCell>
@@ -283,8 +270,6 @@ export function RerouteRequestsPage() {
           </Card>
         </div>
       </div>
-
-      {/* Right Review Panel (기존 로직 유지, 디자인 미세 조정) */}
       {selectedRequest && selectedRequestData && (
         <div className="fixed right-0 top-0 h-screen w-96 bg-white border-l border-slate-200 shadow-2xl z-50 overflow-y-auto">
           <div className="px-4 h-16 border-b border-border flex items-center justify-between sticky top-0 bg-white z-10">
@@ -300,7 +285,6 @@ export function RerouteRequestsPage() {
           </div>
 
           <div className="p-4 space-y-4">
-            {/* Complaint Summary */}
             <Card className="shadow-sm border-slate-200">
               <CardHeader className="pb-3 bg-slate-50 border-b border-slate-100">
                 <CardTitle className="text-sm font-bold text-slate-800">민원 요약</CardTitle>
@@ -320,16 +304,12 @@ export function RerouteRequestsPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Request Reason */}
             <div>
               <div className="text-xs text-slate-500 font-bold mb-2">요청 사유</div>
               <div className="p-3 bg-slate-50 rounded border border-slate-200 text-sm leading-relaxed">
                 {selectedRequestData.reason}
               </div>
             </div>
-
-            {/* AI Routing Recommendation */}
             <Card className="bg-blue-50/50 border-blue-200 shadow-none">
               <CardHeader className="pb-3 border-b border-blue-100">
                 <CardTitle className="text-sm flex items-center gap-2 text-blue-900">
@@ -364,19 +344,6 @@ export function RerouteRequestsPage() {
               </CardContent>
             </Card>
 
-            {/* Decision Memo
-            <div className="pt-2">
-              <label className="text-sm font-bold text-slate-700">결정 메모</label>
-              <Textarea
-                placeholder="승인 또는 반려 사유를 입력하세요 (선택)"
-                rows={3}
-                value={decisionMemo}
-                onChange={(e) => setDecisionMemo(e.target.value)}
-                className="mt-2 bg-white resize-none"
-              />
-            </div> */}
-
-            {/* Action Buttons */}
             {selectedRequestData.status === 'pending' ? (
               <div className="pt-2 grid grid-cols-2 gap-3">
                 <Button
@@ -404,7 +371,6 @@ export function RerouteRequestsPage() {
         </div>
       )}
 
-      {/* Approval Confirmation Dialog */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
         <DialogContent>
           <DialogHeader>
@@ -438,7 +404,6 @@ export function RerouteRequestsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Rejection Dialog */}
       <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
         <DialogContent>
           <DialogHeader>

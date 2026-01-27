@@ -54,16 +54,13 @@ public class AdminController {
         return ResponseEntity.ok("재이관 요청이 반려되었습니다. 민원이 다시 접수 상태로 변경됩니다.");
     }
 
-    // 기존 AdminController에 추가
     @GetMapping("/reroutes")
     public ResponseEntity<Page<ComplaintRerouteResponse>> getReroutes(
             @ModelAttribute RerouteSearchCondition condition) {
-        // Repository 직접 호출 (단순 조회)
         Page<ComplaintRerouteResponse> result = complaintRerouteRepository.searchReroutes(condition);
         return ResponseEntity.ok(result);
     }
 
-    // 세션 사용자 조회 (기존 Controller와 동일 로직)
     private User getSessionUser(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("LOGIN_USER") == null) {
@@ -73,7 +70,6 @@ public class AdminController {
         return (User) session.getAttribute("LOGIN_USER");
     }
 
-    // [추가] 필터용 부서 목록 조회 (국 단위)
     @GetMapping("/departments")
     public ResponseEntity<List<AdminDashboardStatsDto.DepartmentFilterDto>> getDepartmentFilters() {
         return ResponseEntity.ok(dashboardService.getBureauList());

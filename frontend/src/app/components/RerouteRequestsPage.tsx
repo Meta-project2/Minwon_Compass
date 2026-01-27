@@ -32,12 +32,10 @@ import { toast } from 'sonner';
 import { AgentComplaintApi, ComplaintRerouteResponse } from '../../api/AgentComplaintApi';
 import { springApi } from '../../lib/springApi';
 
-// Props 정의
 interface RerouteRequestsPageProps {
   userRole?: 'agent' | 'admin' | null;
 }
 
-// 상태별 뱃지 스타일
 const statusMap: Record<string, { label: string; color: string }> = {
   PENDING: { label: '대기', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
   APPROVED: { label: '승인', color: 'bg-green-100 text-green-800 border-green-200' },
@@ -45,7 +43,6 @@ const statusMap: Record<string, { label: string; color: string }> = {
   CANCELED: { label: '취소', color: 'bg-slate-100 text-slate-700 border-slate-200' },
 };
 
-// 날짜 포맷 (YYYY-MM-DD HH:mm)
 const formatDate = (dateString: string) => {
   if (!dateString) return '-';
   const date = new Date(dateString);
@@ -54,31 +51,21 @@ const formatDate = (dateString: string) => {
 };
 
 export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
-  // --- States ---
   const [requests, setRequests] = useState<ComplaintRerouteResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalElements, setTotalElements] = useState(0);
-
-  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('PENDING');
   const [selectedOriginDept, setSelectedOriginDept] = useState<string>('all');
   const [selectedTargetDept, setSelectedTargetDept] = useState<string>('all');
-
-  // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
-
-  // Detail View
   const [selectedRequest, setSelectedRequest] = useState<ComplaintRerouteResponse | null>(null);
-
-  // Dialog Actions
   const [rejectionReason, setRejectionReason] = useState('');
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
 
-  // --- API 호출 ---
   const fetchRequests = async () => {
     setLoading(true);
     try {
@@ -111,15 +98,12 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
     }
   };
 
-  // 필터 변경 시 페이지 1로 초기화
   useEffect(() => {
     setPage(1);
   }, [selectedStatus, selectedOriginDept, selectedTargetDept]);
 
-  // 페이지나 필터 값이 바뀔 때 데이터 조회
   useEffect(() => {
     fetchRequests();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, selectedStatus, selectedOriginDept, selectedTargetDept]);
 
   const handleSearch = () => {
@@ -135,7 +119,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
     setPage(1);
   };
 
-  // --- 승인/반려 핸들러 ---
   const handleApprove = async () => {
     if (!selectedRequest) return;
     try {
@@ -167,7 +150,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
     }
   };
 
-  // AI 추천 데이터 파싱
   const getAiRecommendations = (request: ComplaintRerouteResponse) => {
     try {
       console.log("전체 데이터:", selectedRequest);
@@ -182,7 +164,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
     }
   };
 
-  // --- 페이지네이션 계산 로직 ---
   const pageGroupSize = 10;
   const currentGroup = Math.ceil(page / pageGroupSize);
   const startPage = (currentGroup - 1) * pageGroupSize + 1;
@@ -195,7 +176,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
     if (p >= 1 && p <= totalPages) setPage(p);
   };
 
-  // ★ 2. 토글 로직 구현: 같은 행 클릭 시 닫기
   const handleRowClick = (request: ComplaintRerouteResponse) => {
     if (selectedRequest?.rerouteId === request.rerouteId) {
       setSelectedRequest(null);
@@ -206,18 +186,13 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
 
   return (
     <div className="flex h-full w-full bg-slate-100/50">
-      {/* 1. Main Content */}
       <div className="flex-1 flex flex-col h-full">
-
-        {/* Header Area */}
         <div className="h-16 border-b border-border bg-card px-6 shadow-sm flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-slate-900">이관 요청함</h1>
             <p className="text-sm text-slate-400 font-medium pt-1">부서 간 민원 이관 승인/반려 관리</p>
           </div>
         </div>
-
-        {/* Filter Area */}
         <div className="px-6 pt-0 pb-0 py-4 flex-col bg-slate-100/50 shrink-0">
           <div className="py-3 flex items-center gap-4 justify-left">
             <div className="flex gap-2">
@@ -254,8 +229,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
                   <SelectItem value="REJECTED">반려</SelectItem>
                 </SelectContent>
               </Select>
-
-              {/* 현재 부서 필터 */}
               <Select value={selectedOriginDept} onValueChange={setSelectedOriginDept}>
                 <SelectTrigger className="w-36 bg-input-background"><SelectValue placeholder="현재 부서" /></SelectTrigger>
                 <SelectContent>
@@ -264,8 +237,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
                   <SelectItem value="4">교통안전과</SelectItem>
                 </SelectContent>
               </Select>
-
-              {/* 희망 부서 필터 */}
               <Select value={selectedTargetDept} onValueChange={setSelectedTargetDept}>
                 <SelectTrigger className="w-36 bg-input-background"><SelectValue placeholder="희망 부서" /></SelectTrigger>
                 <SelectContent>
@@ -288,8 +259,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
             </div>
           </div>
         </div>
-
-        {/* Table Area */}
         <div className="flex-1 overflow-hidden px-6 pb-6 flex flex-col">
           <Card className="flex-1 flex flex-col border-none shadow-md bg-white rounded-md overflow-hidden mb-4">
             <div className="flex-1 overflow-auto">
@@ -345,7 +314,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          {/* ★ 1. 관리 버튼: 테두리 추가 및 '검토' 텍스트로 변경 */}
                           <Button
                             size="sm"
                             variant="ghost"
@@ -361,8 +329,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
               </Table>
             </div>
           </Card>
-
-          {/* Pagination */}
           {totalPages > 0 && (
             <div className="flex flex-col items-center justify-center gap-2 pb-0 shrink-0">
               <div className="flex items-center gap-2">
@@ -403,8 +369,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
 
         </div>
       </div>
-
-      {/* Right Fixed Panel (Review Detail) */}
       {selectedRequest && (
         <div className="fixed right-0 top-0 h-screen w-96 bg-white border-l border-slate-200 shadow-2xl z-50 overflow-y-auto animate-in slide-in-from-right duration-300">
           <div className="px-5 h-16 border-b border-border flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur z-10">
@@ -415,13 +379,11 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
           </div>
 
           <div className="p-5 space-y-4">
-
-            {/* 민원 정보 카드  */}
             <Card className="shadow-sm border-slate-200 overflow-hidden gap-3">
-              <CardHeader className="py-2 px-4 !pb-0 bg-slate-50 border-b border-slate-100"> {/* py-3 -> py-2 */}
+              <CardHeader className="py-2 px-4 !pb-0 bg-slate-50 border-b border-slate-100">
                 <CardTitle className="text-sm font-bold text-slate-700">민원 정보</CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 px-4 !pb-3 space-y-1.5 text-sm"> {/* pb-4 -> pb-3, space-y-3 -> space-y-1.5 */}
+              <CardContent className="pt-0 px-4 !pb-3 space-y-1.5 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500">민원 번호</span>
                   <span className="font-mono font-medium text-slate-800">{selectedRequest.complaintId}</span>
@@ -436,29 +398,25 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
                 </div>
               </CardContent>
             </Card>
-
-            {/* 요청 사유 */}
             <div>
               <div className="text-xs text-slate-500 font-bold mb-1.5 uppercase tracking-wider">요청 사유</div>
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-700 leading-relaxed">
                 {selectedRequest.requestReason}
               </div>
             </div>
-
-            {/* AI 라우팅 분석 카드 (★ 3. 카드 여백 축소) */}
             <Card className="bg-blue-50/40 border-blue-100 shadow-none gap-3">
-              <CardHeader className="py-2 px-4 !pb-0 border-b border-blue-100/50 bg-blue-50/60"> {/* py-3 -> py-2 */}
+              <CardHeader className="py-2 px-4 !pb-0 border-b border-blue-100/50 bg-blue-50/60">
                 <CardTitle className="text-sm flex items-center gap-3 text-blue-800">
                   <AlertCircle className="h-4 w-4 text-blue-600" />
                   AI 라우팅 추천 분석
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 px-4 pb-2 space-y-3 text-sm"> {/* pb-4 -> pb-3 */}
+              <CardContent className="pt-0 px-4 pb-2 space-y-3 text-sm">
                 {getAiRecommendations(selectedRequest).length > 0 ? (
                   <>
                     <div>
                       <div className="text-xs text-blue-700 font-bold mb-1.5">추천 부서 순위</div>
-                      <div className="space-y-1.5"> {/* space-y-2 -> space-y-1.5 */}
+                      <div className="space-y-1.5">
                         {getAiRecommendations(selectedRequest).slice(0, 3).map((rec: any, idx: number) => (
                           <div key={idx} className="flex items-center justify-between bg-white/80 p-2 rounded border border-blue-100">
                             <div className="flex items-center gap-2">
@@ -490,8 +448,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
                 )}
               </CardContent>
             </Card>
-
-            {/* 하단 버튼 영역 */}
             {selectedRequest.status === 'PENDING' ? (
               userRole === 'admin' ? (
                 <div className="pt-2 grid grid-cols-2 gap-3">
@@ -519,7 +475,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
         </div>
       )}
 
-      {/* 승인 다이얼로그 */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
         <DialogContent>
           <DialogHeader>
@@ -540,7 +495,6 @@ export function RerouteRequestsPage({ userRole }: RerouteRequestsPageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* 반려 다이얼로그 */}
       <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
         <DialogContent>
           <DialogHeader>

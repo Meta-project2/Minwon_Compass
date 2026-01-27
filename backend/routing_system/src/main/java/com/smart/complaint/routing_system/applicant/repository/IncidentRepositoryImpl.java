@@ -25,42 +25,35 @@ public class IncidentRepositoryImpl implements IncidentRepositoryCustom {
 
     @Override
     public Page<IncidentListResponse> searchIncidents(String searchQuery, IncidentStatus status, Pageable pageable) {
-        // 1. 데이터 조회 (5개 이상 조건 추가 및 날짜 계산)
         List<IncidentListResponse> content = queryFactory
                 .select(Projections.constructor(IncidentListResponse.class,
                         incident,
                         complaint.count(),
-                        complaint.receivedAt.min(), // 최초 발생일: 군집 내 가장 오래된 민원 날짜
-                        complaint.receivedAt.max()  // 최근 발생일: 군집 내 가장 최신 민원 날짜
-                ))
+                        complaint.receivedAt.min(),
+                        complaint.receivedAt.max()))
                 .from(incident)
                 .leftJoin(complaint).on(complaint.incident.eq(incident))
                 .where(
                         containsSearchQuery(searchQuery),
-                        eqStatus(status)
-                )
+                        eqStatus(status))
                 .groupBy(incident.id)
-                .having(complaint.count().goe(3)) // [수정] n개 이상인 군집만 필터링
-                .orderBy(complaint.receivedAt.max().desc()) // 최신 사건 순 정렬
+                .having(complaint.count().goe(3))
+                .orderBy(complaint.receivedAt.max().desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
 
-        // 2. 전체 개수 조회 (필터 조건 동일 적용)
         Long count = queryFactory
                 .select(incident.count())
                 .from(incident)
                 .where(
                         containsSearchQuery(searchQuery),
                         eqStatus(status),
-                        // 서브쿼리로 5개 이상인 것만 카운트
                         incident.id.in(
                                 JPAExpressions.select(complaint.incident.id)
                                         .from(complaint)
                                         .groupBy(complaint.incident.id)
-                                        .having(complaint.count().goe(3))
-                        )
-                )
+                                        .having(complaint.count().goe(3))))
                 .fetchOne();
 
         long total = (count != null) ? count : 0L;

@@ -61,14 +61,10 @@ export function UserManagementPage() {
   const [newRole, setNewRole] = useState('');
   const [newDepartment, setNewDepartment] = useState('');
   const [deptError, setDeptError] = useState('');
-
-  // User form state
   const [userName, setUserName] = useState('');
   const [userUsername, setUserUsername] = useState('');
   const [userRole, setUserRole] = useState('');
   const [userDepartment, setUserDepartment] = useState('');
-
-  // Department form state
   const [deptCode, setDeptCode] = useState('');
   const [deptName, setDeptName] = useState('');
   const [deptParent, setDeptParent] = useState('');
@@ -80,7 +76,6 @@ export function UserManagementPage() {
     }
     setShowUserDialog(false);
     toast('사용자가 추가되었습니다');
-    // Reset form
     setUserName('');
     setUserUsername('');
     setUserRole('');
@@ -92,8 +87,6 @@ export function UserManagementPage() {
       toast('모든 필수 항목을 입력해주세요');
       return;
     }
-
-    // Check for duplicate code
     if (mockDepartments.some((d) => d.code === deptCode)) {
       setDeptError('이미 존재하는 부서 코드입니다');
       return;
@@ -102,7 +95,6 @@ export function UserManagementPage() {
     setShowDeptDialog(false);
     setDeptError('');
     toast('부서가 추가되었습니다');
-    // Reset form
     setDeptCode('');
     setDeptName('');
     setDeptParent('');
@@ -151,7 +143,6 @@ export function UserManagementPage() {
           </div>
 
           <div className="flex-1 overflow-auto">
-            {/* Tab 1: Users */}
             <TabsContent value="users" className="m-0 h-full">
               <div className="p-6 space-y-4">
                 <div className="flex gap-2">
@@ -244,7 +235,6 @@ export function UserManagementPage() {
               </div>
             </TabsContent>
 
-            {/* Tab 2: Departments */}
             <TabsContent value="departments" className="m-0 h-full">
               <div className="p-6 space-y-4">
                 <div className="flex gap-2">
@@ -308,8 +298,6 @@ export function UserManagementPage() {
           </div>
         </Tabs>
       </div>
-
-      {/* Add User Dialog */}
       <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
         <DialogContent>
           <DialogHeader>
@@ -374,7 +362,6 @@ export function UserManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Department Dialog */}
       <Dialog open={showDeptDialog} onOpenChange={setShowDeptDialog}>
         <DialogContent>
           <DialogHeader>
@@ -431,7 +418,6 @@ export function UserManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Change Role Dialog */}
       <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
         <DialogContent>
           <DialogHeader>
@@ -471,7 +457,6 @@ export function UserManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Change Department Dialog */}
       <Dialog open={showDeptChangeDialog} onOpenChange={setShowDeptChangeDialog}>
         <DialogContent>
           <DialogHeader>

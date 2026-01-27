@@ -9,10 +9,6 @@ import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.PathInits;
 
-
-/**
- * QUser is a Querydsl query type for User
- */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QUser extends EntityPathBase<User> {
 
@@ -32,7 +28,8 @@ public class QUser extends EntityPathBase<User> {
 
     public final StringPath password = createString("password");
 
-    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.UserRole> role = createEnum("role", com.smart.complaint.routing_system.applicant.domain.UserRole.class);
+    public final EnumPath<com.smart.complaint.routing_system.applicant.domain.UserRole> role = createEnum("role",
+            com.smart.complaint.routing_system.applicant.domain.UserRole.class);
 
     public final StringPath username = createString("username");
 
@@ -54,8 +51,9 @@ public class QUser extends EntityPathBase<User> {
 
     public QUser(Class<? extends User> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.department = inits.isInitialized("department") ? new QDepartment(forProperty("department"), inits.get("department")) : null;
+        this.department = inits.isInitialized("department")
+                ? new QDepartment(forProperty("department"), inits.get("department"))
+                : null;
     }
 
 }
-

@@ -12,7 +12,7 @@ interface ResetPasswordPageProps {
 }
 
 export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPageProps) {
-  const [loginId, setLoginId] = useState(''); // 아이디 상태 추가
+  const [loginId, setLoginId] = useState('');
   const [email, setEmail] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -23,11 +23,9 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
   const isValidId = idRegex.test(loginId);
   const isValidEmail = emailRegex.test(email);
 
-  // Mock function to verify email exists in database
   const verifyEmail = async () => {
     setErrorMessage('');
 
-    // Validate email format
     if (!email.trim()) {
       Swal.fire({ icon: 'warning', title: '형식 오류', text: '이메일 주소를 입력해주세요.' });
       return;
@@ -50,15 +48,14 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
     Swal.fire({
       title: '메일 발송 중...',
       text: '임시 비밀번호를 생성하여 메일을 보내고 있습니다.',
-      allowOutsideClick: false, // 로딩 중 바깥 클릭으로 닫기 방지
+      allowOutsideClick: false,
       didOpen: () => {
-        Swal.showLoading(); // 로딩 애니메이션 시작
+        Swal.showLoading();
       }
     });
 
     setIsVerifying(true);
     try {
-      // 1. 여기서 실제 백엔드 API를 호출합니다 (이전에 만든 sendMail 로직 연결)
       await api.post('/applicant/newpw',
         { id: loginId, email: email },
       );
@@ -69,7 +66,7 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
         text: '입력하신 이메일로 임시 비밀번호가 발송되었습니다. 메일함을 확인해주세요.',
         confirmButtonText: '로그인으로 이동'
       }).then(() => {
-        navigate("/applicant/login") // 성공 후 로그인 페이지 등으로 이동
+        navigate("/applicant/login")
       });
 
     } catch (error: any) {
@@ -133,8 +130,6 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
                 }}
               />
             </div>
-
-            {/* 실시간 이메일 유효성 확인 */}
             {email && !isValidEmail && (
               <p className="text-orange-600 text-base flex items-center gap-2">
                 <AlertCircle className="w-5 h-5" />
@@ -148,14 +143,10 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
               </p>
             )}
           </div>
-
-          {/* Info Box */}
           <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
             <p className="text-blue-900 text-base font-medium">임시 비밀번호 안내</p>
             <p className="text-blue-800 text-sm mt-1">로그인 후 반드시 비밀번호를 변경해주시기 바랍니다.</p>
           </div>
-
-          {/* Verify Button */}
           <div className="pt-4 space-y-3">
             <Button
               onClick={handleSendTempPassword}
@@ -173,8 +164,6 @@ export default function ApplicantResetPwPage({ onResetSuccess }: ResetPasswordPa
               취소
             </Button>
           </div>
-
-          {/* Helper Text */}
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-center text-gray-600 text-base">
               계정 찾기에 어려움이 있으신가요?

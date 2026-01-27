@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
-import { 
-  ArrowLeft, Calendar, Users, Clock, Eye, AlertCircle, 
+import {
+  ArrowLeft, Calendar, Users, Clock, Eye, AlertCircle,
   Search, ChevronLeft, ChevronRight, Loader2,
   Pencil, Check, X, FolderPlus, Reply, AlertTriangle
 } from 'lucide-react';
@@ -18,15 +18,14 @@ import {
   SelectValue,
 } from './ui/select';
 
-// [이식] 사용자님이 보내주신 민원 상세 페이지 컴포넌트
-import { ComplaintDetailPage } from './ComplaintDetailPage'; 
+import { ComplaintDetailPage } from './ComplaintDetailPage';
 
 interface IncidentDetailPageProps {
   incidentId: string;
   onBack: () => void;
 }
 
-const ITEMS_PER_PAGE = 8; 
+const ITEMS_PER_PAGE = 8;
 
 const cleanTitle = (title: string) => title?.replace(/\[.*?\]/g, '').trim() || "";
 
@@ -35,19 +34,19 @@ const statusMap: Record<string, { label: string; color: string }> = {
   CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-300' },
 };
 
-// [수정] 민원함과 동일한 스타일 적용
 const complaintStatusMap: Record<string, { label: string; color: string }> = {
   RECEIVED: { label: '접수', color: 'bg-blue-100 text-blue-700 border-blue-300' },
   RECOMMENDED: { label: '이관 요청', color: 'bg-purple-100 text-purple-700 border-purple-300' },
   IN_PROGRESS: { label: '처리중', color: 'bg-amber-100 text-amber-700 border-amber-300' },
   RESOLVED: { label: '답변완료', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
   CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-300' },
+  CANCELED: { label: '취하', color: 'bg-red-100 text-pink-600 border-red-300' }
 };
 
 export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPageProps) {
   const [incidentData, setIncidentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+
   const [complaintPage, setComplaintPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
@@ -76,14 +75,14 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
 
   const fetchDetail = useCallback(async () => {
     try {
-      if (!incidentData) setLoading(true); 
+      if (!incidentData) setLoading(true);
       const response = await axios.get(`/api/agent/incidents/${incidentId}`);
       setIncidentData(response.data);
-      
+
       if (!isEditingTitle) {
         setTempTitle(cleanTitle(response.data.title));
       }
-      return response.data; 
+      return response.data;
     } catch (error) {
       console.error("데이터 조회 실패");
       return null;
@@ -105,16 +104,16 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
       await axios.patch(`/api/agent/incidents/${incidentId}`, { title: tempTitle });
       setIncidentData({ ...incidentData, title: tempTitle });
       setIsEditingTitle(false);
-    } catch (e) { 
-      showDialog('alert', '오류', '제목 저장에 실패했습니다.'); 
+    } catch (e) {
+      showDialog('alert', '오류', '제목 저장에 실패했습니다.');
     }
   };
 
   const openMoveModal = () => {
     setIsMoveModalOpen(true);
-    setTargetSearchQuery(""); 
+    setTargetSearchQuery("");
     setModalPage(1);
-    searchTargetIncidents("", 1); 
+    searchTargetIncidents("", 1);
   };
 
   const handleModalSearch = () => {
@@ -126,7 +125,7 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
     setIsSearchingTarget(true);
     try {
       const response = await axios.get('/api/agent/incidents', {
-        params: { search: query, page: page - 1, size: 5 } 
+        params: { search: query, page: page - 1, size: 5 }
       });
       let filtered = response.data.content.filter((inc: any) => inc.id !== incidentData.id);
       if (filtered.length > 4) filtered = filtered.slice(0, 4);
@@ -168,8 +167,8 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
         const complaintIds = selectedIds.map(id => parseIdFromStr(id));
 
         if (isNaN(targetId)) {
-            showDialog('alert', '오류', "대상 사건 ID가 올바르지 않습니다.");
-            return;
+          showDialog('alert', '오류', "대상 사건 ID가 올바르지 않습니다.");
+          return;
         }
 
         await axios.post('/api/agent/incidents/move', {
@@ -179,7 +178,7 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
 
         setIsMoveModalOpen(false);
         setSelectedIds([]);
-        const updatedData = await fetchDetail(); 
+        const updatedData = await fetchDetail();
         checkEmptyAndExit(updatedData);
 
       } catch (error) {
@@ -203,13 +202,13 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
 
         setSelectedIds([]);
         const updatedData = await fetchDetail();
-        
+
         if (updatedData && updatedData.complaintCount === 0) {
-           showDialog('alert', '생성 완료', "새로운 사건방이 생성되었습니다.\n현재 방은 비어있으므로 목록으로 이동합니다.", () => {
-             onBack();
-           });
+          showDialog('alert', '생성 완료', "새로운 사건방이 생성되었습니다.\n현재 방은 비어있으므로 목록으로 이동합니다.", () => {
+            onBack();
+          });
         } else {
-           showDialog('alert', '생성 완료', "새로운 사건방이 생성되었습니다.");
+          showDialog('alert', '생성 완료', "새로운 사건방이 생성되었습니다.");
         }
 
       } catch (error) {
@@ -228,9 +227,9 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
   const filteredComplaints = useMemo(() => {
     if (!incidentData) return [];
     return incidentData.complaints.filter((c: any) => {
-      const matchesSearch = 
-        (c.title?.toLowerCase().includes(activeSearch.toLowerCase()) || 
-         c.id?.toLowerCase().includes(activeSearch.toLowerCase()));
+      const matchesSearch =
+        (c.title?.toLowerCase().includes(activeSearch.toLowerCase()) ||
+          c.id?.toLowerCase().includes(activeSearch.toLowerCase()));
       const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -239,7 +238,7 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
   const totalItems = filteredComplaints.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const visibleComplaints = filteredComplaints.slice(
-    (complaintPage - 1) * ITEMS_PER_PAGE, 
+    (complaintPage - 1) * ITEMS_PER_PAGE,
     complaintPage * ITEMS_PER_PAGE
   );
 
@@ -273,15 +272,15 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
 
   return (
     <div className="h-full flex flex-col bg-slate-50 overflow-hidden relative">
-      
+
       {/* 상단 배너 */}
       <div className="h-16 border-b border-slate-200 bg-white px-6 shadow-sm flex items-center gap-1 shrink-0">
         <Button variant="ghost" size="icon" onClick={onBack} className="text-slate-400 hover:text-slate-600 shrink-0 -ml-4 h-9 w-9"><ArrowLeft className="h-5 w-5" /></Button>
         <div className="flex flex-col justify-center overflow-hidden flex-1">
           {isEditingTitle ? (
             <div className="flex items-center gap-2 animate-in fade-in">
-              <Input 
-                value={tempTitle} 
+              <Input
+                value={tempTitle}
                 onChange={(e) => setTempTitle(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSaveTitle();
@@ -291,8 +290,8 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
                 autoFocus
               />
               <div className="flex gap-1">
-                <Button size="icon" className="h-8 w-8 bg-blue-600" onClick={handleSaveTitle}><Check className="h-4 w-4"/></Button>
-                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setIsEditingTitle(false)}><X className="h-4 w-4"/></Button>
+                <Button size="icon" className="h-8 w-8 bg-blue-600" onClick={handleSaveTitle}><Check className="h-4 w-4" /></Button>
+                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setIsEditingTitle(false)}><X className="h-4 w-4" /></Button>
               </div>
             </div>
           ) : (
@@ -301,8 +300,7 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
               <Pencil className="h-3.5 w-3.5 text-slate-300 opacity-0 group-hover:opacity-100" />
             </div>
           )}
-          
-          {/* [수정] 헤더 라벨: Badge 적용 */}
+
           <div className="flex items-center gap-1.5 mt-1">
             <Badge variant="secondary" className="font-mono text-xs px-2 py-0.5">
               {incidentData.id}
@@ -314,9 +312,7 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
         </div>
       </div>
 
-      {/* 메인 컨텐츠 */}
       <div className="flex-1 overflow-auto px-6 py-4 flex flex-col gap-4">
-        {/* 요약 카드 */}
         <div className="grid grid-cols-4 gap-4 shrink-0">
           <Card className="border-none shadow-sm bg-white"><CardContent className="p-4 flex items-center gap-3"><Calendar className="h-5 w-5 text-blue-600" /><div><div className="text-[10px] font-bold text-slate-400">최초 발생</div><div className="text-sm font-semibold">{incidentData.firstOccurred}</div></div></CardContent></Card>
           <Card className="border-none shadow-sm bg-white"><CardContent className="p-4 flex items-center gap-3"><AlertCircle className="h-5 w-5 text-orange-600" /><div><div className="text-[10px] font-bold text-slate-400">최근 발생</div><div className="text-sm font-semibold">{incidentData.lastOccurred}</div></div></CardContent></Card>
@@ -325,7 +321,6 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
         </div>
 
         <div className="flex-1 flex flex-col">
-          {/* 필터 및 검색바 */}
           <div className="py-3 flex items-center gap-4 justify-left shrink-0">
             <div className="flex gap-2">
               <div className="flex-1 relative">
@@ -344,8 +339,6 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
             </div>
             <div className="flex items-center h-10 ml-2"><div className="h-4 w-px bg-slate-300 mr-4"></div><span className="text-sm font-medium text-slate-600">총 <span className="text-blue-600 font-bold">{totalItems}</span>건</span></div>
           </div>
-
-          {/* 테이블 */}
           <Card className="flex-1 flex flex-col border-none shadow-sm bg-white rounded-md overflow-hidden">
             <Table>
               <TableHeader className="bg-slate-300 border-b-2 sticky top-0 z-10">
@@ -362,10 +355,8 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
                 {visibleComplaints.length > 0 ? visibleComplaints.map((c) => (
                   <TableRow key={c.id} className={`${selectedIds.includes(c.id) ? 'bg-blue-50/50' : 'hover:bg-slate-50'} border-b border-slate-100 h-[50px]`}>
                     <TableCell className="text-center py-0"><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => setSelectedIds(prev => prev.includes(c.id) ? prev.filter(i => i !== c.id) : [...prev, c.id])} /></TableCell>
-                    <TableCell className="text-xs font-mono text-center text-slate-500">{c.id.slice(0,8)}</TableCell>
+                    <TableCell className="text-xs font-mono text-center text-slate-500">{c.id}</TableCell>
                     <TableCell className="font-medium text-slate-700 truncate max-w-[400px] text-left pl-6" title={c.title}>{c.title}</TableCell>
-                    
-                    {/* [수정] 상태 배지: 민원함과 동일한 스타일 적용 (크기/색상 통일) */}
                     <TableCell className="text-center p-1">
                       <div className="flex justify-center items-center">
                         <Badge className={`${complaintStatusMap[c.status]?.color || 'bg-gray-100'} border px-2.5 py-0.5 text-xs font-medium`}>
@@ -374,10 +365,8 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
                       </div>
                     </TableCell>
 
-                    {/* [수정] 접수일시: 날짜 표시 복구 */}
                     <TableCell className="text-center text-xs text-slate-500">{c.receivedAt}</TableCell>
-                    
-                    {/* [수정] 관리 버튼: 보기 버튼 복구 */}
+
                     <TableCell className="text-center">
                       <div className="flex justify-center">
                         <Button size="sm" variant="ghost" className="h-7 text-xs border bg-white" onClick={() => setSelectedComplaintId(c.id)}>
@@ -395,7 +384,6 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
         </div>
       </div>
 
-      {/* 하단 플로팅 액션 바 */}
       {selectedIds.length > 0 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white border border-slate-200 px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-4 z-50">
           <span className="text-sm font-bold text-slate-800 flex items-center gap-2"><Check className="h-4 w-4 text-blue-600" /><span className="text-blue-600">{selectedIds.length}건</span> 선택됨</span>
@@ -412,18 +400,17 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
         </div>
       )}
 
-      {/* 사건 이동 모달 */}
       {isMoveModalOpen && (
         <div className="absolute inset-0 bg-black/50 z-[100] flex items-center justify-center backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-lg shadow-xl w-[500px] flex flex-col h-[550px]"> 
+          <div className="bg-white rounded-lg shadow-xl w-[500px] flex flex-col h-[550px]">
             <div className="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-lg shrink-0">
               <h2 className="font-bold text-lg text-slate-800">이동할 사건 선택</h2>
               <Button variant="ghost" size="icon" onClick={() => setIsMoveModalOpen(false)}><X className="h-5 w-5 text-slate-500" /></Button>
             </div>
             <div className="p-4 flex flex-col gap-4 overflow-hidden flex-1">
               <div className="flex gap-2 shrink-0">
-                <Input 
-                  placeholder="이동할 사건 그룹의 제목을 입력하세요..." 
+                <Input
+                  placeholder="이동할 사건 그룹의 제목을 입력하세요..."
                   value={targetSearchQuery}
                   onChange={(e) => setTargetSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleModalSearch()}
@@ -466,7 +453,6 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
         </div>
       )}
 
-      {/* 커스텀 Alert/Confirm 대화상자 */}
       {dialogConfig.isOpen && (
         <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-[400px] flex flex-col gap-4 animate-in zoom-in-95 duration-200">
@@ -476,22 +462,22 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
               </div>
               <h3 className="text-lg font-bold text-slate-800">{dialogConfig.title}</h3>
             </div>
-            
+
             <p className="text-slate-600 text-sm leading-relaxed pl-1 whitespace-pre-wrap">
               {dialogConfig.message}
             </p>
 
             <div className="flex justify-end gap-2 mt-2">
               {dialogConfig.type === 'confirm' && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setDialogConfig({ ...dialogConfig, isOpen: false })}
                   className="h-9 px-4 text-slate-600 border-slate-300"
                 >
                   취소
                 </Button>
               )}
-              <Button 
+              <Button
                 onClick={() => {
                   setDialogConfig({ ...dialogConfig, isOpen: false });
                   if (dialogConfig.onConfirm) dialogConfig.onConfirm();

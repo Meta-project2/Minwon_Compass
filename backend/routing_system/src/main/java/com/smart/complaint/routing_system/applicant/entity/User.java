@@ -16,8 +16,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @Table(name = "users")
-@NoArgsConstructor(access = AccessLevel.PROTECTED) // JPA용
-@AllArgsConstructor(access = AccessLevel.PRIVATE) // 빌더용 (외부 노출 차단)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 public class User {
     @Id
@@ -41,7 +41,7 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
-    @ManyToOne(fetch = FetchType.EAGER) // 세션에서 바로 접근할 수 있게 EAGER 권장
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "department_id")
     private Department department;
 
@@ -49,8 +49,7 @@ public class User {
         this.password = password;
     }
 
-    public Object update(Map<String,Object> attributes) {
-        // TODO Auto-generated method stub
+    public Object update(Map<String, Object> attributes) {
         throw new UnsupportedOperationException("Unimplemented method 'update'");
     }
 }

@@ -21,9 +21,8 @@ public class Department {
     private String name;
 
     @Column(length = 20, nullable = false)
-    private String category; // GU, GUK, GWA
+    private String category;
 
-    // 자기 자신을 참조하는 계층 구조 (상위 부서)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private Department parent;

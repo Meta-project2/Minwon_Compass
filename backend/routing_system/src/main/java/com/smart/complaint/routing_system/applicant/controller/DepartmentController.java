@@ -28,19 +28,17 @@ public class DepartmentController {
                 .collect(Collectors.toList());
     }
 
-    // 간단한 DTO 내부 클래스
     @Data
     public static class DepartmentSimpleDto {
         private Long id;
         private String name;
-        private String category; // GUK, GWA
-        private Long parentId;   // 상위 부서 ID (필터링용)
+        private String category;
+        private Long parentId;
 
         public DepartmentSimpleDto(Department d) {
             this.id = d.getId();
             this.name = d.getName();
             this.category = d.getCategory();
-            // 부모가 있으면 ID 추출, 없으면 null
             this.parentId = (d.getParent() != null) ? d.getParent().getId() : null;
         }
     }

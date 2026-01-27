@@ -8,9 +8,6 @@ from sklearn.metrics.pairwise import cosine_distances
 from collections import Counter
 from datetime import datetime
 
-# ==========================================
-# 1. DB 설정
-# ==========================================
 DB_CONFIG = {
     "host": "localhost",
     "dbname": "postgres",
@@ -19,9 +16,6 @@ DB_CONFIG = {
     "port": "5432"
 }
 
-# ==========================================
-# 2. 데이터 파싱 유틸리티
-# ==========================================
 def parse_vector(val):
     if isinstance(val, str):
         try: return np.array(json.loads(val))
@@ -40,14 +34,8 @@ def parse_keywords(val):
         raw_set = set(val)
     return {word for word in raw_set if len(word) > 1}
 
-# ==========================================
-# 3. 거리 계산 로직 (하이브리드)
-# ==========================================
 def calculate_hybrid_distance(vec1, vec2, kws1, kws2):
-    # 1. 의미 거리 (Cosine)
     sem_dist = cosine_distances([vec1], [vec2])[0][0]
-    
-    # 2. 키워드 거리 (Jaccard)
     if not kws1 and not kws2: key_dist = 0.5
     elif not kws1 or not kws2: key_dist = 1.0
     else:
@@ -58,7 +46,6 @@ def calculate_hybrid_distance(vec1, vec2, kws1, kws2):
     return (sem_dist * 0.7) + (key_dist * 0.3)
 
 def calculate_jaccard_matrix(keywords_list):
-    """DBSCAN용 매트릭스 계산 (누락되었던 함수 복구)"""
     n = len(keywords_list)
     dist_matrix = np.ones((n, n))
     for i in range(n):
@@ -75,9 +62,6 @@ def calculate_jaccard_matrix(keywords_list):
             dist_matrix[j, i] = dist
     return dist_matrix
 
-# ==========================================
-# 4. 타이틀 및 키워드 생성
-# ==========================================
 def generate_title_only(group):
     sorted_group = group.sort_values('received_at')
     raw_summary = sorted_group.iloc[0]['core_request']
@@ -89,15 +73,11 @@ def get_representative_keyword(keywords_list):
     top_kw = Counter(all_kws).most_common(1)[0][0]
     return str(top_kw).replace('[','').replace(']','').replace("'","").strip()
 
-# ==========================================
-# 5. 메인 로직: 증분 업데이트 (Anchoring & Global Clustering)
-# ==========================================
 def run_incremental_clustering():
     conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
     print(f"🚀 [Upgrade] 부서 통합 & 중심점 고정(Anchoring) 로직 시작 ({datetime.now()})")
 
-    # 1. 활성 사건 로드
     sql_active = """
         SELECT c.incident_id, n.embedding, n.keywords_jsonb
         FROM complaints c
@@ -111,15 +91,12 @@ def run_incremental_clustering():
     incident_centroids = {}
     if not active_df.empty:
         for iid, group in active_df.groupby('incident_id'):
-            # 현재의 중심점 계산
             mean_vec = np.mean(np.stack(group['vec'].values), axis=0)
             all_kws = set().union(*group['kws'].tolist())
-            # [솔루션 2] 부서 정보 제거 (Global)
             incident_centroids[iid] = {'vec': mean_vec, 'kws': all_kws, 'count': len(group)}
             
     print(f"   👉 활성화된 사건 {len(incident_centroids)}개 로드 완료.")
 
-    # 2. 신규 민원 로드
     sql_new = """
         SELECT c.id, c.created_at as received_at, n.embedding, n.keywords_jsonb, n.core_request
         FROM complaints c
@@ -136,7 +113,6 @@ def run_incremental_clustering():
 
     print(f"   👉 신규 민원 {len(new_df)}건 처리 시작 (부서 구분 없음)")
 
-    # 3. 매칭 및 중심점 고정 (Anchoring)
     assigned_count = 0
     unassigned_indices = []
     MATCH_THRESHOLD = 0.15 
@@ -148,7 +124,6 @@ def run_incremental_clustering():
         best_match_id = None
         min_dist = 1.0
         
-        # [솔루션 2] 모든 사건과 비교
         for iid, info in incident_centroids.items():
             dist = calculate_hybrid_distance(vec, info['vec'], kws, info['kws'])
             if dist < min_dist:
@@ -156,7 +131,6 @@ def run_incremental_clustering():
                 best_match_id = iid
         
         if best_match_id and min_dist <= MATCH_THRESHOLD:
-            # DB 업데이트
             cur.execute("UPDATE complaints SET incident_id = %s WHERE id = %s", (best_match_id, row['id']))
             cur.execute("""
                 UPDATE incidents 
@@ -164,7 +138,6 @@ def run_incremental_clustering():
                 WHERE id = %s
             """, (row['received_at'], best_match_id))
             
-            # [솔루션 1] Anchoring: 10개 미만일 때만 학습, 그 뒤론 고정
             current_count = incident_centroids[best_match_id]['count']
             
             if current_count < 10:
@@ -183,16 +156,12 @@ def run_incremental_clustering():
             
     conn.commit()
 
-    # 4. 신규 사건 생성 (Global DBSCAN)
     remaining_df = new_df.loc[unassigned_indices].copy()
     new_incidents_count = 0
 
     if not remaining_df.empty:
-        # [솔루션 2] groupby 제거 -> 전체 군집화
         vectors = np.stack(remaining_df['vec'].values)
         sem_dist = cosine_distances(vectors)
-        
-        # [수정] 누락되었던 함수 호출 복구
         kws_list = remaining_df['kws'].tolist()
         key_dist = calculate_jaccard_matrix(kws_list)
         

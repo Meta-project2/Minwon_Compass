@@ -10,14 +10,13 @@ export interface ComplaintDto {
   status: ComplaintStatus;
   urgency: UrgencyLevel;
   receivedAt: string;
-  neutralSummary?: string; 
+  neutralSummary?: string;
   addressText?: string;
   tags?: string[];
   managerName?: string;
   coreRequest?: string;
 }
 
-// 민원 이력 아이템 (부모/자식 공통)
 export interface ComplaintHistoryDto {
   id: string; // "P-1" or "C-5"
   originalId: number;
@@ -28,8 +27,6 @@ export interface ComplaintHistoryDto {
   answer?: string;
   answeredBy?: number;
   status: ComplaintStatus;
-
-  // 정규화 정보 (부모만 있음)
   neutralSummary?: string;
   coreRequest?: string;
   coreCause?: string;
@@ -38,37 +35,29 @@ export interface ComplaintHistoryDto {
   locationHint?: string;
 }
 
-// 상세 조회용 DTO (백엔드 구조 변경 반영)
 export interface ComplaintDetailDto {
   // 기본 정보
-  id: string;          // 화면 표시용 ID (예: C2026-0004)
-  originalId: number;  // 실제 DB ID
-  title: string;       // 대표 제목
+  id: string;
+  originalId: number;
+  title: string;
   address: string;
-  receivedAt: string;  // 최초 접수일
-  status: ComplaintStatus; // 대표 상태
+  receivedAt: string;
+  status: ComplaintStatus;
   urgency: UrgencyLevel;
-  departmentName?: string; // 담당 부서
-  category?: string;       // 업무군
-  managerName?: string;    // 담당자 이름
-
-  // 이력 리스트로 통합
+  departmentName?: string;
+  category?: string;
+  managerName?: string;
   history: ComplaintHistoryDto[];
-
-  // 사건 정보
-  incidentId?: string;       
+  incidentId?: string;
   incidentTitle?: string;
   incidentStatus?: string;
   incidentComplaintCount?: number;
-
-  // 기존 최상위 필드 호환성 (필요시 사용, 현재는 history에서 가져옴)
-  answeredBy?: number; // 대표 담당자 ID
+  answeredBy?: number;
 }
 
-// ID 파싱
+
 const parseId = (id: string | number): number => {
   const idStr = String(id);
-  // "C2026-0008" 형태라면 "-" 뒤의 숫자만 추출
   if (idStr.includes('-')) {
     return Number(idStr.split('-').pop());
   }
@@ -80,12 +69,11 @@ export interface PageResponse<T> {
   totalPages: number;
   totalElements: number;
   size: number;
-  number: number; // 현재 페이지 (0-based)
+  number: number;
   first: boolean;
   last: boolean;
 }
 
-// 재이관 목록 응답 타입
 export interface ComplaintRerouteResponse {
   rerouteId: number;
   requestedAt: string;
@@ -97,7 +85,7 @@ export interface ComplaintRerouteResponse {
   requesterName: string;
   requestReason: string;
   status: string;
-  aiRoutingRank: any; // JSON Object
+  aiRoutingRank: any;
   category: string;
 }
 
@@ -105,43 +93,37 @@ export interface DepartmentDto {
   id: number;
   name: string;
   category: string;
-  parentId?: number | null; 
+  parentId?: number | null;
 }
 
 export const AgentComplaintApi = {
 
-  // 0. 내 정보 가져오기
   getMe: async () => {
-    const response = await springApi.get<{id: number, displayName: string}>("/api/agent/me");
+    const response = await springApi.get<{ id: number, displayName: string }>("/api/agent/me");
     return response.data;
   },
 
-  // 1. [목록] 모든 민원 가져오기
   getAll: async (params?: any) => {
     const response = await springApi.get<ComplaintDto[]>("/api/agent/complaints", { params });
     return response.data;
   },
 
-  // 2. [상세] 특정 민원 1개 가져오기
   getDetail: async (id: string | number) => {
     const realId = parseId(id);
     const response = await springApi.get<ComplaintDetailDto>(`/api/agent/complaints/${realId}`);
     return response.data;
   },
 
-  // 3. 담당 배정 (Assign)
   assign: async (id: string | number) => {
-    const realId = parseId(id); // ★ 여기서 변환!
+    const realId = parseId(id);
     await springApi.post(`/api/agent/complaints/${realId}/assign`);
   },
 
-  // 4. 담당 취소 (Release)
   release: async (id: string | number) => {
-    const realId = parseId(id); // ★ 여기서 변환!
+    const realId = parseId(id);
     await springApi.post(`/api/agent/complaints/${realId}/release`);
   },
 
-  // 5. 답변 전송/저장 (Answer)
   answer: async (id: string | number, content: string, isTemporary: boolean) => {
     const realId = parseId(id); // ★ 여기서 변환!
     await springApi.post(`/api/agent/complaints/${realId}/answer`, {
@@ -150,7 +132,6 @@ export const AgentComplaintApi = {
     });
   },
 
-  // 6. 재이관 요청 (Reroute)
   reroute: async (id: string | number, targetDeptId: number, reason: string) => {
     const realId = parseId(id); // ★ 여기서 변환!
     await springApi.post(`/api/agent/complaints/${realId}/reroute`, {
@@ -158,24 +139,20 @@ export const AgentComplaintApi = {
       reason,
     });
   },
-  
-  // 7. [목록] 모든 재이관 요청 가져오기
-getReroutes: async (params?: any) => {
-    // params 구조: { page, size, status, keyword, originDeptId, targetDeptId }
+
+  getReroutes: async (params?: any) => {
     const response = await springApi.get<PageResponse<ComplaintRerouteResponse>>("/api/admin/complaints/reroutes", { params });
     return response.data;
   },
 
-  // 8. 로그아웃 요청 (Logout)
   logout: async () => {
     await springApi.post("/api/agent/logout");
   },
 
 
-  // 9. AI 답변 초안 생성
   generateAiDraft: async (id: number, content: string) => {
     // 1. springApi 대신 fetch 사용 (주소 주의: 8000 포트)
-    const response = await fetch(`http://localhost:8000/api/complaints/${id}/generate-draft`, {
+    const response = await fetch(`/api/v2/complaints/${id}/generate-draft`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -190,13 +167,13 @@ getReroutes: async (params?: any) => {
     if (!response.ok) {
       throw new Error(`AI Server Error: ${response.statusText}`);
     }
-    
+
     return await response.json(); // { status: "success", data: "..." } 반환
   },
 
   // 10. 채팅 기록 가져오기
   getChatHistory: async (id: number) => {
-    const response = await fetch(`http://localhost:8000/api/complaints/${id}/chat-history`);
+    const response = await fetch(`/api/v2/complaints/${id}/chat-history`);
     if (!response.ok) throw new Error("Failed to fetch chat history");
     return await response.json();
   },

@@ -16,7 +16,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner';
 import { AgentComplaintApi, ComplaintDetailDto, ComplaintHistoryDto, DepartmentDto } from '../../api/AgentComplaintApi';
-// 패널 제어용 타입 import (react-resizable-panels 설치된 환경 가정)
 import { ImperativePanelHandle } from "react-resizable-panels";
 import { Panel as RawPanel } from "react-resizable-panels";
 
@@ -25,17 +24,13 @@ interface ComplaintDetailPageProps {
   onBack: () => void;
 }
 
-const DEPARTMENTS = [
-  { id: 12, name: '일자리정책과' },
-  { id: 13, name: '지역경제과' },
-];
-
 const statusMap: Record<string, { label: string; color: string }> = {
   RECEIVED: { label: '접수', color: 'bg-blue-100 text-blue-700 border-blue-200' },
   RECOMMENDED: { label: '이관 요청', color: 'bg-purple-100 text-purple-700 border-purple-200' },
   IN_PROGRESS: { label: '처리중', color: 'bg-amber-100 text-amber-700 border-amber-200' },
   RESOLVED: { label: '답변완료', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   CLOSED: { label: '종결', color: 'bg-slate-100 text-slate-600 border-slate-300' },
+  CANCELED: { label: '취하', color: 'bg-red-100 text-pink-600 border-red-300' }
 };
 
 const incidentstatusMap: Record<string, { label: string; color: string }> = {
@@ -66,20 +61,11 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
   const [isDrafting, setIsDrafting] = useState(false);
   const [expandedDocIndex, setExpandedDocIndex] = useState<number | null>(null);
 
-  // [부서 데이터 State]
-  const [allDepts, setAllDepts] = useState<DepartmentDto[]>([]); // 전체 목록
-  // [선택 State]
-  const [selectedGukId, setSelectedGukId] = useState<string>(''); // 왼쪽: 국 ID
+  const [allDepts, setAllDepts] = useState<DepartmentDto[]>([]);
+  const [selectedGukId, setSelectedGukId] = useState<string>('');
 
-  // [추가] 패널 제어용 ref 및 상태
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-
-  // const knowledgeSources = [
-  //   { id: 'KB-001', type: '매뉴얼', title: '도로 유지보수 업무 매뉴얼', section: '제3장 긴급 보수', confidence: 95, snippet: '긴급도가 높은 도로 파손의 경우 접수 후 24시간 이내 현장 조사 및 임시 조치를 실시하고...' },
-  //   { id: 'KB-002', type: '규정', title: '도로법 시행규칙', section: '제12조', confidence: 88, snippet: '도로관리청은 도로의 파손, 함몰 등으로 인하여 교통 안전에 지장을 초래할 우려가 있는 경우...' },
-  //   { id: 'KB-003', type: '사례', title: '2025년 도로 파손 처리 사례집', section: 'Case #45', confidence: 82, snippet: '역삼동 유사 사례: 접수 후 4시간 내 현장 조사, 12시간 내 임시 보수 완료...' },
-  // ];
 
   const [documents, setDocuments] = useState<any[]>([]);
 
@@ -115,13 +101,11 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
 
   useEffect(() => {
     if (!complaint?.originalId) return;
-    
-    // 채팅 기록 불러오기
+
     const loadChatHistory = async () => {
       try {
         const res = await AgentComplaintApi.getChatHistory(complaint.originalId);
         if (res.status === 'success' && res.data) {
-          // DB 포맷({role, content})을 프론트 포맷으로 맞춰줌
           setChatMessages(res.data);
         }
       } catch (e) {
@@ -143,16 +127,11 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
     fetchDepts();
   }, []);
 
-  // 필터링 로직
-  // 국 목록: category가 'GUK' 인 것들
   const gukOptions = allDepts.filter(d => d.category === 'GUK');
-
-  // 과 목록: 선택된 국(selectedGukId)을 부모로 가지는 것들
-  const gwaOptions = allDepts.filter(d => 
+  const gwaOptions = allDepts.filter(d =>
     d.category === 'GWA' && String(d.parentId) === selectedGukId
   );
 
-  // 국 변경 핸들러 (국을 바꾸면, 선택된 과는 초기화)
   const handleGukChange = (val: string) => {
     setSelectedGukId(val);
     setSelectedTargetDept(''); // 과 선택 초기화
@@ -204,11 +183,8 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
     } catch (e) { toast.error("처리 실패"); }
   };
 
-  // AI 초안 작성 핸들러
   const handleDraft = async () => {
     if (!complaint) return;
-
-    // 1. 민원 본문 찾기 (history 중 부모글)
     const targetHistory = complaint.history.find((h) => h.parent) || complaint.history[0];
     const bodyText = targetHistory?.body;
 
@@ -217,19 +193,18 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
       return;
     }
 
-    // 2. 덮어쓰기 경고 (answerContent 사용)
     if (answerContent.trim() && !confirm("작성 중인 내용이 사라지고 AI 초안으로 대체됩니다. 계속하시겠습니까?")) {
       return;
     }
 
-    setIsDrafting(true); // 로딩 시작
+    setIsDrafting(true);
 
     try {
       // 3. API 호출
       const result = await AgentComplaintApi.generateAiDraft(complaint.originalId, bodyText);
 
       if (result.status === "success") {
-        setAnswerContent(result.data); // 결과 적용 (setAnswerContent 사용)
+        setAnswerContent(result.data);
         toast.success("AI 초안이 작성되었습니다.");
       } else {
         toast.error("초안 생성 실패: " + result.status);
@@ -238,7 +213,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
       console.error("Draft Error:", error);
       toast.error("AI 서버 연결 실패");
     } finally {
-      setIsDrafting(false); // 로딩 끝
+      setIsDrafting(false);
     }
   };
 
@@ -258,19 +233,16 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
   const handleSendChat = async (message: string, action: 'chat' | 'search_law' | 'search_case' = 'chat') => {
     if (!message.trim() && action === 'chat') return;
 
-    // 1. 사용자 메시지 UI 표시 (버튼 클릭 시엔 메시지 표시 안 함 or 선택사항)
     if (action === 'chat') {
       setChatMessages((prev) => [...prev, { role: 'user', content: message }]);
       setChatInput('');
     } else {
-      // 버튼 클릭 시 안내 메시지 추가
       setChatMessages((prev) => [...prev, { role: 'user', content: `${message}` }]);
     }
 
     setIsChatLoading(true);
 
     try {
-      // ID 파싱 (기존 로직 유지)
       let numericId = complaintId;
       if (typeof complaintId === 'string' && complaintId.includes('-')) {
         const parts = complaintId.split('-');
@@ -278,8 +250,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
         if (!isNaN(parseInt(lastPart))) numericId = parseInt(lastPart).toString();
       }
 
-      // 2. Python AI 서버 호출
-      const response = await fetch(`http://localhost:8000/api/complaints/${numericId}/ai-chat`, {
+      const response = await fetch(`/api/v2/complaints/${numericId}/ai-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -291,14 +262,11 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
       const data = await response.json();
 
       if (data.status === 'success') {
-        // 3. 응답 처리
-        // (1) AI 답변 말풍선 추가
         setChatMessages((prev) => [...prev, {
           role: 'assistant',
           content: data.data.answer
         }]);
 
-        // (2) 우측 문서 카드 리스트 갱신
         if (data.data.documents && data.data.documents.length > 0) {
           setDocuments(data.data.documents);
         }
@@ -313,7 +281,6 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
     }
   };
 
-  // 패널 토글 함수
   const toggleRightPanel = () => {
     const panel = rightPanelRef.current;
 
@@ -342,7 +309,6 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* 1. Header */}
       <div className="border-b border-border bg-card px-6 py-4 flex-none">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -358,12 +324,13 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
           </div>
 
           <div className="flex gap-2">
-            {isUnassigned && !isSelectedClosed && (
+            {isUnassigned && !isSelectedClosed && complaint.status !== 'CANCELED' && complaint.status !== 'CLOSED' && (
               <Button onClick={handleAssign} className="bg-gray-600 hover:bg-gray-700">
                 <UserCheck className="w-4 h-4 mr-2" /> 담당하기
               </Button>
             )}
-            {isMine && !isSelectedClosed && complaint.status !== 'RECOMMENDED' && (
+
+            {isMine && !isSelectedClosed && complaint.status !== 'RECOMMENDED' && complaint.status !== 'CANCELED' && complaint.status !== 'CLOSED' && (
               <>
                 <Button variant="outline" onClick={() => setShowRerouteDialog(true)}>
                   <RefreshCw className="w-4 h-4 mr-2" /> 이관 요청
@@ -375,37 +342,25 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
             )}
           </div>
         </div>
-
-        {/* grid 대신 flex로 변경하여 내용물 크기에 맞게 공간 확보 */}
         <div className="flex flex-wrap items-center gap-15 text-sm w-full mt-4">
-
-          {/* 1. 접수일시: 줄바꿈 절대 금지 (whitespace-nowrap) */}
           <div className="whitespace-nowrap">
             <span className="text-muted-foreground">접수일시: </span>
             <span>{complaint.receivedAt}</span>
           </div>
-
-          {/* 2. 담당부서 */}
           <div className="whitespace-nowrap">
             <span className="text-muted-foreground">담당부서: </span>
             <span>{complaint.departmentName || '미배정'}</span>
           </div>
-
-          {/* 3. 담당자 */}
           <div className="whitespace-nowrap">
             <span className="text-muted-foreground">담당자: </span>
             <span className={complaint.managerName ? "font-medium" : "text-slate-400"}>
               {complaint.managerName || '미배정'}
             </span>
           </div>
-
-          {/* 4. 민원번호: 여기서부터 오른쪽 끝으로 밀어버림 (ml-auto) */}
           <div className="whitespace-nowrap">
             <span className="text-muted-foreground">민원번호: </span>
             <span className="medium font-mono">{complaint.id}</span>
           </div>
-
-          {/* 5. 사건 */}
           <div className="whitespace-nowrap flex items-center gap-1">
             <span className="text-muted-foreground">사건: </span>
             {complaint.incidentId ? (
@@ -420,9 +375,6 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
       </div>
 
       <ResizablePanelGroup direction="horizontal" className="flex-1">
-
-        {/* [왼쪽] Tabs Panel */}
-        {/* minSize를 주어 패널이 완전히 사라지지 않도록 보호할 수 있음 */}
         <ResizablePanel defaultSize={100} minSize={30}>
           <Tabs defaultValue="normalization" className="h-full flex flex-col">
 
@@ -452,8 +404,6 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                 </TabsTrigger>
 
               </TabsList>
-
-              {/*  답변창 토글 버튼 */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -495,7 +445,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{h.body}</p>
                               </div>
                               <div className="border-l pl-6">
-                                <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center"><Sparkles className="w-3 h-3 mr-1" /> AI 정규화 분석</div>
+                                <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center"><Sparkles className="w-3 h-3 mr-1" /> AI 요약</div>
                                 {!h.neutralSummary ? (
                                   <div className="text-sm text-muted-foreground">분석 데이터 없음</div>
                                 ) : (
@@ -512,7 +462,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                                             <span className="text-slate-500"></span>
                                           )}
                                         </div></div>
-                                      <div><span className="text-muted-foreground block mb-1">위치</span> <div><span className="text-sm text-muted-foreground b">{h.locationHint}</span></div></div>
+                                      <div><span className="text-muted-foreground block mb-1">위치</span> <div><span className="text-sm text-muted-foreground b">{complaint.address}</span></div></div>
                                     </div>
                                   </div>
                                 )}
@@ -585,11 +535,8 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                 </Card>
               </TabsContent>
 
-              {/* ▼▼▼ 기존 knowledge 탭 내용을 이걸로 교체하세요 ▼▼▼ */}
               <TabsContent value="knowledge" className="m-0 h-full">
-                <div className="grid grid-cols-3 h-full min-h-0 overflow-hidden"> {/* overflow-hidden 추가로 전체 스크롤 방지 */}
-
-                  {/* 왼쪽: 채팅 영역 (ScrollArea가 있어서 내부에서만 스크롤됨) */}
+                <div className="grid grid-cols-3 h-full min-h-0 overflow-hidden">
                   <div className="col-span-2 border-r border-border flex flex-col h-full min-h-0 overflow-hidden">
                     <ScrollArea className="flex-1 min-h-0 p-6">
                       {chatMessages.length === 0 ? (
@@ -601,7 +548,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                           </div>
                         </div>
                       ) : (
-                        <div className="space-y-6"> {/* 메시지 간격 조금 넓힘 */}
+                        <div className="space-y-6">
                           {chatMessages.map((msg, idx) => (
                             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                               <div
@@ -625,22 +572,20 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                         </div>
                       )}
                     </ScrollArea>
-
-                    {/* 채팅 입력바 (하단 고정) */}
                     <div className="p-4 border-t border-border bg-white space-y-3">
                       <div className="flex flex-wrap gap-2">
-                        {suggestedPrompts.map((prompt, i) => ( // suggestedPrompts 변수 활용
+                        {suggestedPrompts.map((prompt, i) => (
                           <Button
                             key={i}
                             variant="outline"
                             size="sm"
                             className="text-xs bg-gray-50 text-gray-600 border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
                             onClick={() => handleSendChat(
-          prompt, 
-          i === 0 ? 'search_law' : (i === 1 ? 'search_case' : 'chat')
-      )}
-    >
-      {prompt}
+                              prompt,
+                              i === 0 ? 'search_law' : (i === 1 ? 'search_case' : 'chat')
+                            )}
+                          >
+                            {prompt}
                           </Button>
                         ))}
                       </div>
@@ -663,9 +608,6 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                       </div>
                     </div>
                   </div>
-
-                  {/* 오른쪽: 근거 카드 영역 (Sticky 효과) */}
-                  {/* h-full과 overflow-hidden을 주어 스크롤이 채팅창과 독립적으로 돕니다 */}
                   <div className="bg-slate-50/80 p-4 h-full min-h-0 flex flex-col overflow-hidden border-l">
                     <div className="mb-3 flex items-center justify-between flex-none">
                       <h3 className="text-sm font-bold flex items-center gap-2 text-slate-700">
@@ -674,8 +616,6 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                       </h3>
                       <Badge variant="secondary" className="text-[10px]">{documents.length}건</Badge>
                     </div>
-
-                    {/* 카드 리스트 스크롤 영역 */}
                     <ScrollArea className="flex-1 min-h-0 pr-3 -mr-3">
                       {documents.length === 0 ? (
                         <div className="text-xs text-muted-foreground text-center py-10 border-2 border-dashed rounded-lg">
@@ -685,37 +625,70 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                         <div className="space-y-3 pb-4">
                           {documents.map((doc, idx) => {
                             const isExpanded = expandedDocIndex === idx;
+
+                            // ★ 데이터 타입 식별 (answer가 있으면 '유사 사례', 없으면 '법령')
+                            const isCase = doc.hasOwnProperty('answer');
+
+                            // 1. 배지 라벨 및 스타일 설정
+                            const badgeLabel = isCase ? "유사 사례" : "법령/규정";
+                            const badgeStyle = isCase
+                              ? "bg-amber-50 text-amber-600 border-amber-200"
+                              : "bg-white text-slate-500 border-slate-200";
+
+                            // 2. 제목 설정
+                            const titleText = isCase
+                              ? `유사 민원 #${doc.id} (유사도 ${doc.similarity}%)`
+                              : `${doc.title || '문서명 없음'} ${doc.article_no || doc.section || ''}`;
+
+                            // 3. 본문 설정 (유사 사례는 질문+답변 형태)
+                            const contentElement = isCase ? (
+                              <div className="space-y-2">
+                                <div>
+                                  <span className="text-[10px] font-bold text-slate-500 block mb-1">Q. 민원 내용</span>
+                                  <p className="text-slate-700">{doc.body}</p>
+                                </div>
+                                <div className="border-t border-slate-200 pt-2 mt-2">
+                                  <span className="text-[10px] font-bold text-blue-600 block mb-1">A. 처리 결과</span>
+                                  <p className="text-slate-700">{doc.answer}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <p>{doc.chunk_text || doc.content || '내용 없음'}</p>
+                            );
+
                             return (
                               <Card
                                 key={idx}
-                                className={`transition-all duration-200 hover:shadow-md cursor-pointer border-l-4 ${isExpanded ? 'border-l-blue-500 ring-1 ring-blue-200' : 'border-l-transparent hover:border-l-blue-300'
+                                className={`transition-all duration-200 hover:shadow-md cursor-pointer border-l-4 ${isExpanded
+                                  ? (isCase ? 'border-l-amber-500 ring-1 ring-amber-200' : 'border-l-blue-500 ring-1 ring-blue-200')
+                                  : 'border-l-transparent hover:border-l-slate-300'
                                   }`}
                                 onClick={() => setExpandedDocIndex(isExpanded ? null : idx)}
                               >
                                 <CardContent className="p-3 text-xs space-y-2">
                                   <div className="flex justify-between items-start">
-                                    <Badge variant="outline" className="bg-white text-slate-500 border-slate-200 font-normal">
-                                      법령/규정
+                                    <Badge variant="outline" className={`font-normal ${badgeStyle}`}>
+                                      {badgeLabel}
                                     </Badge>
-                                    {/* 펼침/접힘 아이콘 표시 */}
+                                    {/* 펼침/접힘 아이콘 */}
                                     {isExpanded ? <ChevronDown className="w-3 h-3 text-gray-400" /> : <ChevronRight className="w-3 h-3 text-gray-400" />}
                                   </div>
 
                                   <div className="font-bold text-slate-800 text-sm">
-                                    {doc.title || '문서명 없음'} {doc.article_no || doc.section || ''}
+                                    {titleText}
                                   </div>
 
-                                  {/* 내용 부분: isExpanded에 따라 line-clamp 해제 */}
+                                  {/* 내용 부분 */}
                                   <div className={`text-slate-600 bg-slate-50 p-2 rounded leading-relaxed ${isExpanded ? '' : 'line-clamp-3'
                                     }`}>
-                                    {doc.chunk_text || doc.content || '내용 없음'}
+                                    {contentElement}
                                   </div>
 
-                                  {/* 펼쳐졌을 때만 보이는 추가 정보 (예: 정확도) */}
-                                  {isExpanded && (
+                                  {/* 유사도 표시 (법령일 때도 표시) */}
+                                  {isExpanded && doc.similarity && (
                                     <div className="pt-1 flex justify-end">
-                                      <span className="text-[10px] text-blue-600 font-medium">
-                                        유사도: {doc.similarity}%
+                                      <span className={`text-[10px] font-medium ${isCase ? 'text-amber-600' : 'text-blue-600'}`}>
+                                        정확도: {doc.similarity}%
                                       </span>
                                     </div>
                                   )}
@@ -732,11 +705,7 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
             </div>
           </Tabs>
         </ResizablePanel>
-
-        {/* [수정] 핸들 아이콘(Grip) 제거 (withHandle 속성 삭제) */}
         <ResizableHandle />
-
-        {/* [수정] 오른쪽 답변 패널에 Ref 연결 및 이벤트 핸들링 추가 */}
         <RawPanel
           ref={rightPanelRef}
           defaultSize={0}
@@ -744,16 +713,13 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
           collapsible={true}
           onCollapse={() => setIsPanelOpen(false)}
           onExpand={() => setIsPanelOpen(true)}
-          className="bg-background border-l flex flex-col" // flex flex-col 스타일 직접 추가
+          className="bg-background border-l flex flex-col"
         >
           <div className="flex flex-col h-full overflow-hidden">
-            {/* Header */}
             <div className="h-14 px-4 border-b flex items-center justify-between bg-card flex-none">
               <span className="font-semibold text-sm">답변 및 처리</span>
               {isSelectedClosed ? <Badge className="bg-green-100 text-green-800">완료</Badge> : <Badge variant="outline">작성 중</Badge>}
             </div>
-
-            {/* Banners */}
             <div className="flex-none">
               {isUnassigned && !isSelectedClosed && (
                 <div className="bg-blue-50 p-4 text-sm text-blue-800 flex items-start gap-3 border-b border-blue-100">
@@ -781,33 +747,17 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
               )}
             </div>
 
-            {/* Content Area  */}
-            {/* <div className="flex-1 p-4 min-h-0 flex flex-col">
-              <div className="flex items-center justify-between mb-2 flex-none">
-                <label className="text-sm font-medium text-muted-foreground">내용</label>
-                {isEditable && <Button variant="ghost" size="sm" className="text-xs text-blue-600 h-6"><Sparkles className="w-3 h-3 mr-1" /> AI 초안</Button>}
-              </div>
-
-              <Textarea
-                placeholder={isEditable ? "답변을 입력하세요." : "작성 권한이 없습니다."}
-                className="flex-1 resize-none p-4 text-sm focus-visible:ring-1"
-                value={answerContent}
-                onChange={(e) => setAnswerContent(e.target.value)}
-                disabled={!isEditable}
-              />
-            </div> */}
             <div className="flex-1 p-4 min-h-0 flex flex-col overflow-y-auto">
               <div className="flex items-center justify-between mb-2 flex-none">
                 <label className="text-sm font-medium text-muted-foreground">내용</label>
 
-                {/* [수정] 기존 버튼에 onClick 연결 및 disabled 처리 */}
                 {isEditable && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-xs text-blue-600 h-6"
-                    onClick={handleDraft}     // 핸들러 연결
-                    disabled={isDrafting}     // 로딩 중 비활성화
+                    onClick={handleDraft}
+                    disabled={isDrafting}
                   >
                     {isDrafting ? (
                       <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -818,18 +768,15 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                   </Button>
                 )}
               </div>
-
-              {/* [수정] Textarea를 div.relative로 감싸서 로딩 오버레이 추가 */}
               <div className="relative flex-1 flex flex-col min-h-[300px]">
                 <Textarea
                   placeholder={isEditable ? "답변을 입력하세요." : "작성 권한이 없습니다."}
                   className="flex-1 resize-none p-4 text-sm focus-visible:ring-1"
-                  value={answerContent} // 기존 변수명 유지
-                  onChange={(e) => setAnswerContent(e.target.value)} // 기존 함수 유지
-                  disabled={!isEditable || isDrafting} // 로딩 중 수정 불가
+                  value={answerContent}
+                  onChange={(e) => setAnswerContent(e.target.value)}
+                  disabled={!isEditable || isDrafting}
                 />
 
-                {/* 로딩 오버레이 */}
                 {isDrafting && (
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-md border">
                     <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-2" />
@@ -840,9 +787,6 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                 )}
               </div>
             </div>
-            {/* Content Area 끝 */}
-
-            {/* Footer Buttons  */}
             {isEditable && (
               <div className="p-4 border-t bg-gray-50/50 grid grid-cols-2 gap-3 flex-none">
                 <Button variant="outline" onClick={() => handleAnswer(true)}><Save className="w-4 h-4 mr-2" /> 저장</Button>
@@ -852,16 +796,12 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
           </div>
         </RawPanel>
       </ResizablePanelGroup>
-
-      {/* 재이관 Dialog */}
       <Dialog open={showRerouteDialog} onOpenChange={setShowRerouteDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>이관 요청</DialogTitle><DialogDescription>부서와 사유를 입력하세요.</DialogDescription></DialogHeader>
           <div className="space-y-4 py-4">
-            {/* [수정] 2단 Select 구조 (Grid 사용) */}
             <div className="grid grid-cols-2 gap-4">
-              
-              {/* 왼쪽: 국(GUK) 선택 */}
+
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">국 (상위부서)</label>
                 <Select value={selectedGukId} onValueChange={handleGukChange}>
@@ -875,14 +815,12 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* 오른쪽: 과(GWA) 선택 */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">과 (하위부서)</label>
-                <Select 
-                  value={selectedTargetDept} 
+                <Select
+                  value={selectedTargetDept}
                   onValueChange={setSelectedTargetDept}
-                  disabled={!selectedGukId} // 국을 선택해야 활성화
+                  disabled={!selectedGukId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={selectedGukId ? "과 선택" : "국을 먼저 선택"} />
@@ -900,17 +838,16 @@ export function ComplaintDetailPage({ complaintId, onBack }: ComplaintDetailPage
               </div>
             </div>
 
-            <Textarea 
-              value={rerouteReason} 
-              onChange={(e) => setRerouteReason(e.target.value)} 
-              placeholder="이관 사유를 입력하세요 (필수)" 
+            <Textarea
+              value={rerouteReason}
+              onChange={(e) => setRerouteReason(e.target.value)}
+              placeholder="이관 사유를 입력하세요 (필수)"
               className="min-h-[100px]"
             />
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRerouteDialog(false)}>취소</Button>
-            {/* 제출 버튼은 기존 selectedTargetDept를 사용하므로 로직 변경 없음 */}
             <Button onClick={handleSubmitReroute} disabled={!selectedTargetDept || !rerouteReason.trim()}>
               제출
             </Button>

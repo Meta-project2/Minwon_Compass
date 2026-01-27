@@ -1,12 +1,10 @@
 import { useState, useMemo, useEffect, } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { Badge } from './ui/badge';
-import { ChevronLeft, ChevronRight, Eye, Search, Calendar, ArrowUpDown, RefreshCcw, Home, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, ArrowUpDown, RefreshCcw } from 'lucide-react';
 import api from './AxiosInterface';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 import { Toolbar } from './toolbar';
 
@@ -41,12 +39,12 @@ const STATUS_LABELS = {
 };
 
 const STATUS_COLORS = {
-  RECEIVED: 'bg-blue-100 text-blue-700 border-blue-200',      // 신규 접수: 청량한 블루
-  RECOMMENDED: 'bg-purple-100 text-purple-700 border-purple-200', // 부서 추천: 신비로운 퍼플
-  IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-200',  // 처리중: 주의가 필요한 오렌지/앰버
-  RESOLVED: 'bg-emerald-100 text-emerald-700 border-emerald-200', // 답변 완료: 신뢰의 그린
-  CLOSED: 'bg-slate-100 text-slate-600 border-slate-300',     // 종결: 차분한 그레이
-  CANCELED: 'bg-rose-100 text-rose-700 border-rose-200',      // 취소/반려: 경고의 레드/로즈
+  RECEIVED: 'bg-blue-100 text-blue-700 border-blue-200',
+  RECOMMENDED: 'bg-purple-100 text-purple-700 border-purple-200',
+  IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-200',
+  RESOLVED: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  CLOSED: 'bg-slate-100 text-slate-600 border-slate-300',
+  CANCELED: 'bg-rose-100 text-rose-700 border-rose-200',
 };
 
 type SortOption = 'date-desc' | 'date-asc' | 'status' | 'title';
@@ -74,7 +72,6 @@ export default function PastComplaintsPage() {
   );
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>(savedState?.selectedStatus || 'ALL');
-  // 조회 버튼 클릭 시 필터를 적용하기 위한 '트리거' 상태 (실제 필터링 로직에 반영)
   const [searchTrigger, setSearchTrigger] = useState(0);
 
   const handleViewDetail = (id: string) => {
@@ -85,7 +82,7 @@ export default function PastComplaintsPage() {
         endDate,
         sortBy,
         selectedStatus,
-        currentPage // 현재 페이지 정보 포함
+        currentPage
       }
     });
   };
@@ -117,11 +114,11 @@ export default function PastComplaintsPage() {
       text: '취하된 이후에도 제출하신 민원은 확인하실 수 있습니다.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#d33',
       cancelButtonColor: '#3085d6',
-      confirmButtonText: '네, 취하합니다',
+      confirmButtonColor: '#d33',
       cancelButtonText: '아니오',
-      // 2. 확인 버튼 클릭 시 실행될 비동기 로직 (처리 중 상태 유지)
+      confirmButtonText: '네, 취하합니다',
+      reverseButtons: true,
       showLoaderOnConfirm: true,
       preConfirm: async () => {
         try {
@@ -132,10 +129,9 @@ export default function PastComplaintsPage() {
           return false;
         }
       },
-      allowOutsideClick: () => !Swal.isLoading() // 로딩 중 바깥 클릭 방지
+      allowOutsideClick: () => !Swal.isLoading()
     });
 
-    // 3. 처리 완료 후 최종 알림
     if (result.isConfirmed) {
       await Swal.fire({
         title: '취하 완료',
@@ -149,21 +145,17 @@ export default function PastComplaintsPage() {
 
   const itemsPerPage = 10;
 
-  // 2. API 호출 로직
   useEffect(() => {
     fetchComplaints();
   }, []);
 
-  // 필터 및 정렬 로직 (조회 버튼 클릭 시의 흐름을 위해 useMemo의 의존성 관리)
   const filteredAndSortedComplaints = useMemo(() => {
     let filtered = [...complaints];
 
-    // 상태 탭 필터링 추가
     if (selectedStatus !== 'ALL') {
       filtered = filtered.filter(c => c.status === selectedStatus);
     }
 
-    // 검색어 필터링
     if (searchKeyword.trim()) {
       const keyword = searchKeyword.toLowerCase();
       filtered = filtered.filter(c =>
@@ -184,9 +176,8 @@ export default function PastComplaintsPage() {
       }
     });
     return filtered;
-  }, [complaints, searchTrigger, sortBy, selectedStatus]); // searchTrigger가 변할 때만(조회 버튼 클릭) 필터링
+  }, [complaints, searchTrigger, sortBy, selectedStatus]);
 
-  // Calculate pagination
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedComplaints.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -194,23 +185,22 @@ export default function PastComplaintsPage() {
 
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const offset = 2; // 현재 페이지 앞뒤로 보여줄 개수
+    const offset = 2;
 
     for (let i = 1; i <= totalPages; i++) {
       if (
-        i === 1 || // 첫 페이지
-        i === totalPages || // 마지막 페이지
-        (i >= currentPage - offset && i <= currentPage + offset) // 현재 페이지 주변
+        i === 1 ||
+        i === totalPages ||
+        (i >= currentPage - offset && i <= currentPage + offset)
       ) {
         pageNumbers.push(i);
       } else if (
         i === currentPage - offset - 1 ||
         i === currentPage + offset + 1
       ) {
-        pageNumbers.push('...'); // 생략 기호
+        pageNumbers.push('...');
       }
     }
-    // 중복 제거 (생략 기호가 여러 번 들어가는 것 방지)
     return [...new Set(pageNumbers)];
   };
 
@@ -223,13 +213,10 @@ export default function PastComplaintsPage() {
     setCurrentPage(1);
   };
 
-  const onGoHome = () => navigate('/applicant/main');
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-4">
-          {/* 간단한 스피너 애니메이션 */}
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-gray-600 font-medium">민원 내역을 불러오는 중입니다...</p>
         </div>
@@ -239,17 +226,11 @@ export default function PastComplaintsPage() {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden font-sans">
-      {/* 통합 툴바 사용 */}
       <Toolbar subTitle="과거 민원 내역" />
-
-      {/* Main Content */}
       <main className="flex-1 max-w-[1700px] mx-auto px-10 py-8 overflow-y-auto">
         <div className="space-y-6">
-          {/* [수정] Filters Section - 한 줄 구성 및 조회 버튼 추가 */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
-
-              {/* 기간 설정 영역 */}
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
                 <Input
                   type="date"
@@ -265,8 +246,6 @@ export default function PastComplaintsPage() {
                   className="h-8 w-32 text-xs border-gray-200 bg-white"
                 />
               </div>
-
-              {/* 검색어 입력 영역 - 길이 조정 */}
               <div className="flex-1 min-w-[200px] max-w-[400px] relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
@@ -277,8 +256,6 @@ export default function PastComplaintsPage() {
                   className="pl-9 h-10 text-sm border-gray-200 focus:ring-1 focus:ring-gray-300"
                 />
               </div>
-
-              {/* 정렬 드롭다운 */}
               <div className="relative">
                 <Button
                   onClick={() => setShowSortMenu(!showSortMenu)}
@@ -301,16 +278,12 @@ export default function PastComplaintsPage() {
                   </div>
                 )}
               </div>
-
-              {/* 조회 버튼 - 이미지 참고 (회색 계열 디자인) */}
               <Button
                 onClick={handleSearch}
                 className="bg-blue-700 hover:bg-blue-800 text-white h-10 px-6 font-bold text-sm flex items-center gap-2 rounded-lg"
               >
                 조회 <Search className="w-4 h-4" />
               </Button>
-
-              {/* 초기화 버튼 */}
               <Button
                 variant="ghost"
                 onClick={() => { setSearchKeyword(''); setStartDate(''); setEndDate(''); setSortBy('date-desc'); setSearchTrigger(0); }}
@@ -320,8 +293,6 @@ export default function PastComplaintsPage() {
               </Button>
             </div>
           </div>
-
-          {/* 3. 상태 탭 (글자 크게) */}
           <div className="flex border-b-4 border-gray-200 bg-white rounded-t-3xl px-6">
             {['ALL', 'RECEIVED', 'RECOMMENDED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'CANCELED'].map((tab) => {
               const isActive = selectedStatus === tab;
@@ -341,14 +312,11 @@ export default function PastComplaintsPage() {
               );
             })}
           </div>
-
-          {/* Results Summary */}
           <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200">
-            {/* 컬럼 헤더 영역 - 글씨 크기 키움(text-sm/base), 구분선 강화 */}
             {currentComplaints.length > 0 && (
               <div className="px-6 py-4 bg-gray-100 border-b-2 border-gray-300 flex items-center gap-4 text-sm font-bold text-gray-800 uppercase tracking-tight">
                 <div className="w-16 shrink-0 text-center">번호</div>
-                <div className="h-4 w-[1.5px] bg-gray-400 shrink-0" /> {/* 더 진해진 구분선 */}
+                <div className="h-4 w-[1.5px] bg-gray-400 shrink-0" />
 
                 <div className="flex-1 px-4 text-center">민원 제목</div>
                 <div className="h-4 w-[1.5px] bg-gray-400 shrink-0" />
@@ -365,23 +333,17 @@ export default function PastComplaintsPage() {
                 <div className="w-56 shrink-0 text-center">관리</div>
               </div>
             )}
-
-            {/* Complaints List - 본문 글씨 크기 확대(text-base), 행 높이 조절 */}
             {currentComplaints.length > 0 ? (
-              <div className="divide-y-2 divide-gray-200"> {/* 행 간 구분선도 강화 */}
+              <div className="divide-y-2 divide-gray-200">
                 {currentComplaints.map((complaint) => (
                   <div
                     key={complaint.id}
                     className="px-6 py-5 hover:bg-blue-50/30 transition-colors group flex items-center gap-4"
                   >
-                    {/* 1. 번호 */}
                     <div className="w-16 shrink-0 text-center text-sm font-mono text-gray-500">
                       {complaint.id}
                     </div>
-
-                    <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" /> {/* 세로 구분선 진하게 */}
-
-                    {/* 2. 민원 제목 - 글씨 크기 확대 */}
+                    <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" />
                     <div className="flex-1 px-4 min-w-0">
                       <h3
                         className="text-base font-bold text-gray-900 truncate cursor-pointer hover:text-blue-600 transition-colors"
@@ -390,48 +352,34 @@ export default function PastComplaintsPage() {
                         {complaint.title}
                       </h3>
                     </div>
-
                     <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" />
-
-                    {/* 3. 담당부서 */}
                     <div className="w-40 shrink-0 text-center text-base text-gray-700 font-medium">
                       {complaint.department || '미지정'}
                     </div>
-
                     <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" />
-
-                    {/* 4. 접수일 */}
                     <div className="w-32 shrink-0 text-center text-sm text-gray-600">
                       {complaint.submittedDate}
                     </div>
-
                     <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" />
-
-                    {/* 5. 진행 상태 - 라벨을 여기로 이동 */}
                     <div className="w-32 shrink-0 flex justify-center">
                       <Badge className={`px-3 py-1 text-[11px] font-bold border shadow-none rounded-md ${STATUS_COLORS[complaint.status]}`}>
                         {STATUS_LABELS[complaint.status]}
                       </Badge>
                     </div>
-
                     <div className="h-10 w-[1.5px] bg-gray-300 shrink-0" />
-
-                    {/* 6. 관리 버튼 (취하, 상세보기) */}
                     <div className="w-56 shrink-0 flex items-center gap-2 px-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        // [수정] CLOSED 또는 CANCELED 상태일 때 버튼 비활성화
                         disabled={complaint.status === 'CLOSED' || complaint.status === 'CANCELED'}
                         className={`flex-1 h-9 font-bold text-xs transition-all ${complaint.status === 'CLOSED' || complaint.status === 'CANCELED'
-                          ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' // 비활성 스타일
-                          : 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700' // 활성 스타일
+                          ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                          : 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700'
                           }`}
                         onClick={() => handleCancel(complaint.id)}
                       >
                         {complaint.status === 'CANCELED' ? '취하됨' : '취하'}
                       </Button>
-
                       <Button
                         size="sm"
                         className="flex-1 bg-blue-800 hover:bg-blue-900 text-white h-9 font-bold text-xs shadow-sm active:scale-95 transition-all"
@@ -444,17 +392,13 @@ export default function PastComplaintsPage() {
                 ))}
               </div>
             ) : (
-              /* Empty State */
               <div className="p-20 text-center">
                 <p className="text-gray-500 text-xl font-bold">검색 조건에 맞는 민원이 없습니다.</p>
                 <p className="text-gray-400 text-base mt-2">다른 검색어나 날짜 범위를 시도해보세요.</p>
               </div>
             )}
-
-            {/* Pagination */}
             <div className="bg-gray-50 px-6 py-5 border-t border-gray-200">
               <div className="flex items-center justify-center gap-2">
-                {/* 이전 페이지 버튼 */}
                 <Button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
@@ -463,8 +407,6 @@ export default function PastComplaintsPage() {
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </Button>
-
-                {/* [수정] 유동적인 페이지 번호 렌더링 */}
                 <div className="flex items-center gap-1">
                   {getPageNumbers().map((pageNum, idx) => {
                     if (pageNum === '...') {
@@ -490,8 +432,6 @@ export default function PastComplaintsPage() {
                     );
                   })}
                 </div>
-
-                {/* 다음 페이지 버튼 */}
                 <Button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}

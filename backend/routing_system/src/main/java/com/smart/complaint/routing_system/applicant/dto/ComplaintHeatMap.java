@@ -14,7 +14,6 @@ public record ComplaintHeatMap(
         BigDecimal lat,
         BigDecimal lon) {
     public static ComplaintHeatMap from(Complaint entity) {
-        // null 방어 로직 추가
         if (entity.getLat() == null || entity.getLon() == null) {
             return null;
         }

@@ -5,8 +5,8 @@ import lombok.Data;
 
 @Data
 public class ComplaintAnswerRequest {
-    private String answer;       // 답변 내용
+    private String answer;
 
     @JsonProperty("isTemporary")
-    private boolean isTemporary; // true: 임시저장, false: 종결
+    private boolean isTemporary;
 }

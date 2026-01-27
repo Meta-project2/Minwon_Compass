@@ -23,8 +23,6 @@ import com.smart.complaint.routing_system.applicant.repository.ComplaintRerouteR
 import com.smart.complaint.routing_system.applicant.repository.DepartmentRepository;
 import com.smart.complaint.routing_system.applicant.repository.UserRepository;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -56,51 +54,37 @@ public class ComplaintService {
     private final ComplaintNormalizationRepository complaintNormalizationRepository;
     private final UserRepository userRepository;
     private final RestTemplate restTemplate;
-
-    // [수정 26-01-20] 사건 상태 동기화를 위해 IncidentService 주입
     private final IncidentService incidentService;
 
-    /**
-     * 1. 담당자 배정 (Assign)
-     * - 민원의 상태를 '처리중'으로 변경하고 담당자를 지정합니다.
-     */
     public void assignManager(Long complaintId, Long userId) {
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 민원을 찾을 수 없습니다. ID=" + complaintId));
 
-        complaint.assignManager(userId); // Entity의 편의 메서드 호출
+        complaint.assignManager(userId);
 
-        // [수정 26-01-20] 담당자 배정 시 상태 변경(처리중)에 따른 사건 상태 동기화
         if (complaint.getIncident() != null) {
             incidentService.refreshIncidentStatus(complaint.getIncident().getId());
         }
     }
 
-    /**
-     * 2. 답변 저장/전송 (Answer)
-     * [수정] 부모 ID로 들어왔지만, 실제 답변은 '가장 최신 민원(자식 포함)'에 저장해야 함.
-     */
     public void saveAnswer(Long complaintId, ComplaintAnswerRequest request) {
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 민원을 찾을 수 없습니다. ID=" + complaintId));
 
-        // 1) 자식 민원이 있는지 확인
         List<ChildComplaint> children = complaint.getChildComplaints();
 
         if (children != null && !children.isEmpty()) {
-            // 2) 자식이 있다면 가장 최신(ID가 큰 것 or CreatedAt이 최신) 자식을 찾음
             ChildComplaint latestChild = children.stream()
                     .max(Comparator.comparing(ChildComplaint::getId))
                     .orElseThrow();
 
-            // 3) 최신 자식에 답변 저장
             if (request.isTemporary()) {
                 latestChild.updateAnswerDraft(request.getAnswer());
             } else {
                 latestChild.completeAnswer(request.getAnswer(), complaint.getAnsweredBy());
+                complaint.updateStatustoComplete();
             }
         } else {
-            // 4) 자식이 없으면 기존대로 부모(최초 민원)에 답변 저장
             if (request.isTemporary()) {
                 complaint.updateAnswerDraft(request.getAnswer());
             } else {
@@ -108,45 +92,33 @@ public class ComplaintService {
             }
         }
 
-        // [수정 26-01-20] 답변 완료(임시저장 아님) 시 상태 변경에 따른 사건 상태 동기화
         if (!request.isTemporary() && complaint.getIncident() != null) {
             incidentService.refreshIncidentStatus(complaint.getIncident().getId());
         }
     }
 
-    /**
-     * 3. 재이관 요청 (Reroute)
-     * - 민원 테이블은 건드리지 않고, 재이관 이력 테이블에 요청 데이터를 쌓습니다.
-     * - 관리자가 승인하기 전까지는 기존 부서/담당자가 유지됩니다.
-     */
     public void requestReroute(Long complaintId, ComplaintRerouteRequest request, Long userId) {
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 민원을 찾을 수 없습니다. ID=" + complaintId));
 
-        // 재이관 요청 엔티티 생성
         ComplaintReroute reroute = ComplaintReroute.builder()
                 .complaint(complaint)
-                .originDepartmentId(complaint.getCurrentDepartmentId()) // 현재 부서
-                .targetDepartmentId(request.getTargetDeptId()) // 희망 부서
-                .requestReason(request.getReason()) // 사유
-                .requesterId(userId) // 요청자 (나)
-                .status("PENDING") // 대기 상태
+                .originDepartmentId(complaint.getCurrentDepartmentId())
+                .targetDepartmentId(request.getTargetDeptId())
+                .requestReason(request.getReason())
+                .requesterId(userId)
+                .status("PENDING")
                 .build();
 
         rerouteRepository.save(reroute);
 
         complaint.statusToReroute();
 
-        // [수정 26-01-20] 재이관 요청으로 인한 상태 변경 시 사건 상태 동기화
         if (complaint.getIncident() != null) {
             incidentService.refreshIncidentStatus(complaint.getIncident().getId());
         }
     }
 
-    /**
-     * 3-1. 재이관 승인 (Approve) - 관리자용
-     * - 이력 상태 APPROVED 변경 + 민원 부서 이동 처리
-     */
     public void approveReroute(Long rerouteId, Long reviewerId) {
         ComplaintReroute reroute = rerouteRepository.findById(rerouteId)
                 .orElseThrow(() -> new IllegalArgumentException("재이관 요청 내역을 찾을 수 없습니다."));
@@ -155,23 +127,15 @@ public class ComplaintService {
             throw new IllegalStateException("이미 처리된 요청입니다.");
         }
 
-        // 이력 상태 업데이트 (APPROVED)
         reroute.process("APPROVED", reviewerId);
-
-        // 민원 실제 부서 이동 및 상태 초기화
         Complaint complaint = reroute.getComplaint();
         complaint.rerouteTo(reroute.getTargetDepartmentId());
 
-        // [수정 26-01-20] 재이관 승인으로 인한 상태 변경 시 사건 상태 동기화
         if (complaint.getIncident() != null) {
             incidentService.refreshIncidentStatus(complaint.getIncident().getId());
         }
     }
 
-    /**
-     * 3-2. 재이관 반려 (Reject) - 관리자용
-     * - 이력 상태 REJECTED 변경 + 민원 상태 원복
-     */
     public void rejectReroute(Long rerouteId, Long reviewerId) {
         ComplaintReroute reroute = rerouteRepository.findById(rerouteId)
                 .orElseThrow(() -> new IllegalArgumentException("재이관 요청 내역을 찾을 수 없습니다."));
@@ -180,23 +144,15 @@ public class ComplaintService {
             throw new IllegalStateException("이미 처리된 요청입니다.");
         }
 
-        // 이력 상태 업데이트 (REJECTED)
         reroute.process("REJECTED", reviewerId);
-
-        // 민원 상태 원복 (대기중 -> 접수)
         Complaint complaint = reroute.getComplaint();
         complaint.rejectReroute();
 
-        // [수정 26-01-20] 재이관 반려로 인한 상태 원복 시 사건 상태 동기화
         if (complaint.getIncident() != null) {
             incidentService.refreshIncidentStatus(complaint.getIncident().getId());
         }
     }
 
-    /**
-     * 4. 담당 취소 (Release)
-     * - 담당자를 비우고 상태를 다시 '접수(RECEIVED)'로 되돌립니다.
-     */
     public void releaseManager(Long complaintId, Long userId) {
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 민원을 찾을 수 없습니다."));
@@ -205,30 +161,19 @@ public class ComplaintService {
             throw new IllegalStateException("본인이 담당한 민원만 취소할 수 있습니다.");
         }
         complaint.releaseManager();
-
-        // [수정 26-01-20] 담당 취소로 인한 상태 변경(접수됨) 시 사건 상태 동기화
         if (complaint.getIncident() != null) {
             incidentService.refreshIncidentStatus(complaint.getIncident().getId());
         }
     }
 
-    /**
-     * [수정 26-01-20] 민원 상태 업데이트 (외부 호출용)
-     * - 민원 상태를 직접 변경할 때 사용하며, 변경 후 사건 상태도 동기화합니다.
-     */
     public void updateComplaintStatus(Long complaintId, ComplaintStatus newStatus) {
         Complaint complaint = complaintRepository.findById(complaintId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 민원을 찾을 수 없습니다."));
 
-        // 1. 민원 상태 변경
         complaint.setStatus(newStatus);
-
-        // 종결이라면 종결 일시 기록
         if (newStatus == ComplaintStatus.CLOSED) {
             complaint.setClosedAt(LocalDateTime.now());
         }
-
-        // 2. 소속된 사건(Incident)이 있다면, 사건 상태를 재계산하라고 명령!
         if (complaint.getIncident() != null) {
             incidentService.refreshIncidentStatus(complaint.getIncident().getId());
         }
@@ -242,17 +187,14 @@ public class ComplaintService {
     public Long receiveComplaint(String applicantId, ComplaintSubmitDto complaintSubmitDto) {
         log.info("민원 접수 프로세스 시작 - 민원인 ID: {}", applicantId);
 
-        // 1. 일반 PK(숫자)로 먼저 조회 시도
         Long actualUserId = null;
 
         if (isPureNumeric(applicantId)) {
-            // 숫자라면 PK일 가능성이 높으므로 먼저 exists 체크
             if (userRepository.existsById(Long.parseLong(applicantId))) {
                 actualUserId = Long.parseLong(applicantId);
             }
         }
 
-        // 2. PK가 아니거나 검색 실패 시 Querydsl로 소셜 유저 조회
         if (actualUserId == null) {
             User socialUser = userRepository.findByProviderIdLike(applicantId)
                     .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + applicantId));
@@ -281,19 +223,15 @@ public class ComplaintService {
     @Transactional
     public void processAiResponse(String rawResponseBody, Long complaintId) {
         try {
-            // 1. 전체 응답 파싱
             AiDto.Response responseWrapper = objectMapper.readValue(rawResponseBody, AiDto.Response.class);
 
-            // 2. data 내 마크다운 제거
             String cleanJson = responseWrapper.data()
                     .replaceAll("```json", "")
                     .replaceAll("```", "")
                     .trim();
 
-            // 3. 실제 분석 데이터 객체로 변환
             AiDto.Analysis analysis = objectMapper.readValue(cleanJson, AiDto.Analysis.class);
 
-            // 4. DB 저장 처리
             saveNormalizationData(complaintId, analysis, responseWrapper.embedding());
 
         } catch (Exception e) {
@@ -395,20 +333,16 @@ public class ComplaintService {
             }
 
             try {
-                // 3. ChildComplaint 엔티티 생성 및 저장
                 ChildComplaint child = ChildComplaint.builder()
                         .parentComplaint(parent)
                         .title(inquiryDto.title())
                         .body(inquiryDto.body())
                         .status(ComplaintStatus.RECEIVED)
                         .build();
-
-                // 부모 민원의 상태 변화 -> IN_PROGRESS로
                 parent.newInquiry();
                 complaintRepository.save(parent);
                 childComplaintRepository.save(child);
 
-                // [수정 26-01-20] 새 문의 접수로 인한 상태 변경(IN_PROGRESS) 시 사건 상태 동기화
                 if (parent.getIncident() != null) {
                     incidentService.refreshIncidentStatus(parent.getIncident().getId());
                 }
@@ -446,14 +380,8 @@ public class ComplaintService {
                 .orElseThrow(() -> new BusinessException(ErrorMessage.COMPLAINT_NOT_FOUND));
 
         log.info("찾은 민원: {}, 상태: {}", complaint.getId(), complaint.getStatus());
-
-        // 민원 취소 처리
         complaint.cancelComplaint();
-
         log.info("변경 후 상태 찾은 민원: {}, 상태: {}", complaint.getId(), complaint.getStatus());
-        complaintRepository.save(complaint);
-
-        // [수정 26-01-20] 민원 취소로 인한 상태 변경 시 사건 상태 동기화
         if (complaint.getIncident() != null) {
             incidentService.refreshIncidentStatus(complaint.getIncident().getId());
         }
@@ -461,7 +389,6 @@ public class ComplaintService {
 
     @Transactional
     public void closeComplaint(Long id) {
-        // TODO Auto-generated method stub
         Complaint complaint = complaintRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorMessage.COMPLAINT_NOT_FOUND));
         log.info("찾은 민원: {}, 상태: {}", complaint.getId(), complaint.getStatus());

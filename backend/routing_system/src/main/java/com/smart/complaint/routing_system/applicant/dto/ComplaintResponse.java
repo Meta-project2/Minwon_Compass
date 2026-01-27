@@ -8,29 +8,21 @@ import java.time.format.DateTimeFormatter;
 
 @Data
 public class ComplaintResponse {
-    private String id;          // 화면용 ID (예: C2026-0001)
-    private Long originalId;    // 실제 DB ID (상세 조회용)
+    private String id;
+    private Long originalId;
     private String title;
     private String address;
-    private String receivedAt;  // 문자열로 변환된 날짜
+    private String receivedAt;
     private ComplaintStatus status;
     private UrgencyLevel urgency;
-    private String incidentId;  // 사건 ID (있으면 I-2026-001)
-
-    private String neutralSummary; // 민원 내용 요약(LLM)
-
+    private String incidentId;
+    private String neutralSummary;
     private String coreRequest;
-
     private String managerName;
 
-    // Entity -> DTO 변환 생성자
     public ComplaintResponse(Complaint complaint) {
         this.originalId = complaint.getId();
-
-        // ID 변환 로직: "C" + 연도 + 4자리 숫자
-        // receivedAt의 연도?? 일단 간단히 구현
         this.id = String.format("C2026-%04d", complaint.getId());
-
         this.title = complaint.getTitle();
         this.address = complaint.getAddressText();
         this.receivedAt = complaint.getReceivedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));

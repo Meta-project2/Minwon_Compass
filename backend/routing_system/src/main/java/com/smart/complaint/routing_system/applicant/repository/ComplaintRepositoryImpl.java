@@ -41,8 +41,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.smart.complaint.routing_system.applicant.entity.QComplaint.complaint;
-
-// 팀원의 Q클래스
 import com.smart.complaint.routing_system.applicant.entity.*;
 
 import jakarta.persistence.EntityManager;
@@ -72,12 +70,10 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 complaint.currentDepartmentId.eq(departmentId),
                                                 keywordContains(condition.getKeyword()),
                                                 statusEq(condition.getStatus()),
-                                                hasIncident(condition.getHasIncident())
-                                // hasTags(condition.getHasTags())
-                                )
-                                .orderBy(getOrderSpecifier(condition.getSort())) // 정렬 적용
-                                .offset(condition.getOffset()) // 건너뛰기
-                                .limit(condition.getSize()) // 10개만 가져오기
+                                                hasIncident(condition.getHasIncident()))
+                                .orderBy(getOrderSpecifier(condition.getSort()))
+                                .offset(condition.getOffset())
+                                .limit(condition.getSize())
                                 .fetch();
                 List<ComplaintResponse> content = results.stream()
                                 .map(tuple -> {
@@ -98,16 +94,12 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 Long total = queryFactory
                                 .select(complaint.count())
                                 .from(complaint)
-                                .leftJoin(normalization).on(normalization.complaint.eq(complaint)) // 검색 조건에
-                                                                                                   // normalization 포함시
-                                                                                                   // 필요
+                                .leftJoin(normalization).on(normalization.complaint.eq(complaint))
                                 .where(
                                                 complaint.currentDepartmentId.eq(departmentId),
                                                 keywordContains(condition.getKeyword()),
                                                 statusEq(condition.getStatus()),
-                                                hasIncident(condition.getHasIncident())
-                                // hasTags(condition.getHasTags())
-                                )
+                                                hasIncident(condition.getHasIncident()))
                                 .fetchOne();
 
                 if (total == null)
@@ -117,14 +109,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 return new PageImpl<>(content, PageRequest.of(condition.getPage() - 1, condition.getSize()), total);
         }
 
-        /*
-         * 수정 전
-         * private BooleanExpression hasTagsEq(Boolean hasTags) {
-         * return (hasTags != null && hasTags) ? complaint.tag.isNotNull() : null;
-         * }
-         */
-
-        // 수정 후: 기능을 아예 비활성화하거나 null을 반환하게 합니다.
         private BooleanExpression hasTagsEq(Boolean hasTags) {
                 return null;
         }
@@ -159,9 +143,8 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                 .select(Projections.constructor(ComplaintDto.class,
                                                 complaint.id,
                                                 complaint.title,
-                                                complaint.status, // 엔티티의 Enum 타입
-                                                complaint.createdAt // 엔티티의 LocalDateTime 타입
-                                ))
+                                                complaint.status,
+                                                complaint.createdAt))
                                 .from(complaint)
                                 .where(applicantIdEq(applicantId))
                                 .orderBy(complaint.createdAt.desc())
@@ -180,8 +163,8 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 complaint.body,
                                                 complaint.answer,
                                                 complaint.addressText,
-                                                complaint.status, // Enum 타입 (예: RECEIVED)
-                                                complaint.createdAt, // LocalDateTime 타입
+                                                complaint.status,
+                                                complaint.createdAt,
                                                 complaint.updatedAt,
                                                 department.name))
                                 .from(complaint)
@@ -193,7 +176,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                 .fetch();
         }
 
-        // --- 조건 메서드 ---
         private BooleanExpression keywordContains(String keyword) {
                 if (keyword == null || keyword.isEmpty())
                         return null;
@@ -212,12 +194,10 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
         }
 
         private BooleanExpression titleContains(String keyword) {
-                // 검색어가 없으면(null 또는 빈 문자열) null을 반환 -> where 절에서 무시됨
                 return StringUtils.hasText(keyword) ? QComplaint.complaint.title.contains(keyword) : null;
         }
 
         private BooleanExpression applicantIdEq(Long applicantId) {
-                // applicantId가 null이면 null을 반환하여 where 절에서 조건이 제외되게 함
                 return applicantId != null ? QComplaint.complaint.applicantId.eq(applicantId) : null;
         }
 
@@ -225,7 +205,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 if ("status".equals(sort)) {
                         return complaint.status.asc();
                 }
-                // 기본값: 최신순
                 return complaint.receivedAt.desc();
         }
 
@@ -236,32 +215,21 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 QIncident incident = QIncident.incident;
                 QDepartment department = QDepartment.department;
 
-                // [수정] 자식 민원까지 Fetch Join하여 조회
-                // QueryDSL에서 OneToMany fetch join은 데이터 뻥튀기 주의가 필요하지만,
-                // 여기서는 단건 조회(where id eq)이므로 distinct()를 사용하여 깔끔하게 가져옵니다.
-
-                // 1. 사건에 묶인 민원 수 계산 (SubQuery)
                 var incidentCountSubQuery = JPAExpressions
                                 .select(complaint.count())
                                 .from(complaint)
                                 .where(complaint.incident.id.eq(incident.id));
-
-                // 2. 조인 쿼리 실행
                 Complaint c = queryFactory
                                 .select(complaint)
                                 .from(complaint)
-                                .leftJoin(complaint.childComplaints).fetchJoin() // [신규] 자식들까지 한방에
+                                .leftJoin(complaint.childComplaints).fetchJoin()
                                 .leftJoin(complaint.incident, incident).fetchJoin()
                                 .where(complaint.id.eq(complaintId))
-                                .fetchOne(); // 여기서 distinct는 Entity Graph상 자동 처리될 수 있으나 필요시 .distinct()
+                                .fetchOne();
 
                 if (c == null) {
                         return null;
                 }
-
-                // 3. 연관 데이터 별도 조회 (Normalization, Department, User)
-                // Entity 조회 후 DTO 변환 시점에 필요한 데이터들
-
                 ComplaintNormalization n = null;
 
                 Tuple normTuple = queryFactory
@@ -271,14 +239,12 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 normalization.coreCause,
                                                 normalization.targetObject,
                                                 normalization.locationHint,
-                                                normalization.keywordsJsonb // JSONB는 드라이버가 지원하면 가져옴
-                                )
+                                                normalization.keywordsJsonb)
                                 .from(normalization)
                                 .where(normalization.complaint.eq(c))
                                 .fetchFirst();
 
                 if (normTuple != null) {
-                        // Builder를 사용해 필요한 값만 채운 임시 객체 생성 (embedding은 null 상태)
                         n = ComplaintNormalization.builder()
                                         .neutralSummary(normTuple.get(normalization.neutralSummary))
                                         .coreRequest(normTuple.get(normalization.coreRequest))
@@ -289,7 +255,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                         .build();
                 }
 
-                // 부서명
                 String deptName = null;
                 if (c.getCurrentDepartmentId() != null) {
                         deptName = queryFactory
@@ -298,8 +263,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                         .where(department.id.eq(c.getCurrentDepartmentId()))
                                         .fetchOne();
                 }
-
-                // 담당자 이름
                 String mgrName = null;
                 if (c.getAnsweredBy() != null) {
                         mgrName = queryFactory
@@ -308,8 +271,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                         .where(user.id.eq(c.getAnsweredBy()))
                                         .fetchOne();
                 }
-
-                // 사건 카운트
                 Long iCount = 0L;
                 if (c.getIncident() != null) {
                         iCount = queryFactory
@@ -318,7 +279,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                         .where(complaint.incident.eq(c.getIncident()))
                                         .fetchOne();
                 }
-
                 ComplaintDetailResponse res = new ComplaintDetailResponse(c, n, c.getIncident(), iCount, deptName);
                 res.setManagerName(mgrName);
                 return res;
@@ -354,11 +314,10 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 childComplaint.updatedAt))
                                 .from(childComplaint)
                                 .where(childComplaint.parentComplaint.id.eq(parentId))
-                                .orderBy(childComplaint.createdAt.asc()) // 시간순 정렬 (타임라인용)
+                                .orderBy(childComplaint.createdAt.asc())
                                 .fetch();
         }
 
-        // 1. 민원 접수 추이 (일별 Grouping)
         @Override
         public List<DailyCountDto> getDailyTrends(LocalDateTime start, LocalDateTime end, Long deptId) {
                 var dateTemplate = Expressions.stringTemplate("TO_CHAR({0}, 'MM/DD')", complaint.receivedAt);
@@ -369,9 +328,9 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 dateTemplate,
                                                 complaint.count()))
                                 .from(complaint)
-                                .leftJoin(dept).on(complaint.currentDepartmentId.eq(dept.id)) // 부서 조인
+                                .leftJoin(dept).on(complaint.currentDepartmentId.eq(dept.id))
                                 .where(complaint.receivedAt.between(start, end)
-                                                .and(deptIdEq(deptId, dept))) // 부서 필터 조건
+                                                .and(deptIdEq(deptId, dept)))
                                 .groupBy(dateTemplate)
                                 .orderBy(dateTemplate.asc())
                                 .fetch();
@@ -380,8 +339,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
         @Override
         public List<TimeRangeDto> getProcessingTimeStats(LocalDateTime start, LocalDateTime end, Long deptId) {
                 QDepartment dept = QDepartment.department;
-
-                // DB 조회
                 List<Tuple> results = queryFactory
                                 .select(complaint.receivedAt, complaint.closedAt)
                                 .from(complaint)
@@ -390,10 +347,9 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 .and(complaint.status.in(ComplaintStatus.RESOLVED,
                                                                 ComplaintStatus.CLOSED))
                                                 .and(complaint.closedAt.isNotNull())
-                                                .and(deptIdEq(deptId, dept))) // 부서 필터
+                                                .and(deptIdEq(deptId, dept)))
                                 .fetch();
 
-                // Java 집계 로직 (기존과 동일)
                 Map<String, Long> countMap = new HashMap<>();
                 String[] ranges = { "3일 이내", "7일 이내", "14일 이내", "14일 이상" };
                 for (String r : ranges)
@@ -423,34 +379,31 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 return response;
         }
 
-        // 3. 부서별 현황 (핵심: 동적 그룹핑)
         @Override
         public List<DeptStatusDto> getDeptStatusStats(LocalDateTime start, LocalDateTime end, Long deptId) {
                 QDepartment d = QDepartment.department;
                 QComplaint c = QComplaint.complaint;
 
                 if (deptId == null) {
-                        // [전체 보기] 모든 '국(GUK)' 기준 (하위 과들의 민원 합산)
                         QDepartment subDept = new QDepartment("subDept");
                         return queryFactory
                                         .select(Projections.constructor(DeptStatusDto.class,
                                                         d.name,
-                                                        c.count().coalesce(0L), // 민원 없어도 0으로 표시
+                                                        c.count().coalesce(0L),
                                                         new CaseBuilder()
                                                                         .when(c.status.notIn(ComplaintStatus.RESOLVED,
                                                                                         ComplaintStatus.CLOSED))
                                                                         .then(1L).otherwise(0L)
                                                                         .sum().coalesce(0L)))
                                         .from(d)
-                                        .leftJoin(subDept).on(subDept.parent.id.eq(d.id)) // 국 하위의 과들 조인
+                                        .leftJoin(subDept).on(subDept.parent.id.eq(d.id))
                                         .leftJoin(c).on(c.currentDepartmentId.eq(subDept.id)
-                                                        .and(c.receivedAt.between(start, end))) // 기간 내 민원 조인
+                                                        .and(c.receivedAt.between(start, end)))
                                         .where(d.category.eq("GUK").and(d.isActive.isTrue()))
                                         .groupBy(d.id, d.name)
                                         .orderBy(c.count().desc())
                                         .fetch();
                 } else {
-                        // [국 선택] 해당 국 하위의 모든 '과(GWA)' 리스트 (0건 포함)
                         return queryFactory
                                         .select(Projections.constructor(DeptStatusDto.class,
                                                         d.name,
@@ -470,11 +423,9 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 }
         }
 
-        // [Helper] 부서 필터 조건 생성
         private BooleanExpression deptIdEq(Long deptId, QDepartment dept) {
                 if (deptId == null)
                         return null;
-                // deptId가 들어오면, 해당 국(Parent)에 속한 부서인지 확인
                 return dept.parent.id.eq(deptId);
         }
 
@@ -492,13 +443,12 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                 .fetch();
         }
 
-        // 5. 반복 민원 Top 3 (증감 포함)
         @Override
         public List<RecurringIncidentDto> getTopRecurringIncidents(LocalDateTime currentStart, LocalDateTime currentEnd,
                         LocalDateTime prevStart, LocalDateTime prevEnd) {
                 QIncident incident = QIncident.incident;
 
-                // 1단계: 이번 기간 Top 3 사건 조회
+                // 기간 Top 3 사건 조회
                 List<Tuple> topIncidents = queryFactory
                                 .select(incident.id, incident.title, complaint.count())
                                 .from(complaint)
@@ -511,13 +461,13 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
 
                 List<RecurringIncidentDto> result = new ArrayList<>();
 
-                // 2단계: 각 사건별로 직전 기간 데이터 조회 및 증감 계산
+                // 각 사건별 직전 기간 데이터 조회 및 증감 계산
                 for (Tuple t : topIncidents) {
                         Long incId = t.get(incident.id);
                         String title = t.get(incident.title);
                         Long currentCount = t.get(complaint.count());
 
-                        // 직전 기간 카운트 (별도 쿼리 - 3번만 실행되므로 성능 이슈 없음)
+                        // 직전 기간 카운트
                         Long prevCount = queryFactory
                                         .select(complaint.count())
                                         .from(complaint)
@@ -529,8 +479,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                 prevCount = 0L;
 
                         long trend = currentCount - prevCount;
-
-                        // "I-PK" 형태로 ID 포맷팅
                         String displayId = "I-2026-" + incId;
 
                         result.add(new RecurringIncidentDto(displayId, title, currentCount, trend));
@@ -539,21 +487,18 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 return result;
         }
 
-        // 6. AI 자동 배정 품질
         @Override
         public Double getAiAccuracy(LocalDateTime start, LocalDateTime end) {
-                // 전체 건수
                 Long total = queryFactory
                                 .select(complaint.count())
                                 .from(complaint)
                                 .where(complaint.receivedAt.between(start, end)
-                                                .and(complaint.aiPredictedDepartmentId.isNotNull())) // AI 예측값이 있는 것만 대상
+                                                .and(complaint.aiPredictedDepartmentId.isNotNull()))
                                 .fetchOne();
 
                 if (total == null || total == 0)
                         return 0.0;
 
-                // 일치 건수
                 Long matched = queryFactory
                                 .select(complaint.count())
                                 .from(complaint)
@@ -566,7 +511,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 if (matched == null)
                         matched = 0L;
 
-                // 백분율 계산 (소수점 첫째자리까지 반올림 로직은 Java에서 처리하거나 DB에서 처리)
                 double accuracy = (double) matched / total * 100.0;
                 return Math.round(accuracy * 10) / 10.0;
         }
@@ -574,7 +518,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
         @Override
         public ComplaintStatDto geComplaintStatus() {
 
-                // 1. 기준점 (2025년 최신 날짜) - 이건 간단하니 QueryDSL 유지 가능
                 LocalDateTime baseDate = queryFactory
                                 .select(complaint.createdAt.max())
                                 .from(complaint)
@@ -583,8 +526,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 if (baseDate == null)
                         baseDate = LocalDateTime.of(2025, 12, 31, 23, 59);
 
-                // 2. Native Query 통합 실행
-                // 여러 번 쿼리하는 것보다 하나의 큰 SQL로 가져오는 것이 성능상 훨씬 좋습니다.
                 String sql = "SELECT " +
                                 "  (SELECT ROUND(CAST(EXTRACT(EPOCH FROM AVG(updated_at - created_at)) / 86400 AS numeric), 1) FROM complaints) as total_avg, "
                                 +
@@ -602,19 +543,15 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
 
                 Object[] statsRow = (Object[]) nativeQuery.getSingleResult();
 
-                // 결과 매핑 (null 체크 포함)
                 double totalAvg = statsRow[0] != null ? ((Number) statsRow[0]).doubleValue() : 0.0;
                 String fastestDept = statsRow[1] != null ? (String) statsRow[1] : "없음";
                 Double currentSec = statsRow[2] != null ? ((Number) statsRow[2]).doubleValue() : null;
                 Double prevSec = statsRow[3] != null ? ((Number) statsRow[3]).doubleValue() : null;
 
-                // 3. 개선율 계산
                 double improvementRate = 0.0;
                 if (prevSec != null && currentSec != null && prevSec > 0) {
                         improvementRate = Math.round(((prevSec - currentSec) / prevSec) * 1000) / 10.0;
                 }
-
-                // 4. 차트 데이터 (Top 5 부서 평균) - 이건 별도 Native Query로 실행
                 String chartSql = "SELECT cn.target_object as category, ROUND(CAST(EXTRACT(EPOCH FROM AVG(c.updated_at - c.created_at)) / 86400 AS numeric), 1) as avgDays "
                                 +
                                 "FROM complaints c JOIN complaint_normalizations cn ON c.id = cn.complaint_id " +
@@ -634,8 +571,6 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
 
         @Override
         public List<KeywordsDto> calculateKeywords() {
-                // 1. jsonb_array_elements_text 함수를 사용하는 템플릿 정의
-                // 이 함수는 배열 안의 요소들을 각각의 String 행으로 반환
                 String sql = "SELECT word as text, count(*) as value " +
                                 "FROM complaint_normalizations, jsonb_array_elements_text(keywords_jsonb) as word " +
                                 "GROUP BY word ORDER BY value DESC LIMIT 10";
@@ -644,13 +579,10 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                 List<Object[]> results = entityManager.createNativeQuery(sql).getResultList();
 
                 log.info("쿼리 결과물: " + results.toString());
-
-                // 3. Object 배열 결과를 KeywordsDto(record) 리스트로 변환
                 return results.stream()
                                 .map(row -> new KeywordsDto(
-                                                (String) row[0], // text
-                                                ((Number) row[1]).longValue() // count (value)
-                                ))
+                                                (String) row[0],
+                                                ((Number) row[1]).longValue()))
                                 .collect(Collectors.toList());
         }
 
@@ -668,9 +600,7 @@ public class ComplaintRepositoryImpl implements ComplaintRepositoryCustom {
                                                 complaint.createdAt,
                                                 complaint.updatedAt,
                                                 department.name, // d.name 매핑
-                                                Expressions.constant(new ArrayList<ChildComplaintDto>()) // children 필드는
-                                                                                                         // 빈 리스트로 초기화
-                                ))
+                                                Expressions.constant(new ArrayList<ChildComplaintDto>())))
                                 .from(complaint)
                                 .join(department).on(complaint.currentDepartmentId.eq(department.id))
                                 .where(complaint.id.eq(id))

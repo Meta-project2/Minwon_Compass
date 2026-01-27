@@ -9,10 +9,6 @@ import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.PathInits;
 
-
-/**
- * QComplaintReroute is a Querydsl query type for ComplaintReroute
- */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QComplaintReroute extends EntityPathBase<ComplaintReroute> {
 
@@ -24,9 +20,11 @@ public class QComplaintReroute extends EntityPathBase<ComplaintReroute> {
 
     public final QComplaint complaint;
 
-    public final DateTimePath<java.time.LocalDateTime> completedAt = createDateTime("completedAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> completedAt = createDateTime("completedAt",
+            java.time.LocalDateTime.class);
 
-    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt",
+            java.time.LocalDateTime.class);
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
@@ -60,8 +58,9 @@ public class QComplaintReroute extends EntityPathBase<ComplaintReroute> {
 
     public QComplaintReroute(Class<? extends ComplaintReroute> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.complaint = inits.isInitialized("complaint") ? new QComplaint(forProperty("complaint"), inits.get("complaint")) : null;
+        this.complaint = inits.isInitialized("complaint")
+                ? new QComplaint(forProperty("complaint"), inits.get("complaint"))
+                : null;
     }
 
 }
-

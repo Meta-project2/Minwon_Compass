@@ -1,6 +1,5 @@
 package com.smart.complaint.routing_system.applicant.controller;
 
-
 import com.smart.complaint.routing_system.applicant.dto.AdminDashboardStatsDto.*;
 import com.smart.complaint.routing_system.applicant.service.AdminDashboardService;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,7 @@ public class AdminDashboardController {
 
     private final AdminDashboardService dashboardService;
 
-    // 1. 민원 접수 추이 (필터 적용)
+    // 민원 접수 추이
     @GetMapping("/trend")
     public ResponseEntity<List<DailyCountDto>> getTrendStats(
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
@@ -29,7 +28,7 @@ public class AdminDashboardController {
         return ResponseEntity.ok(dashboardService.getTrendStats(startDate, endDate, deptId));
     }
 
-    // 2. 처리 소요 시간 (필터 적용)
+    // 처리 소요 시간
     @GetMapping("/processing-time")
     public ResponseEntity<List<TimeRangeDto>> getProcessingTimeStats(
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
@@ -40,7 +39,7 @@ public class AdminDashboardController {
         return ResponseEntity.ok(dashboardService.getProcessingTimeStats(startDate, endDate, deptId));
     }
 
-    // 3. 부서별 현황 (핵심: 동적 그룹핑)
+    // 부서별 현황
     @GetMapping("/dept-status")
     public ResponseEntity<List<DeptStatusDto>> getDeptStatusStats(
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
@@ -51,19 +50,17 @@ public class AdminDashboardController {
         return ResponseEntity.ok(dashboardService.getDeptStatusStats(startDate, endDate, deptId));
     }
 
-    // 4. 일반 지표 (필터 없음 - AI, 유형, 반복민원)
+    // 일반 지표
     @GetMapping("/general")
     public ResponseEntity<GeneralStatsResponse> getGeneralStats(
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate
-    ) {
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         checkDates(startDate, endDate);
         return ResponseEntity.ok(dashboardService.getGeneralStats(startDate, endDate));
     }
 
     private void checkDates(LocalDate start, LocalDate end) {
         if (start == null || end == null) {
-            // 기본값 처리는 Service 혹은 클라이언트 위임 (여기선 단순 null 방지용)
         }
     }
 

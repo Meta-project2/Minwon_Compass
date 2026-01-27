@@ -56,12 +56,10 @@ public class ChildComplaint {
     @Column(name = "closed_at")
     private LocalDateTime closedAt;
 
-    // 답변 임시 저장
     public void updateAnswerDraft(String draftAnswer) {
         this.answer = draftAnswer;
     }
 
-    // 답변 완료
     public void completeAnswer(String finalAnswer, Long userId) {
         this.answer = finalAnswer;
         this.answeredBy = userId;

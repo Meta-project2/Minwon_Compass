@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 
 const ApplicationLoginPage = () => {
     const navigate = useNavigate();
-    // 토큰이 이미 있다면 우선 로딩 상태를 true로 유지하여 화면 노출을 막습니다.
+
     const [isLoading, setIsLoading] = useState(true);
     const [userId, setUserId] = useState('');
     const [password, setPassword] = useState('');
@@ -16,7 +16,6 @@ const ApplicationLoginPage = () => {
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
 
-        // 1. 토큰이 아예 없으면 즉시 로딩 해제 -> 로그인 버튼 노출
         if (!token) {
             setIsLoading(false);
             return;
@@ -24,24 +23,20 @@ const ApplicationLoginPage = () => {
 
         const validateToken = async () => {
             try {
-                // 2. 백엔드 검증 시도
                 await axios.get('/api/auth/validate', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-
-                // 3. 성공 시 메인으로 이동 (이동 중에도 화면은 여전히 로딩 상태)
                 navigate('/applicant/main');
             } catch (error) {
                 console.error("토큰 만료/유효하지 않음");
                 localStorage.removeItem('accessToken');
-                setIsLoading(false); // 실패 시에만 로그인 버튼 노출
+                setIsLoading(false);
             }
         };
 
         validateToken();
     }, [navigate]);
 
-    // 로딩 중일 때는 빈 화면이나 스피너만
     if (isLoading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -61,7 +56,6 @@ const ApplicationLoginPage = () => {
         }
     };
 
-    // 비밀번호 검증 (8자 이상, 영문/숫자/특수문자 포함) - input이 있을때마다 검증
     const validatePw = (pw: string) => {
         const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,20}$/;
         if (!pw) {
@@ -76,7 +70,6 @@ const ApplicationLoginPage = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // 1. 즉시 검증용 정규식 (state를 기다리지 않음)
         const idRegex = /^[a-z0-9]{5,15}$/;
         const pwRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
 
@@ -89,7 +82,6 @@ const ApplicationLoginPage = () => {
             return;
         }
 
-        // --- 비밀번호 검증 ---
         if (!password) {
             Swal.fire({ icon: 'warning', title: '입력 누락', text: '비밀번호를 입력해주세요.' });
             return;
@@ -102,13 +94,12 @@ const ApplicationLoginPage = () => {
         Swal.fire({
             title: '로그인 중...',
             text: '잠시만 기다려 주세요.',
-            allowOutsideClick: false, // 로딩 중 바깥 클릭으로 끄기 방지
+            allowOutsideClick: false,
             didOpen: () => {
-                Swal.showLoading(); // 기본 로딩 스피너 표시
+                Swal.showLoading();
             }
         });
 
-        // 3. 모든 검증 통과 시에만 API 호출
         try {
             const response = await axios.post('/api/applicant/login', {
                 userId: userId,
@@ -116,7 +107,6 @@ const ApplicationLoginPage = () => {
             });
 
             Swal.close();
-            // 성공 로직...
             localStorage.setItem('accessToken', response.data.accessToken);
             navigate('/applicant/main');
 
@@ -124,15 +114,11 @@ const ApplicationLoginPage = () => {
 
             Swal.close();
 
-            // 보안상 이유로 상세 에러가 무엇이든 사용자에게는 동일한 메시지를 보여줍니다.
             let displayMessage = '아이디 또는 비밀번호를 확인해주세요.';
 
             if (axios.isAxiosError(error)) {
-                // 온다면 지정 아닐 경우 500으로
                 const serverStatus = error.response?.status || 500;
 
-
-                // 401(미인증)이나 404(찾을 수 없음) 모두 같은 메시지로 처리
                 if (serverStatus === 401 || serverStatus === 404) {
                     displayMessage = '아이디 또는 비밀번호가 일치하지 않습니다.';
                 } else if (serverStatus === 403) {
@@ -151,10 +137,7 @@ const ApplicationLoginPage = () => {
         }
     };
 
-    // 백엔드(Spring Boot)의 OAuth2 엔드포인트로 이동시키는 함수
     const handleLogin = (provider: string) => {
-        // 도커 환경이거나 로컬 환경인 경우에 맞춰 백엔드 주소를 입력합니다.
-        // 브라우저 기준이므로 localhost:8080(Spring)을 호출합니다.
         window.location.href = `/oauth2/authorization/${provider}`;
     };
 
@@ -191,7 +174,6 @@ const ApplicationLoginPage = () => {
             }}>
                 <h1 style={{ textAlign: 'center', marginBottom: '30px', fontSize: '24px', fontWeight: 'bold' }}>민원 서비스 로그인</h1>
 
-                {/* --- 자체 로그인 Form --- */}
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <input
                         type="text"
@@ -213,8 +195,6 @@ const ApplicationLoginPage = () => {
                     />
                     <button type="submit" style={{ cursor: 'pointer' }}>로그인</button>
                 </form>
-
-                {/* --- 보조 링크 (회원가입 등) --- */}
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '20px', fontSize: '14px', color: '#666' }}>
                     <span onClick={handleSignUp} style={{ cursor: 'pointer' }}>회원가입</span>
                     <span style={{ color: '#ddd' }}>|</span>
@@ -222,15 +202,11 @@ const ApplicationLoginPage = () => {
                     <span style={{ color: '#ddd' }}>|</span>
                     <span onClick={handleFindPassword} style={{ cursor: 'pointer' }}>비밀번호 찾기</span>
                 </div>
-
-                {/* --- 구분선 --- */}
                 <div style={{ display: 'flex', alignItems: 'center', margin: '30px 0', color: '#999', fontSize: '13px' }}>
                     <div style={{ flex: 1, height: '1px', backgroundColor: '#eee' }}></div>
                     <span style={{ margin: '0 10px' }}>또는</span>
                     <div style={{ flex: 1, height: '1px', backgroundColor: '#eee' }}></div>
                 </div>
-
-                {/* --- 하단 OAuth 섹션 --- */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <LoginButton provider="kakao" onClick={() => handleLogin('kakao')} />
                     <LoginButton provider="naver" onClick={() => handleLogin('naver')} />

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApplicantComplaintForm, ComplaintFormData } from './ApplicantComplaintForm';
 import { ComplaintPreview } from './ComplaintPreview';
-import Swal from 'sweetalert2';
 
 export default function ApplicantComplaintCreatePage() {
   const navigate = useNavigate();
@@ -25,14 +24,11 @@ export default function ApplicantComplaintCreatePage() {
 
   return (
     <div className="relative">
-      {/* 화면: 민원 작성 폼 */}
       <ApplicantComplaintForm
         onGoHome={handleGoHome}
         onViewComplaints={handleViewComplaints}
         onPreview={handlePreview}
       />
-
-      {/* 모달: 미리보기 창 (상태가 true일 때만 표시) */}
       {isPreviewOpen && previewData && (
         <ComplaintPreview
           data={previewData}

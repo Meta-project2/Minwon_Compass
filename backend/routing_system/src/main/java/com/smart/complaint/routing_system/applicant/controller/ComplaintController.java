@@ -30,11 +30,7 @@ public class ComplaintController {
     @Operation(summary = "민원 리스트 조회", description = "로그인한 사용자의 부서에 배정된 민원 리스트를 전부 조회합니다.")
     @GetMapping
     public Page<ComplaintResponse> getComplaints(
-            @ModelAttribute ComplaintSearchCondition condition, HttpServletRequest request
-    // @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        // 로그인한 사람이 '3번 부서' 소속이라고 가정
-        // 나중에는 userDetails에서 진짜 부서 ID
+            @ModelAttribute ComplaintSearchCondition condition, HttpServletRequest request) {
         Long myDepartmentId = 11L;
         User user = getSessionUser(request);
         myDepartmentId = user.getDepartment().getId();
@@ -98,30 +94,10 @@ public class ComplaintController {
         return ResponseEntity.ok("담당 배정이 취소되었습니다.");
     }
 
-    // --- [Helper Methods] ---
-
-    /**
-     * 세션에서 로그인한 사용자 정보를 가져옵니다.
-     * (SecurityConfig에서 세션 방식을 사용한다고 가정)
-     */
     private User getSessionUser(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-        // 개발 편의를 위해 세션이 없으면 에러 대신 임시 유저(ID:1)를 리턴하거나 에러를 낼 수 있음
-        // 현재는 엄격하게 체크
-        /*
-         * if (session == null || session.getAttribute("LOGIN_USER") == null) {
-         * throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
-         * }
-         * return (User) session.getAttribute("LOGIN_USER");
-         */
-
-        // [개발용 임시 코드] 세션 없으면 ID 1번 유저라고 가정 (테스트 편의성)
-        // 실제 운영 시에는 위 주석 해제하고 아래 코드 삭제 필요
         if (session == null || session.getAttribute("LOGIN_USER") == null) {
-            // User(username, password, displayName, role) - ID는 null일 수 있으므로 주의
-            // 여기서는 ID만 필요하므로 Mocking이 까다로움.
-            // 실제 로그인 후 테스트하거나, Service에서 userId를 파라미터로 받도록 임시 수정 필요.
-            // 일단 에러 던지도록 설정:
+
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
         }
         return (User) session.getAttribute("LOGIN_USER");

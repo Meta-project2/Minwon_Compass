@@ -9,10 +9,6 @@ import javax.annotation.processing.Generated;
 import com.querydsl.core.types.Path;
 import com.querydsl.core.types.dsl.PathInits;
 
-
-/**
- * QDepartment is a Querydsl query type for Department
- */
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QDepartment extends EntityPathBase<Department> {
 
@@ -24,7 +20,8 @@ public class QDepartment extends EntityPathBase<Department> {
 
     public final StringPath category = createString("category");
 
-    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt", java.time.LocalDateTime.class);
+    public final DateTimePath<java.time.LocalDateTime> createdAt = createDateTime("createdAt",
+            java.time.LocalDateTime.class);
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
@@ -52,8 +49,8 @@ public class QDepartment extends EntityPathBase<Department> {
 
     public QDepartment(Class<? extends Department> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
-        this.parent = inits.isInitialized("parent") ? new QDepartment(forProperty("parent"), inits.get("parent")) : null;
+        this.parent = inits.isInitialized("parent") ? new QDepartment(forProperty("parent"), inits.get("parent"))
+                : null;
     }
 
 }
-

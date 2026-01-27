@@ -6,22 +6,16 @@ import lombok.Data;
 
 @Data
 public class ComplaintSearchCondition {
-    // 필터 조건
-    private String keyword;       // 검색어 (제목 + 내용)
-    private ComplaintStatus status; // 처리 상태 (접수, 처리중 등)
-    private UrgencyLevel urgency;   // 긴급도 (상, 중, 하)
-    private Boolean hasIncident;    // 사건(군집) 연결 여부
-    private Boolean hasTags;        // 특이태그 급증 등
 
-    // 정렬 조건 (기본값: latest)
-    // latest(최신순), urgency(긴급도순), status(상태순)
+    private String keyword;
+    private ComplaintStatus status;
+    private UrgencyLevel urgency;
+    private Boolean hasIncident;
+    private Boolean hasTags;
     private String sort = "latest";
-
-    //  페이징 조건 (기본값: 1페이지, 10개씩)
     private Integer page = 1;
     private Integer size = 10;
 
-    // QueryDSL용 Offset 계산
     public long getOffset() {
         return (long) (Math.max(1, page) - 1) * Math.max(1, size);
     }

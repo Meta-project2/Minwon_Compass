@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { springApi } from "../../lib/springApi";
-import minwonIcon from "@/lib/minwon1.png"; 
+import minwonIcon from "@/lib/minwon1.png";
 
 interface LoginPageProps {
   onLogin: (role: 'agent' | 'admin') => void;
@@ -28,26 +28,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setError('');
     setIsLoading(true);
 
-    // Mock login logic
-    // setTimeout(() => {
-    //   if (username && password) {
-    //     // For demo: 'admin' logs in as admin, anything else as agent
-    //     onLogin(username === 'admin' ? 'admin' : 'agent');
-    //   } else {
-    //     setError('아이디 또는 비밀번호를 확인하세요');
-    //     setIsLoading(false);
-    //   }
-    // }, 1000);
     try {
       const res = await springApi.post<LoginResponse>("/api/agent/login", {
         username,
         password,
       });
 
-      // 백엔드 role: ADMIN/AGENT  → 프론트 role: admin/agent
       const role = res.data.role === "ADMIN" ? "admin" : "agent";
 
-      // 필요하면 저장(선택)
       localStorage.setItem("role", role);
       localStorage.setItem("username", res.data.username ?? username);
 
@@ -68,7 +56,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4 text-center pb-8">
           <div className="flex justify-center">
-              <img src={minwonIcon} alt="파일" className="h-30 w-30" />
+            <img src={minwonIcon} alt="파일" className="h-30 w-30" />
           </div>
           <div>
             <CardTitle className="text-2xl">내부 업무 시스템</CardTitle>

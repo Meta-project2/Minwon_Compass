@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'; // useEffect 추가
-import { useLocation, useParams, useNavigate } from 'react-router-dom'; // 훅 추가
-import api from './AxiosInterface'; // api 인스턴스 가져오기
+import { useState, useEffect } from 'react';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import api from './AxiosInterface';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Calendar, Building2, User, MessageSquare, ArrowUpDown, Home, FileText, CheckCircle } from 'lucide-react';
+import { Calendar, Building2, MessageSquare, ArrowUpDown, CheckCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
-import axios from 'axios';
 import { Toolbar } from './toolbar';
 
 interface Message {
@@ -48,22 +47,20 @@ const STATUS_LABELS = {
 };
 
 const STATUS_COLORS = {
-  RECEIVED: 'bg-blue-100 text-blue-700 border-blue-200',      // 신규 접수: 청량한 블루
-  RECOMMENDED: 'bg-purple-100 text-purple-700 border-purple-200', // 부서 추천: 신비로운 퍼플
-  IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-200',  // 처리중: 주의가 필요한 오렌지/앰버
-  RESOLVED: 'bg-emerald-100 text-emerald-700 border-emerald-200', // 답변 완료: 신뢰의 그린
-  CLOSED: 'bg-slate-100 text-slate-600 border-slate-300',     // 종결: 차분한 그레이
-  CANCELED: 'bg-rose-100 text-rose-700 border-rose-200',      // 취소/반려: 경고의 레드/로즈
+  RECEIVED: 'bg-blue-100 text-blue-700 border-blue-200',
+  RECOMMENDED: 'bg-purple-100 text-purple-700 border-purple-200',
+  IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-200',
+  RESOLVED: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  CLOSED: 'bg-slate-100 text-slate-600 border-slate-300',
+  CANCELED: 'bg-rose-100 text-rose-700 border-rose-200',
 };
 
 export default function ComplaintDetail() {
 
-  const { id } = useParams<{ id: string }>(); // URL에서 ID 추출
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-
   const savedState = location.state as LocationState;
-  // 1. 상태 관리 추가
   const [complaint, setComplaint] = useState<ComplaintDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [newComment, setNewComment] = useState('');
@@ -73,14 +70,12 @@ export default function ComplaintDetail() {
   const fetchDetail = async () => {
     try {
       setIsLoading(true);
-      // 백엔드 상세 조회 API 호출
+
       const response = await api.get(`applicant/complaints/${id}`);
       const data = response.data;
-
-      // 0. 메시지 타임라인 구성
       const allMessages: Message[] = [];
 
-      // 1. 원본 민원 내용 추가
+      // 원본 민원 내용 추가
       allMessages.push({
         id: 'orig-q-' + data.id,
         sender: 'applicant',
@@ -89,7 +84,7 @@ export default function ComplaintDetail() {
         timestamp: new Date(data.createdAt).toLocaleString(),
       });
 
-      // 2 원본 민원 답변 추가 (있을 경우)
+      // 원본 민원 답변 추가 (있을 경우)
       if (data.answer) {
         allMessages.push({
           id: 'orig-a-' + data.id,
@@ -100,7 +95,7 @@ export default function ComplaintDetail() {
         });
       }
 
-      // 3. 추가 문의(children) 순회하며 추가
+      // 추가 문의 순회하며 추가
       if (data.children && data.children.length > 0) {
         data.children.forEach((child: any) => {
           // 추가 질문
@@ -112,7 +107,7 @@ export default function ComplaintDetail() {
             timestamp: new Date(child.createdAt).toLocaleString(),
           });
 
-          // 추가 질문에 대한 답변 (있을 경우)
+          // 추가 질문에 대한 답변
           if (child.answer) {
             allMessages.push({
               id: 'child-a-' + child.id,
@@ -134,7 +129,7 @@ export default function ComplaintDetail() {
         submittedDate: new Date(data.createdAt).toLocaleDateString(),
         lastUpdate: data.updatedAt ? new Date(data.updatedAt).toLocaleDateString() : undefined,
         department: data.departmentName,
-        assignedTo: data.officerName, // 담당자 이름 매핑
+        assignedTo: data.officerName,
         messages: allMessages
       });
     } catch (error) {
@@ -145,14 +140,11 @@ export default function ComplaintDetail() {
     }
   };
 
-  // 4. 데이터 Fetch 로직
   useEffect(() => {
     if (id) fetchDetail();
   }, [id]);
 
-  // 새로운 문의 사항을 입력하기 
   const handleCommentSubmit = async () => {
-    // 메시지가 입력되지 않은 경우 return
 
     const isPending = complaint?.status !== 'RESOLVED' && complaint?.status !== 'CLOSED';
 
@@ -175,64 +167,78 @@ export default function ComplaintDetail() {
         title: `${complaint?.title}`,
         body: newComment
       });
-      setNewComment(''); // 입력창 초기화
+      setNewComment('');
       Swal.fire('전송 완료', '추가 문의가 등록되었습니다.', 'success');
-      // 이후 데이터 재호출(fetchDetail)을 통해 리스트 갱신
       fetchDetail();
     } catch (error) {
       Swal.fire('전송 실패', '의견 전송 중 오류가 발생했습니다.', 'error');
     }
   };
 
-  // 민원 종결 핸들러
   const handleCloseComplaint = async () => {
     const result = await Swal.fire({
       title: '민원을 종결하시겠습니까?',
       text: '종결 처리 후에는 추가 문의를 등록하실 수 없습니다.',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonColor: '#e11d48', // rose-600
-      cancelButtonColor: '#64748b', // slate-500
+      cancelButtonColor: '#64748b',
+      confirmButtonColor: '#e11d48',
+      cancelButtonText: '취소',
       confirmButtonText: '종결하기',
-      cancelButtonText: '취소'
+      reverseButtons: true
     });
 
     if (result.isConfirmed) {
       try {
-        // 실제 API 경로에 맞춰 수정 필요 (예: patch 또는 post)
         await api.patch(`applicant/complaints/${id}/close`);
         Swal.fire('종결 완료', '민원이 종결 처리되었습니다.', 'success');
-        fetchDetail(); // 상태 갱신
+        fetchDetail();
       } catch (error) {
         Swal.fire('오류', '종결 처리 중 에러가 발생했습니다.', 'error');
       }
     }
   };
 
-  // 3. 로딩 및 에러 처리
   if (isLoading) return <div className="p-20 text-center">정보를 불러오는 중입니다...</div>;
   if (!complaint) return <div className="p-20 text-center">정보를 찾을 수 없습니다.</div>;
 
   const isClosed = complaint.status === 'CLOSED' || complaint.status === 'CANCELED';
 
+  const deptMessages = complaint.messages.filter(m => m.sender === 'department');
+
+  const formattedAnswerDate = deptMessages.length > 0
+    ? (() => {
+      const rawDate = deptMessages[0].timestamp;
+      const dateParts = rawDate.match(/\d+/g);
+
+      if (dateParts && dateParts.length >= 3) {
+        const dateObj = new Date(
+          parseInt(dateParts[0]),
+          parseInt(dateParts[1]) - 1,
+          parseInt(dateParts[2])
+        );
+
+        return dateObj.toLocaleDateString('ko-KR', {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric'
+        });
+      }
+      return null;
+    })()
+    : null;
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-y-auto font-sans">
-      {/* 통합 툴바 사용 */}
       <Toolbar subTitle="민원 상세 내역 조회" />
-
-      {/* Main Content */}
       <main className="flex-1 max-w-[1700px] w-full mx-auto px-10 py-8">
         <div className="space-y-6">
-          {/* Complaint Header Information */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="bg-gray-100 border-b border-gray-200 px-6 py-4"> {/* py-6에서 py-4로 축소 */}
+            <div className="bg-gray-100 border-b border-gray-200 px-6 py-4">
               <div className="flex items-center justify-between">
-                {/* 좌측: 제목 */}
                 <h2 className="text-2xl font-bold text-gray-900">
                   {complaint.title}
                 </h2>
-
-                {/* 우측: 카테고리 및 상태 배지 (ID 제거) */}
                 <div className="flex items-center gap-2">
                   <Badge className="bg-white text-gray-700 border border-gray-300 text-xs px-2.5 py-1 font-medium">
                     {complaint.category}
@@ -244,7 +250,6 @@ export default function ComplaintDetail() {
               </div>
             </div>
 
-            {/* Meta Information Grid */}
             <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 border-b ${isClosed ? 'bg-slate-200/50 border-slate-300' : 'bg-gray-50 border-gray-200'}`}>
               <div className="flex items-start gap-3">
                 <Calendar className="w-5 h-5 text-gray-500 mt-1" />
@@ -254,18 +259,18 @@ export default function ComplaintDetail() {
                 </div>
               </div>
 
-              {/* 답변일 (추가됨) */}
+
               <div className="flex items-start gap-3">
                 <Calendar className="w-5 h-5 text-blue-500 mt-1" />
                 <div>
                   <p className="text-xs text-blue-500 uppercase font-bold">답변일</p>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {complaint.lastUpdate || '대기 중'}
-                  </p>
+                  {formattedAnswerDate && (
+                    <p className="text-sm font-semibold text-gray-900">{formattedAnswerDate}</p>
+                  )}
                 </div>
               </div>
 
-              {/* 담당 부서 (추가됨) */}
+
               <div className="flex items-start gap-3">
                 <Building2 className="w-5 h-5 text-gray-500 mt-1" />
                 <div>
@@ -276,7 +281,6 @@ export default function ComplaintDetail() {
                 </div>
               </div>
 
-              {/* 최종 업데이트 */}
               <div className="flex items-start gap-3">
                 <ArrowUpDown className="w-5 h-5 text-gray-500 mt-1" />
                 <div>
@@ -287,17 +291,15 @@ export default function ComplaintDetail() {
             </div>
           </div>
 
-          {/* Chat-Style Messages Section */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             {/* Section Header */}
             <div className="bg-gray-100 border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center justify-between"> {/* 수정: 양끝 정렬을 위한 flex 추가 */}
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-gray-900">
                   <MessageSquare className="w-5 h-5" />
                   <h3 className="text-lg font-semibold">민원 내용 및 답변</h3>
                 </div>
 
-                {/* 수정: 종결 버튼 추가 (이미 종결되었거나 취소된 경우 제외하고 표시) */}
                 {complaint.status !== 'CLOSED' && complaint.status !== 'CANCELED' && (
                   <Button
                     variant="outline"
@@ -313,31 +315,26 @@ export default function ComplaintDetail() {
             </div>
           </div>
 
-          {/* 챗창 구현 */}
           <div className="p-6 space-y-6 bg-gray-50 min-h-[400px]">
             {complaint.messages.map((message) => {
-              const isMe = message.sender === 'applicant'; // 내가 보낸 메시지인지 확인
+              const isMe = message.sender === 'applicant';
 
               return (
                 <div
                   key={message.id}
-                  className={`flex ${isMe ? 'justify-end' : 'justify-start'}`} // 민원인 오른쪽(end)
+                  className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-[75%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-
-                    {/* 이름과 시간 표시 */}
                     <div className={`flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                       <span className="text-sm font-semibold text-gray-700">
                         {message.senderName}
                       </span>
                       <span className="text-[10px] text-gray-400">{message.timestamp}</span>
                     </div>
-
-                    {/* 메시지 말풍선 */}
                     <div
                       className={`rounded-2xl px-4 py-2 shadow-sm ${isMe
-                        ? 'bg-blue-600 text-white rounded-tr-none' // 내 말풍선: 파란색, 우측 상단 각짐
-                        : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none' // 상대방: 흰색, 좌측 상단 각짐
+                        ? 'bg-blue-600 text-white rounded-tr-none'
+                        : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'
                         }`}
                     >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -361,7 +358,6 @@ export default function ComplaintDetail() {
               </div>
             )}
 
-            {/* 아직 답변이 없을 경우 */}
             {complaint.messages.filter(m => m.sender === 'department').length === 0 && (
               <div className="text-center py-8">
                 <div className="inline-block bg-yellow-50 border-2 border-yellow-200 rounded-lg px-6 py-4">
@@ -397,14 +393,12 @@ export default function ComplaintDetail() {
               </p>
             </div>
           ) : (
-            // 종결 시 입력창이 있던 자리에 나타나는 바
             <div className="p-4 bg-slate-200 border-t border-slate-300 text-center">
               <p className="text-slate-600 text-sm font-medium">종결된 민원에는 답변을 추가할 수 없습니다.</p>
             </div>
           )}
         </div>
 
-        {/* Back Button at Bottom */}
         <div className="flex justify-center pt-4">
           <Button
             onClick={onGoBack}

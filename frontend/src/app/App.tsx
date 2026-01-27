@@ -51,55 +51,47 @@ export default function App() {
 function AppContent() {
   const location = useLocation();
   const isApplicantPath = location.pathname.startsWith('/applicant');
-
   const [userRole, setUserRole] = useState<'agent' | 'admin' | null>(null);
   const [userName, setUserName] = useState<string>('');
-  const [departmentName, setDepartmentName] = useState<string>(''); 
+  const [departmentName, setDepartmentName] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<Page>({ type: 'login' });
-  const [isLoading, setIsLoading] = useState(true); 
-
-  // [수정 26-01-20] 사건 목록 페이지 번호를 기억하기 위한 상태 추가
+  const [isLoading, setIsLoading] = useState(true);
   const [savedIncidentPage, setSavedIncidentPage] = useState(1);
 
-  // 새로고침 시 세션 복구
   useEffect(() => {
     const restoreSession = async () => {
       if (!isApplicantPath) {
         try {
           const userData = await AgentComplaintApi.getMe();
-
-          // 2. 데이터가 있으면 역할 복구 (userData에 role이 있다고 가정)
-          // 백엔드는 "ADMIN", "AGENT" 대문자로 줌 -> 소문자로 변환 필요
-          // (Typescript 에러가 난다면 any로 감싸거나 DTO를 수정해야 함)
           const serverRole = (userData as any).role;
           const serverName = (userData as any).displayName;
           const serverDept = (userData as any).departmentName;
 
           if (serverRole) {
-             const roleLower = serverRole.toLowerCase() as 'agent' | 'admin';
-             setUserRole(roleLower);
-             setUserName(serverName || '알 수 없음');
-             setDepartmentName(serverDept || '소속 없음'); 
-             
-             if (currentPage.type === 'login') {
-                if (roleLower === 'admin') setCurrentPage({ type: 'dashboard' });
-                else setCurrentPage({ type: 'complaints' });
-             }
+            const roleLower = serverRole.toLowerCase() as 'agent' | 'admin';
+            setUserRole(roleLower);
+            setUserName(serverName || '알 수 없음');
+            setDepartmentName(serverDept || '소속 없음');
+
+            if (currentPage.type === 'login') {
+              if (roleLower === 'admin') setCurrentPage({ type: 'dashboard' });
+              else setCurrentPage({ type: 'complaints' });
+            }
           }
         } catch (error) {
           console.log("세션 만료 또는 비로그인 상태");
           setUserRole(null);
         }
       }
-      setIsLoading(false); 
+      setIsLoading(false);
     };
 
     restoreSession();
-  }, [isApplicantPath]); 
+  }, [isApplicantPath]);
 
   const handleLogout = async () => {
     try {
-      await AgentComplaintApi.logout(); 
+      await AgentComplaintApi.logout();
     } catch (error) {
       console.error("로그아웃 실패:", error);
     } finally {
@@ -119,9 +111,6 @@ function AppContent() {
   };
 
   const handleNavigate = (page: string) => {
-    // [수정 26-01-20] 다른 메뉴로 이동할 때 사건 목록 페이지를 초기화하고 싶다면 여기서 setSavedIncidentPage(1) 호출
-    // 현재는 유지하고 싶으므로 그대로 둡니다. (원하면 아래 주석 해제)
-    // if (page !== 'incidents') setSavedIncidentPage(1);
 
     if (page === 'complaints') {
       setCurrentPage({ type: 'complaints' });
@@ -184,14 +173,14 @@ function AppContent() {
       <Route path="/agent/*" element={
         !userRole ? (
           <LoginPage onLogin={(role) => {
-             setUserRole(role);
-             AgentComplaintApi.getMe().then(u => {
-                setUserName((u as any).displayName);
-                setDepartmentName((u as any).departmentName);
-             });
-             
-             if(role === 'admin') setCurrentPage({type:'dashboard'});
-             else setCurrentPage({type:'complaints'});
+            setUserRole(role);
+            AgentComplaintApi.getMe().then(u => {
+              setUserName((u as any).displayName);
+              setDepartmentName((u as any).departmentName);
+            });
+
+            if (role === 'admin') setCurrentPage({ type: 'dashboard' });
+            else setCurrentPage({ type: 'complaints' });
           }} />
         ) : (
           <Layout
@@ -207,7 +196,7 @@ function AppContent() {
             onNavigate={handleNavigate}
             userRole={userRole}
             userName={userName}
-            departmentName={departmentName}     
+            departmentName={departmentName}
             onLogout={handleLogout}
           >
             {currentPage.type === 'complaints' && (
@@ -219,21 +208,19 @@ function AppContent() {
                 onBack={() => handleBackToList('complaints')}
               />
             )}
-            
-            {/* [수정 26-01-20] IncidentListPage에 savedPage와 onSavePage 전달 */}
+
             {currentPage.type === 'incidents' && (
-              <IncidentListPage 
+              <IncidentListPage
                 onViewDetail={handleViewIncidentDetail}
-                savedPage={savedIncidentPage} // 기억된 페이지 전달
-                onSavePage={setSavedIncidentPage} // 페이지 변경 시 기억 요청
+                savedPage={savedIncidentPage}
+                onSavePage={setSavedIncidentPage}
               />
             )}
-            
+
             {currentPage.type === 'incident-detail' && (
               <IncidentDetailPage
                 incidentId={currentPage.id}
                 onBack={() => handleBackToList('incidents')}
-                // 여기서는 onViewComplaint를 통해 민원 상세로 갈 수도 있음 (타입 정의 필요 시 추가)
               />
             )}
             {currentPage.type === 'dashboard' && (
@@ -257,14 +244,6 @@ function AppContent() {
             {currentPage.type === 'heatmap' && (
               <HeatmapPage />
             )}
-            {/* {currentPage.type === 'settings' && (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <h2 className="mb-2">설정</h2>
-                  <p className="text-muted-foreground">설정 페이지</p>
-                </div>
-              </div>
-            )} */}
           </Layout>
         )
       } />

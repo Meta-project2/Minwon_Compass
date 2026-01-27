@@ -111,8 +111,7 @@ export function KnowledgeBaseListPage({ onViewDetail }: KnowledgeBaseListPagePro
 
     setShowUploadDialog(false);
     toast('문서가 업로드되었습니다');
-    
-    // Reset form
+
     setUploadTitle('');
     setUploadType('');
     setUploadVersion('');
@@ -142,7 +141,6 @@ export function KnowledgeBaseListPage({ onViewDetail }: KnowledgeBaseListPagePro
         </div>
       </div>
 
-      {/* Unified Search & Filter Bar */}
       <div className="bg-card border-b border-border p-4 space-y-3">
         <div className="flex gap-2">
           <div className="flex-1 relative">
@@ -204,7 +202,6 @@ export function KnowledgeBaseListPage({ onViewDetail }: KnowledgeBaseListPagePro
         </div>
       </div>
 
-      {/* Table */}
       <div className="flex-1 overflow-auto p-6">
         <div className="bg-card border rounded">
           <Table>
@@ -252,9 +249,8 @@ export function KnowledgeBaseListPage({ onViewDetail }: KnowledgeBaseListPagePro
                         }
                       >
                         <StatusIcon
-                          className={`h-3 w-3 mr-1 ${
-                            doc.indexingStatus === 'processing' ? 'animate-spin' : ''
-                          }`}
+                          className={`h-3 w-3 mr-1 ${doc.indexingStatus === 'processing' ? 'animate-spin' : ''
+                            }`}
                         />
                         {
                           indexingStatusMap[doc.indexingStatus as keyof typeof indexingStatusMap]
@@ -304,7 +300,6 @@ export function KnowledgeBaseListPage({ onViewDetail }: KnowledgeBaseListPagePro
         </div>
       </div>
 
-      {/* Upload Dialog */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
         <DialogContent>
           <DialogHeader>
