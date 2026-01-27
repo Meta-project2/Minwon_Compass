@@ -355,7 +355,7 @@ export function IncidentDetailPage({ incidentId, onBack }: IncidentDetailPagePro
                 {visibleComplaints.length > 0 ? visibleComplaints.map((c) => (
                   <TableRow key={c.id} className={`${selectedIds.includes(c.id) ? 'bg-blue-50/50' : 'hover:bg-slate-50'} border-b border-slate-100 h-[50px]`}>
                     <TableCell className="text-center py-0"><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => setSelectedIds(prev => prev.includes(c.id) ? prev.filter(i => i !== c.id) : [...prev, c.id])} /></TableCell>
-                    <TableCell className="text-xs font-mono text-center text-slate-500">{c.id.slice(0, 8)}</TableCell>
+                    <TableCell className="text-xs font-mono text-center text-slate-500">{c.id}</TableCell>
                     <TableCell className="font-medium text-slate-700 truncate max-w-[400px] text-left pl-6" title={c.title}>{c.title}</TableCell>
                     <TableCell className="text-center p-1">
                       <div className="flex justify-center items-center">
