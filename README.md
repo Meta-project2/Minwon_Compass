@@ -2,7 +2,7 @@
 
 > **LLM/RAG 기반 지능형 민원 처리 지원 & 자동 배정 플랫폼**
 > *"단순 반복 업무와 부서 간 핑퐁 현상을 해결하여, 행정의 효율성과 신뢰도를 높입니다."*
-> [📺 시연 영상 보러가기 (Google Drive)](https://drive.google.com/file/d/1mvXBrqSZjyy0p_XqKuqEi3ZLauIPIcn1/view?usp=drive_link)
+> [📺 시연 영상 보러가기 (Google Drive)](https://drive.google.com/file/d/1jN1YT0jfBUsdCZpgNXsmTDl-mVXgcbJE/view?usp=drive_link)
 ---
 
 ## 📖 1. 프로젝트 개요 (Project Overview)
